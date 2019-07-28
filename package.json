@@ -1,0 +1,14 @@
+{
+  "name": "debug",
+  "version": "0.0.1",
+  "description": "DevTools Protocol Client",
+  "main": "debug.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Adrien Cransac",
+  "license": "ISC",
+  "dependencies": {
+    "ws": "^7.1.1"
+  }
+}
