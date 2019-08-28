@@ -8,7 +8,7 @@ Source.from = function (eventEmitter, emissionCallbackName) {
   return new Source(eventEmitter, emissionCallbackName);
 };
 
-Source.prototype.with = function (continuation) {
+Source.prototype.withDownstream = function (continuation) {
   this.emitter[this.emissionCallbackName] = (value) => continuation(makeStream(value, new Promise((resolve) => {
     this.emitter[this.emissionCallbackName] = (value) => resolve(value);
   }), this));
@@ -38,4 +38,12 @@ async function later(stream) {
   }), source(stream));
 }
 
-module.exports = { Source, now, later };
+function floatOn(stream, jsValue) {
+  return makeStream(jsValue, afterwards(stream), source(stream));
+}
+
+function IO(procedure, ioChannel) {
+  return (stream) => procedure(ioChannel)(stream);
+}
+
+module.exports = { Source, now, later, floatOn, IO };
