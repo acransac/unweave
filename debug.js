@@ -18,21 +18,17 @@ function startDebugSession(webSocket) {
 
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
-  Source.from(webSocket, "onmessage").withDownstream(async (stream) => IO(enableDebugger, send)(await runtimeEnabled(stream)));
+  Source.from(webSocket, "onmessage").withDownstream(async (stream) => listen(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
+
+  startDeveloperSession(send);
 }
 
 function enableRuntime(send) {
   send("Runtime.enable", {});
 
   return runtimeEnabled;
-}
-
-function enableDebugger(send) {
-  send("Debugger.enable", {});
-
-  return debuggerEnabled;
 }
 
 async function runtimeEnabled(stream) {
@@ -44,6 +40,12 @@ async function runtimeEnabled(stream) {
   }
 }
 
+function enableDebugger(send) {
+  send("Debugger.enable", {});
+
+  return debuggerEnabled;
+}
+
 async function debuggerEnabled(stream) {
   if (isResult(data(now(stream)), "debuggerId")) {
     return stream;
@@ -51,6 +53,39 @@ async function debuggerEnabled(stream) {
   else {
     return debuggerEnabled(await later(stream));
   }
+}
+
+function runProgram(send) {
+  send("Runtime.runIfWaitingForDebugger", {});
+
+  return programStarted;
+}
+
+async function programStarted(stream, continuation) {
+  if (isMethod(data(now(stream)), "Debugger.scriptParsed")) {
+    return programStarted(await later(stream), () => data(now(stream)).params.scriptId);
+  }
+  else if (isMethod(data(now(stream)), "Debugger.paused")) {
+    //return floatOn(stream, continuation());
+    console.log(`script id: ${continuation()}`); // !!!
+
+    return stream;                               // !!!
+  }
+  else {
+    return programStarted(await later(stream), continuation);
+  }
+}
+
+async function listen(stream) {
+  console.log(data(now(stream))); // !!!
+
+  return listen(await later(stream));
+}
+
+function startDeveloperSession(send) {
+  const repl = Readline.createInterface({ input: process.stdin });
+
+  repl.on('line', (line) => send(...parseOneLine(line)));
 }
 
 function data(message) {
@@ -75,22 +110,9 @@ function isResult(message, resultName) {
   }
 }
 
-function receive(message) {
-  console.log(message.data);
-}
-
-function readOneLine(ws, line) {
-  let method, parameters;
-
-  [method, parameters] = parseOneLine(line);
-  
-  ws.send(JSON.stringify({
-    method: method,
-    params: parameters,
-    id: 0
-  }));
-}
-
 function parseOneLine(line) {
-  return line.match(/^([^\s]+)|[^\1]+/g);
+  let method, parameters;
+  [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
+
+  return [method, parseJsValue(parameters)];
 }
