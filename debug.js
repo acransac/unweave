@@ -5,15 +5,15 @@ const { Source, now, later, value, continuation, floatOn, commit, forget, IO } =
 const { renderer, cons, emptyList, atom } = require('terminal');
 const WebSocket = require('ws');
 
-class WrappedEventEmitter extends EventEmitter {
-  constructor(emitter, emissionCallbackName) {
+class MergedEventEmitters extends EventEmitter {
+  constructor(emitters) {
     super();
 
-    this[emissionCallbackName] = undefined;
+    emitters.forEach(emitter => emitter[0].on(emitter[1], (event) => this.emit('event', event)));
 
-    this.emitter = emitter;
+    this.onevent = (event) => {};
 
-    emitter.on(emissionCallbackName, (message) => this[emissionCallbackName](message));
+    this.on('event', (event) => this.onevent(event));
   }
 };
 
@@ -30,15 +30,14 @@ function connectToInspector(sessionHash) {
 function startDebugSession(webSocket) {
   console.log("Connection opened");
 
-  startInputCapture();
-
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
-  Source.from(webSocket, "onmessage").withDownstream(async (stream) => listen(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
+  Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
+	.withDownstream(async (stream) => listen(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
 
-  startDeveloperSession(send);
+  //startDeveloperSession(send);
 }
 
 function enableRuntime(send) {
@@ -107,12 +106,16 @@ function startDeveloperSession(send) {
   repl.on('line', (line) => send(...parseOneLine(line)));
 }
 
-function startInputCapture() {
+function inputCapture() {
   Readline.emitKeypressEvents(process.stdin);
 
   process.stdin.setRawMode(true);
 
-  return [new WrappedEventEmitter(process.stdin, "onkeypress"), "onkeypress"];
+  return process.stdin;
+}
+
+function mergeEvents(emitters) {
+  return new MergedEventEmitters(emitters);
 }
 
 function data(message) {
