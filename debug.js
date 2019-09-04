@@ -1,7 +1,21 @@
+const EventEmitter = require('events');
 const parseJsValue = require('./jsvalueparser.js');
 const Readline = require('readline');
-const { Source, now, later, floatOn, IO } = require('./streamer.js');
+const { Source, now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
+const { renderer, cons, emptyList, atom } = require('terminal');
 const WebSocket = require('ws');
+
+class WrappedEventEmitter extends EventEmitter {
+  constructor(emitter, emissionCallbackName) {
+    super();
+
+    this[emissionCallbackName] = undefined;
+
+    this.emitter = emitter;
+
+    emitter.on(emissionCallbackName, (message) => this[emissionCallbackName](message));
+  }
+};
 
 connectToInspector(process.argv[2]);
 
@@ -15,6 +29,8 @@ function connectToInspector(sessionHash) {
 
 function startDebugSession(webSocket) {
   console.log("Connection opened");
+
+  startInputCapture();
 
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
@@ -77,7 +93,10 @@ async function programStarted(stream, continuation) {
 }
 
 async function listen(stream) {
-  console.log(data(now(stream))); // !!!
+  if (isMethod(data(now(stream)), "Debugger.paused")) {
+    console.log(data(now(stream)).params.callFrames[0]);
+  }
+  //console.log(data(now(stream))); // !!!
 
   return listen(await later(stream));
 }
@@ -86,6 +105,14 @@ function startDeveloperSession(send) {
   const repl = Readline.createInterface({ input: process.stdin });
 
   repl.on('line', (line) => send(...parseOneLine(line)));
+}
+
+function startInputCapture() {
+  Readline.emitKeypressEvents(process.stdin);
+
+  process.stdin.setRawMode(true);
+
+  return [new WrappedEventEmitter(process.stdin, "onkeypress"), "onkeypress"];
 }
 
 function data(message) {
@@ -114,5 +141,5 @@ function parseOneLine(line) {
   let method, parameters;
   [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
-  return [method, parseJsValue(parameters)];
+  return [method, parseJsValue(parameters ? parameters : "")];
 }
