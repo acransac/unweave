@@ -47,7 +47,7 @@ function enableRuntime(send) {
 }
 
 async function runtimeEnabled(stream) {
-  if (isMethod(data(now(stream)), "Runtime.executionContextCreated")) {
+  if (isMethod(data(value(now(stream))), "Runtime.executionContextCreated")) {
     return stream;
   }
   else {
@@ -62,7 +62,7 @@ function enableDebugger(send) {
 }
 
 async function debuggerEnabled(stream) {
-  if (isResult(data(now(stream)), "debuggerId")) {
+  if (isResult(data(value(now(stream))), "debuggerId")) {
     return stream;
   }
   else {
@@ -77,10 +77,10 @@ function runProgram(send) {
 }
 
 async function programStarted(stream, continuation) {
-  if (isMethod(data(now(stream)), "Debugger.scriptParsed")) {
-    return programStarted(await later(stream), () => data(now(stream)).params.scriptId);
+  if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")) {
+    return programStarted(await later(stream), () => data(value(now(stream))).params.scriptId);
   }
-  else if (isMethod(data(now(stream)), "Debugger.paused")) {
+  else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
     //return floatOn(stream, continuation());
     console.log(`script id: ${continuation()}`); // !!!
 
@@ -92,10 +92,10 @@ async function programStarted(stream, continuation) {
 }
 
 async function listen(stream) {
-  if (isMethod(data(now(stream)), "Debugger.paused")) {
-    console.log(data(now(stream)).params.callFrames[0]);
+  if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+    console.log(data(value(now(stream))).params.callFrames[0]);
   }
-  //console.log(data(now(stream))); // !!!
+  //console.log(data(value(now(stream)l)); // !!!
 
   return listen(await later(stream));
 }
@@ -119,7 +119,7 @@ function mergeEvents(emitters) {
 }
 
 function data(message) {
-  return JSON.parse(message.data);
+  return JSON.parse(message);
 }
 
 function isMethod(message, methodName) {
