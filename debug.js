@@ -32,8 +32,11 @@ function startDebugSession(webSocket) {
 
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
-  Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
-	.withDownstream(async (stream) => listen(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
+  const render = (content) => console.log(content);
+
+  //Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
+  Source.from(mergeEvents([[webSocket, "message"]]), "onevent")
+	.withDownstream(async (stream) => TEST(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
 
@@ -76,18 +79,12 @@ function runProgram(send) {
   return programStarted;
 }
 
-async function programStarted(stream, continuation) {
-  if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")) {
-    return programStarted(await later(stream), () => data(value(now(stream))).params.scriptId);
-  }
-  else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-    //return floatOn(stream, continuation());
-    console.log(`script id: ${continuation()}`); // !!!
-
-    return stream;                               // !!!
+async function programStarted(stream) {
+  if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+    return stream;
   }
   else {
-    return programStarted(await later(stream), continuation);
+    return programStarted(await later(stream));
   }
 }
 
@@ -98,6 +95,43 @@ async function listen(stream) {
   //console.log(data(value(now(stream)l)); // !!!
 
   return listen(await later(stream));
+}
+
+function TEST(send, render) {
+  return async (stream) => loop(await IO(displaySource, render)(IO(pullScriptSource, send)(stream)));
+}
+
+function pullScriptSource(send) {
+  const scriptChecker = scriptId => async (stream) => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
+
+      if (scriptId !== currentScriptId) {
+      	send("Debugger.getScriptSource", {scriptId: currentScriptId});
+      }
+
+      return commit(stream, scriptChecker(currentScriptId));
+    }
+    else {
+      return commit(stream, scriptChecker(scriptId));
+    }
+  }
+
+  return scriptChecker(undefined);
+}
+
+function displaySource(render) {
+  const display = async (stream) => {
+    render(text(stream));
+
+    return commit(stream, display);
+  }
+  
+  return display;
+}
+
+async function loop(stream) {
+  return continuation(stream)(forget(await later(stream)));
 }
 
 function startDeveloperSession(send) {
