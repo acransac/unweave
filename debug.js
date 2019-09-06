@@ -98,7 +98,7 @@ async function listen(stream) {
 }
 
 function TEST(send, render) {
-  return async (stream) => loop(await IO(displaySource, render)(IO(pullScriptSource, send)(stream)));
+  return async (stream) => loop(await IO(displaySource, render)(await IO(pullScriptSource, send)(stream)));
 }
 
 function pullScriptSource(send) {
@@ -107,7 +107,7 @@ function pullScriptSource(send) {
       const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
 
       if (scriptId !== currentScriptId) {
-      	send("Debugger.getScriptSource", {scriptId: currentScriptId});
+        send("Debugger.getScriptSource", {scriptId: currentScriptId});
       }
 
       return commit(stream, scriptChecker(currentScriptId));
@@ -122,7 +122,7 @@ function pullScriptSource(send) {
 
 function displaySource(render) {
   const display = async (stream) => {
-    render(text(stream));
+    render(await text(stream));
 
     return commit(stream, display);
   }
@@ -130,8 +130,14 @@ function displaySource(render) {
   return display;
 }
 
+async function text(stream) {
+  if (isResult(data(value(now(stream))), "scriptSource") {
+    return data(value(now(stream)));
+  }
+}
+
 async function loop(stream) {
-  return continuation(stream)(forget(await later(stream)));
+  return continuation(now(stream))(forget(await later(stream)));
 }
 
 function startDeveloperSession(send) {
