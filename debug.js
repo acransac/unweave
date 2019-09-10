@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const parseJsValue = require('./jsvalueparser.js');
 const Readline = require('readline');
 const { Source, now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
-const { renderer, cons, emptyList, atom } = require('terminal');
+const { renderer, compose, show, cons, emptyList, atom, sizeHeight, vindent } = require('terminal');
 const WebSocket = require('ws');
 
 class MergedEventEmitters extends EventEmitter {
@@ -32,7 +32,7 @@ function startDebugSession(webSocket) {
 
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
-  const render = (content) => console.log(content);
+  const render = renderer();
 
   //Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
   Source.from(mergeEvents([[webSocket, "message"]]), "onevent")
@@ -98,7 +98,7 @@ async function listen(stream) {
 }
 
 function TEST(send, render) {
-  return async (stream) => loop(await IO(displaySource, render)(await IO(pullScriptSource, send)(stream)));
+  return async (stream) => loop(await IO(show, render)(compose(sourceAndDevConsole, scriptSource, developerConsole))(await IO(pullScriptSource, send)(stream)));
 }
 
 function pullScriptSource(send) {
@@ -120,20 +120,34 @@ function pullScriptSource(send) {
   return scriptChecker(undefined);
 }
 
-function displaySource(render) {
-  const display = async (stream) => {
-    render(await text(stream));
-
-    return commit(stream, display);
+function scriptSource(predecessor) {
+  return stream => {
+    if (isResult(data(value(now(stream))), "scriptSource")) {
+      return () => data(value(now(stream))).result.scriptSource;
+    }
+    else {
+      return predecessor ? predecessor : () => "Loading script source";
+    }
   }
-  
-  return display;
 }
 
-async function text(stream) {
-  if (isResult(data(value(now(stream))), "scriptSource") {
-    return data(value(now(stream)));
+function developerConsole(predecessor) {
+  return stream => {
+    if (data(value(now(stream))) === "keypress") {
+      return () => "show";
+    }
+    else {
+      return predecessor ? predecessor : () => "Enter command";
+    }
   }
+}
+
+function fullScreen(f) {
+  return cons(atom(f), emptyList());
+}
+
+function sourceAndDevConsole(f, g) {
+  return cons(sizeHeight(90, atom(f)), cons(vindent(90, sizeHeight(10, atom(g))), emptyList()));
 }
 
 async function loop(stream) {
