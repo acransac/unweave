@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const parseJsValue = require('./jsvalueparser.js');
 const Readline = require('readline');
 const { Source, now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
-const { renderer, compose, show, cons, emptyList, atom, sizeHeight, vindent } = require('terminal');
+const { renderer, compose, show, cons, emptyList, atom, sizeHeight, sizeWidth, indent, vindent } = require('terminal');
 const WebSocket = require('ws');
 
 class MergedEventEmitters extends EventEmitter {
@@ -33,14 +33,15 @@ function startDebugSession(webSocket) {
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
   const render = renderer();
+  //const render = content => {
+  //   console.log(content);
+  //};
 
   //Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
   Source.from(mergeEvents([[webSocket, "message"]]), "onevent")
 	.withDownstream(async (stream) => TEST(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
-
-  //startDeveloperSession(send);
 }
 
 function enableRuntime(send) {
@@ -98,7 +99,11 @@ async function listen(stream) {
 }
 
 function TEST(send, render) {
-  return async (stream) => loop(await IO(show, render)(compose(sourceAndDevConsole, scriptSource, developerConsole))(await IO(pullScriptSource, send)(stream)));
+  return async (stream) => {
+    return loop(await IO(show, render)
+	         (compose(developerSession, scriptSource, currentEvent, commandLine))
+	           (await IO(pullScriptSource, send)(stream)));
+    };
 }
 
 function pullScriptSource(send) {
@@ -131,7 +136,13 @@ function scriptSource(predecessor) {
   }
 }
 
-function developerConsole(predecessor) {
+function currentEvent(predecessor) {
+  return stream => () => {
+    data(value(now(stream))).toString();
+  }
+}
+
+function commandLine(predecessor) {
   return stream => {
     if (data(value(now(stream))) === "keypress") {
       return () => "show";
@@ -142,22 +153,18 @@ function developerConsole(predecessor) {
   }
 }
 
-function fullScreen(f) {
-  return cons(atom(f), emptyList());
+function DEBUG(f, g, h) {
+  return `${f} : ${g} : ${h}`;
 }
 
-function sourceAndDevConsole(f, g) {
-  return cons(sizeHeight(90, atom(f)), cons(vindent(90, sizeHeight(10, atom(g))), emptyList()));
+function developerSession(f, g, h) {
+  return cons(sizeWidth(50, sizeHeight(90, atom(f))),
+	      cons(indent(50, sizeWidth(50, sizeHeight(90, atom(g)))),
+		   cons(vindent(90, sizeHeight(10, atom(h))), emptyList())));
 }
 
 async function loop(stream) {
   return continuation(now(stream))(forget(await later(stream)));
-}
-
-function startDeveloperSession(send) {
-  const repl = Readline.createInterface({ input: process.stdin });
-
-  repl.on('line', (line) => send(...parseOneLine(line)));
 }
 
 function inputCapture() {
