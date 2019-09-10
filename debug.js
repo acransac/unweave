@@ -2,7 +2,7 @@ const EventEmitter = require('events');
 const parseJsValue = require('./jsvalueparser.js');
 const Readline = require('readline');
 const { Source, now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
-const { renderer, compose, show, cons, emptyList, atom, sizeHeight, sizeWidth, indent, vindent } = require('terminal');
+const { renderer, compose, show, cons, emptyList, atom, row, sizeHeight, sizeWidth, indent, vindent, inline } = require('terminal');
 const WebSocket = require('ws');
 
 class MergedEventEmitters extends EventEmitter {
@@ -33,13 +33,10 @@ function startDebugSession(webSocket) {
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
   const render = renderer();
-  //const render = content => {
-  //   console.log(content);
-  //};
 
   //Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
   Source.from(mergeEvents([[webSocket, "message"]]), "onevent")
-	.withDownstream(async (stream) => TEST(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
+	.withDownstream(async (stream) => debugSession(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
 }
@@ -89,16 +86,7 @@ async function programStarted(stream) {
   }
 }
 
-async function listen(stream) {
-  if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-    console.log(data(value(now(stream))).params.callFrames[0]);
-  }
-  //console.log(data(value(now(stream)l)); // !!!
-
-  return listen(await later(stream));
-}
-
-function TEST(send, render) {
+function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
 	         (compose(developerSession, scriptSource, currentEvent, commandLine))
@@ -137,9 +125,7 @@ function scriptSource(predecessor) {
 }
 
 function currentEvent(predecessor) {
-  return stream => () => {
-    data(value(now(stream))).toString();
-  }
+  return stream => () => data(value(now(stream))).toString();
 }
 
 function commandLine(predecessor) {
@@ -153,14 +139,9 @@ function commandLine(predecessor) {
   }
 }
 
-function DEBUG(f, g, h) {
-  return `${f} : ${g} : ${h}`;
-}
-
 function developerSession(f, g, h) {
-  return cons(sizeWidth(50, sizeHeight(90, atom(f))),
-	      cons(indent(50, sizeWidth(50, sizeHeight(90, atom(g)))),
-		   cons(vindent(90, sizeHeight(10, atom(h))), emptyList())));
+  return cons(inline(cons(sizeWidth(50, atom(f)), cons(sizeWidth(50, atom(g)), row(90)))),
+              cons(cons(atom(h), vindent(90, row(10))), emptyList()));
 }
 
 async function loop(stream) {
