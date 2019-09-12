@@ -33,9 +33,9 @@ function startDebugSession(webSocket) {
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
   const render = renderer();
+  //const render = (message) => console.log(message);
 
-  //Source.from(mergeEvents([[inputCapture(), "keypress"], [webSocket, "message"]]), "onevent")
-  Source.from(mergeEvents([[webSocket, "message"]]), "onevent")
+  Source.from(mergeEvents([[inputCapture(), "input"], [webSocket, "message"]]), "onevent")
 	.withDownstream(async (stream) => debugSession(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
@@ -89,9 +89,13 @@ async function programStarted(stream) {
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, currentEvent, commandLine))
+	         (compose(developerSession, scriptSource, currentEvent, IO(commandLine, send)))
 	           (await IO(pullScriptSource, send)(stream)));
     };
+}
+
+function DEBUG(f, g, h) {
+  return `${f} : ${g} : ${h}`;
 }
 
 function pullScriptSource(send) {
@@ -125,13 +129,30 @@ function scriptSource(predecessor) {
 }
 
 function currentEvent(predecessor) {
-  return stream => () => data(value(now(stream))).toString();
+  return stream => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      return () => "Method: Debugger.paused";
+    }
+    else {
+      return () => JSON.stringify(data(value(now(stream))));
+    }
+  }
 }
 
-function commandLine(predecessor) {
-  return stream => {
-    if (data(value(now(stream))) === "keypress") {
-      return () => "show";
+function commandLine(send) {
+  return predecessor => stream => {
+    if (isInput(data(value(now(stream))))) {
+      if (predecessor() === "Enter command") {
+        return () => data(value(now(stream))).input;
+      }
+      else if (data(value(now(stream))).input === "\r") {
+        send(...parseOneLine(predecessor()));
+
+        return () => "Enter command";
+      }
+      else {
+        return () => `${predecessor()}${data(value(now(stream))).input}`;
+      }
     }
     else {
       return predecessor ? predecessor : () => "Enter command";
@@ -145,13 +166,15 @@ function developerSession(f, g, h) {
 }
 
 async function loop(stream) {
-  return continuation(now(stream))(forget(await later(stream)));
+  return loop(await continuation(now(stream))(forget(await later(stream))));
 }
 
 function inputCapture() {
   Readline.emitKeypressEvents(process.stdin);
 
   process.stdin.setRawMode(true);
+
+  process.stdin.on('keypress', (key) => process.stdin.emit('input', JSON.stringify({input: key})));
 
   return process.stdin;
 }
@@ -180,6 +203,10 @@ function isResult(message, resultName) {
   else {
     return false;
   }
+}
+
+function isInput(message) {
+  return message.hasOwnProperty("input");
 }
 
 function parseOneLine(line) {
