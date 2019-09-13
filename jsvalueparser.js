@@ -32,13 +32,29 @@ jsonString.substring(1));
 function lexAtom(tokens, jsonString) {
   let atom, rest;
   if (jsonString[0] === "\"") {
-    [atom, rest] = jsonString.match(/^"(.*?)"|[^\1]+/g);
+    [atom, rest] = lexStringAtom(jsonString);
   }
   else {
     [atom, rest] = jsonString.match(/^([^:,\s\]\}]+)|[^\1]+/g);
   }
 
   return [[...tokens, `Atom: ${atom}`], rest === undefined ? "" : rest];
+}
+
+function lexStringAtom(jsonString) {
+  return lexStringAtomImpl("\"", jsonString.slice(1));
+}
+
+function lexStringAtomImpl(stringAtom, jsonString) {
+  if (jsonString[0] === "\"") {
+    return [`${stringAtom}"`, jsonString.slice(1)];
+  }
+  if (jsonString.startsWith("\\\"")) {
+    return lexStringAtomImpl(`${stringAtom}"`, jsonString.slice(2));
+  }
+  else {
+    return lexStringAtomImpl(`${stringAtom}${jsonString[0]}`, jsonString.slice(1));
+  }
 }
 
 function syntaxJsValue(tokens) {
