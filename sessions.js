@@ -6,7 +6,7 @@ function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
 	         (compose(developerSession, scriptSource, currentEvent, IO(commandLine, send)))
-	           (await IO(pullScriptSource, send)(stream)));
+	           (await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream))));
     };
 }
 
@@ -31,6 +31,23 @@ function pullScriptSource(send) {
   }
 
   return scriptChecker(undefined);
+}
+
+function pullEnvironment(send) {
+  const environmentChecker = async (stream) => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      const environmentRemoteObject = data(value(now(stream))).params.callFrames[0].scopeChain[0].object.objectId;
+
+      send("Runtime.getProperties", {objectId: 1});
+
+      return commit(stream, environmentChecker);
+    }
+    else {
+      return commit(stream, environmentChecker);
+    }
+  };
+
+  return environmentChecker;
 }
 
 function scriptSource(predecessor) {
