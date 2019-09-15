@@ -5,8 +5,8 @@ const { emptyList, cons, atom, compose, show, row, vindent, sizeWidth, inline } 
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, environment, IO(commandLine, send)))
-	           (await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream))));
+	         (compose(developerSession, scriptSource, environment, commandLine))
+	           (await IO(queryInspector, send)(await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream)))));
     };
 }
 
@@ -50,6 +50,29 @@ function pullEnvironment(send) {
   return environmentChecker;
 }
 
+function queryInspector(send) {
+  const requester = query => async (stream) => {
+    if (isInput(data(value(now(stream))))) {
+      if (data(value(now(stream))).input === "\x7f") { // If backspace is delete
+        return commit(stream, requester(query.slice(0, -1)));
+      }
+      else if (data(value(now(stream))).input === "\r") {
+        send(...parseOneLine(query));
+
+        return commit(stream, requester(""));
+      }
+      else {
+        return commit(stream, requester(`${query}${data(value(now(stream))).input}`));
+      }
+    }
+    else {
+      return commit(stream, requester(query));
+    }
+  };
+
+  return requester("");
+}
+
 function scriptSource(predecessor) {
   return stream => {
     if (isResult(data(value(now(stream))), "scriptSource")) {
@@ -72,8 +95,8 @@ function environment(predecessor) {
   }
 }
 
-function commandLine(send) {
-  return predecessor => stream => {
+function commandLine(predecessor) {
+  return stream => {
     if (isInput(data(value(now(stream))))) {
       if (predecessor() === "Enter command") {
         return () => data(value(now(stream))).input;
@@ -82,8 +105,6 @@ function commandLine(send) {
         return () => predecessor().slice(0, -1);
       }
       else if (data(value(now(stream))).input === "\r") {
-        send(...parseOneLine(predecessor()));
-
         return () => "Enter command";
       }
       else {
