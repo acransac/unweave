@@ -5,7 +5,7 @@ const { emptyList, cons, atom, compose, show, row, vindent, sizeWidth, inline } 
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, currentEvent, IO(commandLine, send)))
+	         (compose(developerSession, scriptSource, environment, IO(commandLine, send)))
 	           (await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream))));
     };
 }
@@ -38,7 +38,7 @@ function pullEnvironment(send) {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
       const environmentRemoteObject = data(value(now(stream))).params.callFrames[0].scopeChain[0].object.objectId;
 
-      send("Runtime.getProperties", {objectId: 1});
+      send("Runtime.getProperties", {objectId: environmentRemoteObject});
 
       return commit(stream, environmentChecker);
     }
@@ -61,16 +61,13 @@ function scriptSource(predecessor) {
   }
 }
 
-function currentEvent(predecessor) {
+function environment(predecessor) {
   return stream => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => `${predecessor ? predecessor() : ""} \n` + data(value(now(stream))).params.callFrames[0].scopeChain[0].object.objectId.toString();
-    }
-    else if (isInput(data(value(now(stream))))) {
-      return () => `${predecessor ? predecessor() : ""}`
+    if (isResult(data(value(now(stream))), "result")) {
+      return () => describeEnvironment(data(value(now(stream))).result.result);
     }
     else {
-      return () => `${predecessor ? predecessor() : ""} \n` + JSON.stringify(data(value(now(stream))));
+      return predecessor ? predecessor : () => "Loading environment";
     }
   }
 }
@@ -97,6 +94,14 @@ function commandLine(send) {
       return predecessor ? predecessor : () => "Enter command";
     }
   }
+}
+
+function describeEnvironment(values) {
+  return values.filter(item => !(item.name === "exports" || item.name === "require" || item.name === "module"
+			               || item.name === "__filename" || item.name === "__dirname"))
+               .reduce((description, item) => {
+    return `${description}${item.value.type} ${item.name}${item.value  === "undefined" ? "" : ": " + item.value.value}\n`;
+  }, "");
 }
 
 function developerSession(f, g, h) {
