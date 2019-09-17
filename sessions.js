@@ -1,11 +1,11 @@
 const { parseOneLine, isMethod, isResult, isInput, data } = require('./messages.js');
 const { now, later, value, continuation, commit, forget, IO } = require('streamer');
-const { emptyList, cons, atom, compose, show, row, vindent, sizeWidth, inline } = require('terminal');
+const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, environment, commandLine))
+	         (compose(developerSession, scriptSource, environment, commandLine, messages))
 	           (await IO(queryInspector, send)(await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream)))));
     };
 }
@@ -117,6 +117,10 @@ function commandLine(predecessor) {
   }
 }
 
+function messages(predecessor) {
+  return stream => predecessor ? predecessor : () => "Waiting";
+}
+
 function describeEnvironment(values) {
   return values.filter(item => !(item.name === "exports" || item.name === "require" || item.name === "module"
 			               || item.name === "__filename" || item.name === "__dirname"))
@@ -125,9 +129,11 @@ function describeEnvironment(values) {
   }, "");
 }
 
-function developerSession(f, g, h) {
-  return cons(inline(cons(sizeWidth(50, atom(f)), cons(sizeWidth(50, atom(g)), row(90)))),
-              cons(cons(atom(h), vindent(90, row(10))), emptyList()));
+function developerSession(f, g, h, i) {
+  //return cons(inline(cons(sizeWidth(50, atom(f)), cons(sizeWidth(50, atom(g)), row(90)))),
+              //cons(cons(atom(h), vindent(90, row(10))), emptyList()));
+
+  return cons(cons(sizeWidth(50, atom(f)), cons(cons(sizeHeight(50, atom(g)), cons(vindent(50, sizeHeight(50, atom(i))), indent(50, column(50)))), row(90))), cons(cons(atom(h), vindent(90, row(10))), emptyList()));
 }
 
 async function loop(stream) {
