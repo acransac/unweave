@@ -10,8 +10,8 @@ function debugSession(send, render) {
     };
 }
 
-function DEBUG(f, g, h) {
-  return `${f} : ${g} : ${h}`;
+function DEBUG(f, g, h, i, j) {
+  return `${scriptSourceWithLocation(f, g)}\n${h}\n${i}\n${j}`;
 }
 
 function pullScriptSource(send) {
@@ -148,7 +148,9 @@ function describeEnvironment(values) {
 }
 
 function scriptSourceWithLocation(scriptSource, lineNumber) {
-  return `${scriptSource}\n${lineNumber === undefined ? "Waiting for location" : lineNumber}`;
+  return scriptSource.split("\n").reduce(([currentLineNumber, formattedSource], line) =>
+    [currentLineNumber + 1,
+     `${formattedSource === "" ? "" : formattedSource + "\n"} ${currentLineNumber === lineNumber ? "> " + line : "  " + line}`], [0, ""])[1];
 }
 
 function developerSession(source, line, environment, messages, command) {
