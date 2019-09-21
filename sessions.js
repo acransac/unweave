@@ -5,7 +5,7 @@ const { emptyList, cons, atom, compose, show, column, row, indent, vindent, size
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, environment, commandLine, messages))
+	         (compose(developerSession, scriptSource, runLocation, environment, messages, commandLine))
 	           (await IO(queryInspector, send)(await IO(pullEnvironment, send)(await IO(pullScriptSource, send)(stream)))));
     };
 }
@@ -84,6 +84,17 @@ function scriptSource(predecessor) {
   }
 }
 
+function runLocation(predecessor) {
+  return stream => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      return () => data(value(now(stream))).params.callFrames[0].location.lineNumber;
+    }
+    else {
+      return predecessor ? predecessor : () => undefined;
+    }
+  };
+}
+
 function environment(predecessor) {
   return stream => {
     if (isResult(data(value(now(stream))), "result")) {
@@ -118,7 +129,14 @@ function commandLine(predecessor) {
 }
 
 function messages(predecessor) {
-  return stream => predecessor ? predecessor : () => "Waiting";
+  return stream => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      return () => `${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
+    }
+    else {
+      return predecessor ? predecessor : () => "Waiting";
+    }
+  };
 }
 
 function describeEnvironment(values) {
@@ -129,11 +147,15 @@ function describeEnvironment(values) {
   }, "");
 }
 
-function developerSession(f, g, h, i) {
+function scriptSourceWithLocation(scriptSource, lineNumber) {
+  return `${scriptSource}\n${lineNumber === undefined ? "Waiting for location" : lineNumber}`;
+}
+
+function developerSession(source, line, environment, messages, command) {
   //return cons(inline(cons(sizeWidth(50, atom(f)), cons(sizeWidth(50, atom(g)), row(90)))),
               //cons(cons(atom(h), vindent(90, row(10))), emptyList()));
 
-  return cons(cons(sizeWidth(50, atom(f)), cons(cons(sizeHeight(50, atom(g)), cons(vindent(50, sizeHeight(50, atom(i))), indent(50, column(50)))), row(90))), cons(cons(atom(h), vindent(90, row(10))), emptyList()));
+  return cons(cons(sizeWidth(50, atom(scriptSourceWithLocation(source, line))), cons(cons(sizeHeight(50, atom(environment)), cons(vindent(50, sizeHeight(50, atom(messages))), indent(50, column(50)))), row(90))), cons(cons(atom(command), vindent(90, row(10))), emptyList()));
 }
 
 async function loop(stream) {
