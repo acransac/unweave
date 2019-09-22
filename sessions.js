@@ -5,7 +5,13 @@ const { emptyList, cons, atom, compose, show, column, row, indent, vindent, size
 function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
-	         (compose(developerSession, scriptSource, runLocation, environment, messages, commandLine))
+	         (compose(developerSession,
+			  scriptSource,
+			  runLocation,
+			  scriptSourceWindowTopAnchor,
+			  environment,
+			  messages,
+			  commandLine))
 	           (await IO(step, send)
 	             (await IO(queryInspector, send)
 		       (await IO(addBreakpoint, send)
@@ -164,6 +170,20 @@ function scriptSource(predecessor) {
   }
 }
 
+function scriptSourceWindowTopAnchor(predecessor) {
+  return stream => {
+    if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "j") {
+      return () => predecessor() + 1;
+    }
+    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "k") {
+      return () => predecessor() - 1;
+    }
+    else {
+      return predecessor ? predecessor : () => 0;
+    }
+  };
+}
+
 function runLocation(predecessor) {
   return stream => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
@@ -189,15 +209,15 @@ function environment(predecessor) {
 function commandLine(predecessor) {
   return stream => {
     if (isBreakpointCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue"
+      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up"
 	                                    : () => `Add breakpoint at line: ${data(value(now(stream))).breakpoint}`;
     }
     else if (isQueryCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue"
+      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up"
 	                                    : () => `Query Inspector: ${data(value(now(stream))).query}`;
     }
     else {
-      return predecessor ? predecessor : () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue";
+      return predecessor ? predecessor : () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
     }
   };
 }
@@ -221,17 +241,31 @@ function describeEnvironment(values) {
   }, "");
 }
 
-function scriptSourceWithLocation(scriptSource, lineNumber) {
-  return scriptSource.split("\n").reduce(([currentLineNumber, formattedSource], line) =>
-    [currentLineNumber + 1,
-     `${formattedSource === "" ? "" : formattedSource + "\n"} ${currentLineNumber === lineNumber ? "> " + line : "  " + line}`], [0, ""])[1];
+function scriptSourceWithLocation(scriptSource, lineNumber, scriptSourceWindowTopAnchor) {
+  return scriptSource.split("\n")
+		     .map((line, lineId) => ` ${lineId === lineNumber ? "> " + line : "  " + line}`)
+	             .slice(scriptSourceWindowTopAnchor)
+	             .reduce((formattedVisibleSource, line) =>
+		       `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`,
+			"");
 }
 
-function developerSession(source, line, environment, messages, command) {
-  //return cons(inline(cons(sizeWidth(50, atom(f)), cons(sizeWidth(50, atom(g)), row(90)))),
-              //cons(cons(atom(h), vindent(90, row(10))), emptyList()));
-
-  return cons(cons(sizeWidth(50, atom(scriptSourceWithLocation(source, line))), cons(cons(sizeHeight(50, atom(environment)), cons(vindent(50, sizeHeight(50, atom(messages))), indent(50, column(50)))), row(90))), cons(cons(atom(command), vindent(90, row(10))), emptyList()));
+function developerSession(source, line, sourceWindowTopAnchor, environment, messages, command) {
+  return cons
+	   (cons
+	     (sizeWidth(50, atom(scriptSourceWithLocation(source, line, sourceWindowTopAnchor))),
+	      cons
+	        (cons
+	          (sizeHeight(50, atom(environment)),
+	           cons
+	             (vindent(50, sizeHeight(50, atom(messages))),
+		     indent(50, column(50)))),
+		 row(90))),
+	    cons
+	      (cons
+	        (atom(command),
+ 		 vindent(90, row(10))),
+	       emptyList()));
 }
 
 async function loop(stream) {
