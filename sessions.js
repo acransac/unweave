@@ -6,11 +6,12 @@ function debugSession(send, render) {
   return async (stream) => {
     return loop(await IO(show, render)
 	         (compose(developerSession, scriptSource, runLocation, environment, messages, commandLine))
-	           (await IO(queryInspector, send)
-		     (await IO(addBreakpoint, send)
-		       (await IO(pullEnvironment, send)
-		         (await IO(pullScriptSource, send)
-			   (await parseUserInput(stream)))))));
+	           (await IO(step, send)
+	             (await IO(queryInspector, send)
+		       (await IO(addBreakpoint, send)
+		         (await IO(pullEnvironment, send)
+		           (await IO(pullScriptSource, send)
+		  	     (await parseUserInput(stream))))))));
     };
 }
 
@@ -113,6 +114,27 @@ function queryInspector(send) {
   return requester;
 }
 
+function step(send) {
+  const stepper = async (stream) => {
+    if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "n") {
+      send("Debugger.stepOver", {});
+    }
+    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "s") {
+      send("Debugger.stepInto", {});
+    }
+    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "c") {
+      send("Debugger.resume", {});
+    }
+    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "f") {
+      send("Debugger.stepOut", {});
+    }
+
+    return commit(stream, stepper);
+  };
+
+  return stepper;
+}
+
 function addBreakpoint(send) {
   const breakpointSetter = scriptId => async (stream) => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
@@ -167,15 +189,15 @@ function environment(predecessor) {
 function commandLine(predecessor) {
   return stream => {
     if (isBreakpointCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint"
+      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue"
 	                                    : () => `Add breakpoint at line: ${data(value(now(stream))).breakpoint}`;
     }
     else if (isQueryCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint"
+      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue"
 	                                    : () => `Query Inspector: ${data(value(now(stream))).query}`;
     }
     else {
-      return predecessor ? predecessor : () => "q: Query Inspector  b: Add breakpoint";
+      return predecessor ? predecessor : () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue";
     }
   };
 }

@@ -1,5 +1,7 @@
-const a = "test";
+const getA = require('./plastronImports.js');
 
-console.log(a);
+const test = "test";
+
+const a = getA();
 
 const b = "control";
