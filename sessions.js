@@ -173,13 +173,23 @@ function scriptSource(predecessor) {
 function scriptSourceWindowTopAnchor(predecessor) {
   return stream => {
     if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "j") {
-      return () => predecessor() + 1;
+      return () => { return {scriptId: predecessor().scriptId, topLine: predecessor().topLine + 1}; };
     }
     else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "k") {
-      return () => predecessor() - 1;
+      return () => { return {scriptId: predecessor().scriptId, topLine: predecessor().topLine - 1}; };
+    }
+    else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      const currentLocation = data(value(now(stream))).params.callFrames[0].location;
+
+      if (!predecessor || currentLocation.scriptId !== predecessor().scriptId) {
+        return () => { return {scriptId: currentLocation.scriptId, topLine: Math.max(currentLocation.lineNumber - 3, 0)}; }
+      }
+      else {
+        return predecessor;
+      }
     }
     else {
-      return predecessor ? predecessor : () => 0;
+      return predecessor ? predecessor : () => { return {scriptId: undefined, topLine: 0}; };
     }
   };
 }
@@ -244,7 +254,7 @@ function describeEnvironment(values) {
 function scriptSourceWithLocation(scriptSource, lineNumber, scriptSourceWindowTopAnchor) {
   return scriptSource.split("\n")
 		     .map((line, lineId) => ` ${lineId === lineNumber ? "> " + line : "  " + line}`)
-	             .slice(scriptSourceWindowTopAnchor)
+	             .slice(scriptSourceWindowTopAnchor.topLine)
 	             .reduce((formattedVisibleSource, line) =>
 		       `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`,
 			"");
