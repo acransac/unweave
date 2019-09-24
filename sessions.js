@@ -9,6 +9,7 @@ function debugSession(send, render) {
 			  scriptSource,
 			  runLocation,
 			  scriptSourceWindowTopAnchor,
+			  breakpoints,
 			  environment,
 			  messages,
 			  commandLine))
@@ -21,8 +22,8 @@ function debugSession(send, render) {
     };
 }
 
-function DEBUG(f, g, h, i, j) {
-  return `${scriptSourceWithLocation(f, g)}\n${h}\n${i}\n${j}`;
+function DEBUG(f, g, h, i, j, k, l) {
+  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${j}\n${k}\n${l}`;
 }
 
 async function parseUserInput(stream) {
@@ -197,10 +198,33 @@ function scriptSourceWindowTopAnchor(predecessor) {
 function runLocation(predecessor) {
   return stream => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => data(value(now(stream))).params.callFrames[0].location.lineNumber;
+      const executionLocation = data(value(now(stream))).params.callFrames[0].location;
+
+      return () => { return {scriptId: executionLocation.scriptId, lineNumber: executionLocation.lineNumber}; };
     }
     else {
-      return predecessor ? predecessor : () => undefined;
+      return predecessor ? predecessor : () => { return {scriptId: undefined, lineNumber: undefined }; };
+    }
+  };
+}
+
+function breakpoints(predecessor) {
+  return stream => {
+    if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
+      return () => {
+        return {scriptId: predecessor().scriptId,
+		breakpoints: [...predecessor().breakpoints, {scriptId: predecessor().scriptId,
+			                                     lineNumber: Number(data(value(now(stream))).breakpoint)}]};
+      };
+    }
+    else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      return () => {
+        return {scriptId: data(value(now(stream))).params.callFrames[0].location.scriptId,
+	        breakpoints: predecessor ? predecessor().breakpoints : []};
+      };
+    }
+    else {
+      return predecessor ? predecessor : () => { return {scriptId: undefined, breakpoints: []}; };
     }
   };
 }
@@ -251,19 +275,40 @@ function describeEnvironment(values) {
   }, "");
 }
 
-function scriptSourceWithLocation(scriptSource, lineNumber, scriptSourceWindowTopAnchor) {
-  return scriptSource.split("\n")
-		     .map((line, lineId) => ` ${lineId === lineNumber ? "> " + line : "  " + line}`)
-	             .slice(scriptSourceWindowTopAnchor.topLine)
-	             .reduce((formattedVisibleSource, line) =>
-		       `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`,
-			"");
+function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSourceWindowTopAnchor, breakpointLocations) {
+  const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineId) => {
+    if (originalLines.length === 0) {
+      return formattedLines;
+    }
+    else {
+      const hasBreakpoint = !(breakpoints.length === 0) && breakpoints[0].lineNumber === originalLineId;
+
+      const isCurrentExecutionLocation = location.lineNumber === originalLineId;
+
+      return formatScriptSource(
+        [...formattedLines, `${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
+        hasBreakpoint ? breakpoints.slice(1) : breakpoints,
+        originalLines.slice(1),
+        originalLineId + 1);
+    }
+  };
+
+  return formatScriptSource([],
+	                    breakpointLocations.breakpoints.filter(({scriptId, lineNumber}) => scriptId === location.scriptId)
+	                                                   .sort(({scriptIdA, lineNumberA}, {scriptIdB, lineNumberB}) =>
+				                             lineNumberA - lineNumberB),
+	                    scriptSource.split("\n"),
+	                    0)
+	   .slice(scriptSourceWindowTopAnchor.topLine)
+	   .reduce((formattedVisibleSource, line) =>
+             `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`,
+	     "");
 }
 
-function developerSession(source, line, sourceWindowTopAnchor, environment, messages, command) {
+function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, command) {
   return cons
 	   (cons
-	     (sizeWidth(50, atom(scriptSourceWithLocation(source, line, sourceWindowTopAnchor))),
+	     (sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source, location, sourceWindowTopAnchor, breakpoints))),
 	      cons
 	        (cons
 	          (sizeHeight(50, atom(environment)),
