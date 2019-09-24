@@ -45,6 +45,10 @@ function isQueryCapture(message) {
   return message.hasOwnProperty("query");
 }
 
+function isMessagesFocus(message) {
+  return message.hasOwnProperty("focusMessages");
+}
+
 function parseOneLine(line) {
   let method, parameters;
   [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
@@ -52,4 +56,4 @@ function parseOneLine(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { inputCapture, parseOneLine, data, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture };
+module.exports = { inputCapture, parseOneLine, data, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus };

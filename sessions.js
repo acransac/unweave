@@ -1,4 +1,4 @@
-const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, data } = require('./messages.js');
+const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, data } = require('./messages.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
@@ -12,13 +12,14 @@ function debugSession(send, render) {
 			  breakpoints,
 			  environment,
 			  messages,
+			  messagesWindowTopAnchor,
 			  commandLine))
 	           (await IO(step, send)
 	             (await IO(queryInspector, send)
 		       (await IO(addBreakpoint, send)
 		         (await IO(pullEnvironment, send)
 		           (await IO(pullScriptSource, send)
-		  	     (await parseUserInput(stream))))))));
+		  	     (await changeMode(stream))))))));
     };
 }
 
@@ -26,47 +27,45 @@ function DEBUG(f, g, h, i, j, k, l) {
   return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${j}\n${k}\n${l}`;
 }
 
-async function parseUserInput(stream) {
+async function changeMode(stream) {
   const modalCapture = (category, continuation) => {
-    const parser = input => async (stream) => {
+    const modeSetter = async (stream) => {
       if (isInput(data(value(now(stream))))) {
-        if (data(value(now(stream))).input === "\x7f") { // If backspace is delete
-          return floatOn(commit(stream, parser(input.slice(0, -1))), JSON.stringify(
-	    Object.fromEntries([[category, input.slice(0, -1)], ["ended", false]])
-	  ));
-        }
-        else if (data(value(now(stream))).input === "\r") {
+        if (data(value(now(stream))).input === "\r") {
           return floatOn(commit(stream, continuation), JSON.stringify(
-	    Object.fromEntries([[category, input], ["ended", true]])
+	    Object.fromEntries([[category, data(value(now(stream))).input], ["ended", true]])
 	  ));
         }
         else {
-          return floatOn(commit(stream, parser(`${input}${data(value(now(stream))).input}`)), JSON.stringify(
-	    Object.fromEntries([[category, `${input}${data(value(now(stream))).input}`], ["ended", false]])
+          return floatOn(commit(stream, modeSetter), JSON.stringify(
+	    Object.fromEntries([[category, data(value(now(stream))).input], ["ended", false]])
 	  ));
         }
       }
       else {
-        return commit(stream, parser(input));
+        return commit(stream, modeSetter);
       }
     };
 
-    return parser("");
+    return modeSetter;
   };
 
   if (isInput(data(value(now(stream))))) {
     if (data(value(now(stream))).input === "q") {
-      return floatOn(commit(stream, modalCapture("query", parseUserInput)), JSON.stringify({query: ""}));
+      return floatOn(commit(stream, modalCapture("query", changeMode)), JSON.stringify({query: "", ended: false}));
     }
     else if (data(value(now(stream))).input === "b") {
-      return floatOn(commit(stream, modalCapture("breakpoint", parseUserInput)), JSON.stringify({breakpoint: ""}));
+      return floatOn(commit(stream, modalCapture("breakpoint", changeMode)), JSON.stringify({breakpoint: "", ended: false}));
+    }
+    else if (data(value(now(stream))).input === "m") {
+      return floatOn(commit(stream, modalCapture("focusMessages", changeMode)), JSON.stringify({focusMessages: "", ended: false}));
     }
     else {
-      return commit(stream, parseUserInput);
+      return commit(stream, changeMode);
     }
   }
   else {
-    return commit(stream, parseUserInput);
+    return commit(stream, changeMode);
   }
 }
 
@@ -107,18 +106,21 @@ function pullEnvironment(send) {
 }
 
 function queryInspector(send) {
-  const requester = async (stream) => {
-    if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send(...parseOneLine(data(value(now(stream))).query));
+  const requester = query => async (stream) => {
+    if (isQueryCapture(data(value(now(stream))) && !data(value(now(stream))).ended)) {
+      return commit(stream, requester(parseUserInput(query, data(value(now(stream))).query)));
+    }
+    else if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
+      send(...parseOneLine(query));
 
-      return commit(stream, requester);
+      return commit(stream, requester(""));
     }
     else {
-      return commit(stream, requester);
+      return commit(stream, requester(query));
     }
   };
 
-  return requester;
+  return requester("");
 }
 
 function step(send) {
@@ -143,21 +145,26 @@ function step(send) {
 }
 
 function addBreakpoint(send) {
-  const breakpointSetter = scriptId => async (stream) => {
+  const breakpointSetter = scriptId => line => async (stream) => {
+    console.log(line);
+
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return commit(stream, breakpointSetter(data(value(now(stream))).params.callFrames[0].location.scriptId));
+      return commit(stream, breakpointSetter(data(value(now(stream))).params.callFrames[0].location.scriptId)(line));
+    }
+    else if (isBreakpointCapture(data(value(now(stream)))) && !data(value(now(stream))).ended) {
+      return commit(stream, breakpointSetter(scriptId)(parseUserInput(line, data(value(now(stream))).breakpoint)));
     }
     else if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: Number(data(value(now(stream))).breakpoint)}});
+      send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: Number(line)}});
 
-      return commit(stream, breakpointSetter(scriptId));
+      return commit(stream, breakpointSetter(scriptId)(""));
     }
     else {
-      return commit(stream, breakpointSetter(scriptId));
+      return commit(stream, breakpointSetter(scriptId)(line));
     }
   };
 
-  return breakpointSetter(undefined);
+  return breakpointSetter(undefined)("");
 }
 
 function scriptSource(predecessor) {
@@ -242,16 +249,18 @@ function environment(predecessor) {
 
 function commandLine(predecessor) {
   return stream => {
+    const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
+
     if (isBreakpointCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up"
-	                                    : () => `Add breakpoint at line: ${data(value(now(stream))).breakpoint}`;
+      return data(value(now(stream))).ended ? () => defaultMessage
+	                                    : () => `Add breakpoint at line: ${parseUserInput(predecessor(), data(value(now(stream))).breakpoint)}`;
     }
     else if (isQueryCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up"
-	                                    : () => `Query Inspector: ${data(value(now(stream))).query}`;
+      return data(value(now(stream))).ended ? () => defaultMessage
+	                                    : () => `Query Inspector: ${parseUserInput(predecessor(), data(value(now(stream))).query)}`;
     }
     else {
-      return predecessor ? predecessor : () => "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
+      return predecessor ? predecessor : () => defaultMessage;
     }
   };
 }
@@ -259,12 +268,38 @@ function commandLine(predecessor) {
 function messages(predecessor) {
   return stream => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => `${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
+      return () => `${predecessor === undefined ? "" : predecessor() + "\n"}${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
     }
     else {
       return predecessor ? predecessor : () => "Waiting";
     }
   };
+}
+
+function messagesWindowTopAnchor(predecessor) {
+  return stream => {
+    if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "j") {
+      return () => predecessor() + 1;
+    }
+    else if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "k") {
+      return () => predecessor() - 1;
+    }
+    else {
+      return predecessor ? predecessor : () => 0;
+    }
+  };
+}
+
+function parseUserInput(parsed, currentInput) {
+  if (currentInput === "\x7f") { // If backspace is delete
+    return parsed.slice(0, -1);
+  }
+  else if (currentInput === "\r") {
+    return parsed;
+  }
+  else {
+    return `${parsed}${currentInput}`;
+  }
 }
 
 function describeEnvironment(values) {
@@ -305,7 +340,12 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSo
 	     "");
 }
 
-function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, command) {
+function scrollable(content, topLine) {
+  return content.split("\n").slice(topLine).reduce((visibleContent, line) =>
+           `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`, "");
+}
+
+function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command) {
   return cons
 	   (cons
 	     (sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source, location, sourceWindowTopAnchor, breakpoints))),
@@ -313,7 +353,7 @@ function developerSession(source, location, sourceWindowTopAnchor, breakpoints, 
 	        (cons
 	          (sizeHeight(50, atom(environment)),
 	           cons
-	             (vindent(50, sizeHeight(50, atom(messages))),
+	             (vindent(50, sizeHeight(50, atom(scrollable(messages, messagesWindowTopAnchor)))),
 		     indent(50, column(50)))),
 		 row(90))),
 	    cons
