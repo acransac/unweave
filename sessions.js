@@ -19,12 +19,13 @@ function debugSession(send, render) {
 		       (await IO(addBreakpoint, send)
 		         (await IO(pullEnvironment, send)
 		           (await IO(pullScriptSource, send)
-		  	     (await changeMode(stream))))))));
+			     (await parseCaptures()
+		  	       (await changeMode(stream)))))))));
     };
 }
 
-function DEBUG(f, g, h, i, j, k, l) {
-  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${j}\n${k}\n${l}`;
+function DEBUG(f, g, h, i, j, k, l, m) {
+  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${j}\n${k}\n${l}\n${m}`;
 }
 
 async function changeMode(stream) {
@@ -69,6 +70,36 @@ async function changeMode(stream) {
   }
 }
 
+function parseCaptures() {
+  const parser = capture => async (stream) => {
+    if (isBreakpointCapture(data(value(now(stream))))) {
+      if (data(value(now(stream))).ended) {
+        return floatOn(commit(stream, parser("")), JSON.stringify({breakpoint: capture, ended: true}));
+      }
+      else {
+	const newCapture = parseUserInput(capture, data(value(now(stream))).breakpoint);
+
+        return floatOn(commit(stream, parser(newCapture)), JSON.stringify({breakpoint: newCapture, ended: false}));
+      }
+    }
+    else if (isQueryCapture(data(value(now(stream))))) {
+      if (data(value(now(stream))).ended) {
+        return floatOn(commit(stream, parser("")), JSON.stringify({query: capture, ended: true}));
+      }
+      else {
+	const newCapture = parseUserInput(capture, data(value(now(stream))).query);
+
+        return floatOn(commit(stream, parser(newCapture)), JSON.stringify({query: newCapture, ended: false}));
+      }
+    }
+    else {
+      return commit(stream, parser(capture));
+    }
+  };
+
+  return parser("");
+}
+
 function pullScriptSource(send) {
   const scriptChecker = scriptId => async (stream) => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
@@ -106,21 +137,18 @@ function pullEnvironment(send) {
 }
 
 function queryInspector(send) {
-  const requester = query => async (stream) => {
-    if (isQueryCapture(data(value(now(stream))) && !data(value(now(stream))).ended)) {
-      return commit(stream, requester(parseUserInput(query, data(value(now(stream))).query)));
-    }
-    else if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send(...parseOneLine(query));
+  const requester = async (stream) => {
+    if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
+      send(...parseOneLine(data(value(now(stream))).query));
 
-      return commit(stream, requester(""));
+      return commit(stream, requester);
     }
     else {
-      return commit(stream, requester(query));
+      return commit(stream, requester);
     }
   };
 
-  return requester("");
+  return requester;
 }
 
 function step(send) {
@@ -145,26 +173,21 @@ function step(send) {
 }
 
 function addBreakpoint(send) {
-  const breakpointSetter = scriptId => line => async (stream) => {
-    console.log(line);
-
+  const breakpointSetter = scriptId => async (stream) => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return commit(stream, breakpointSetter(data(value(now(stream))).params.callFrames[0].location.scriptId)(line));
-    }
-    else if (isBreakpointCapture(data(value(now(stream)))) && !data(value(now(stream))).ended) {
-      return commit(stream, breakpointSetter(scriptId)(parseUserInput(line, data(value(now(stream))).breakpoint)));
+      return commit(stream, breakpointSetter(data(value(now(stream))).params.callFrames[0].location.scriptId));
     }
     else if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: Number(line)}});
+      send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: Number(data(value(now(stream))).breakpoint)}});
 
-      return commit(stream, breakpointSetter(scriptId)(""));
+      return commit(stream, breakpointSetter(scriptId));
     }
     else {
-      return commit(stream, breakpointSetter(scriptId)(line));
+      return commit(stream, breakpointSetter(scriptId));
     }
   };
 
-  return breakpointSetter(undefined)("");
+  return breakpointSetter(undefined);
 }
 
 function scriptSource(predecessor) {
@@ -253,11 +276,11 @@ function commandLine(predecessor) {
 
     if (isBreakpointCapture(data(value(now(stream))))) {
       return data(value(now(stream))).ended ? () => defaultMessage
-	                                    : () => `Add breakpoint at line: ${parseUserInput(predecessor(), data(value(now(stream))).breakpoint)}`;
+	                                    : () => `Add breakpoint at line: ${data(value(now(stream))).breakpoint}`;
     }
     else if (isQueryCapture(data(value(now(stream))))) {
       return data(value(now(stream))).ended ? () => defaultMessage
-	                                    : () => `Query Inspector: ${parseUserInput(predecessor(), data(value(now(stream))).query)}`;
+	                                    : () => `Query Inspector: ${data(value(now(stream))).query}`;
     }
     else {
       return predecessor ? predecessor : () => defaultMessage;
