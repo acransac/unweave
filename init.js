@@ -61,14 +61,5 @@ async function debuggerEnabled(stream) {
 function runProgram(send) {
   send("Runtime.runIfWaitingForDebugger", {});
 
-  return programStarted;
-}
-
-async function programStarted(stream) {
-  if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-    return stream;
-  }
-  else {
-    return programStarted(await later(stream));
-  }
+  return async (stream) => stream;
 }
