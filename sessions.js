@@ -1,4 +1,5 @@
-const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, data } = require('./messages.js');
+const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTree, data } = require('./messages.js');
+const { parseFilePath, insertInSourceTree } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
@@ -19,8 +20,9 @@ function debugSession(send, render) {
 		       (await IO(addBreakpoint, send)
 		         (await IO(pullEnvironment, send)
 		           (await IO(pullScriptSource, send)
-			     (await parseCaptures()
-		  	       (await changeMode(stream)))))))));
+			     (await parseSourceTree()
+			       (await parseCaptures()
+		  	         (await changeMode(stream))))))))));
     };
 }
 
@@ -100,16 +102,21 @@ function parseCaptures() {
   return parser("");
 }
 
-function buildSourceTree() {
+function parseSourceTree() {
   const builder = sourceTree => async (stream) => {
-    if (isMethod(data(value(now(stream))), "Debugger.scriptParsed") && data(value(now(stream))).url.startsWith("file://")) {
-      const [path, fileName] = parseFilePath(data(value(now(stream))).url.slice("file://".length - 1));
+    if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")
+	  && data(value(now(stream))).params.url.startsWith("file://")) {
+      const [path, fileName] = parseFilePath(data(value(now(stream))).params.url.slice("file://".length));
 
-      const newSourceTree = insertInSourceTree(sourceTree, path, {name: fileName, id: data(value(now(stream))).scriptId});
+      const newSourceTree = insertInSourceTree({root: sourceTree.root ? sourceTree.root : path, branches: sourceTree.branches},
+	                                       path,
+	                                       {name: fileName, id: data(value(now(stream))).scriptId});
 
       return floatOn(commit(stream, builder(newSourceTree)),
-	             JSON.stringify({sourceTree: {root: sourceTree.root ? sourceTree.root : path, 
-			                          branches: newSourceTree.branches}}));
+	             JSON.stringify({sourceTree: {root: newSourceTree.root, branches: newSourceTree.branches}}));
+    }
+    else {
+      return commit(stream, builder(sourceTree));
     }
   };
 
@@ -313,6 +320,11 @@ function messages(predecessor) {
       const script = data(value(now(stream))).params;
 
       return () => `${predecessor === undefined ? "" : predecessor() + "\n"}id: ${script.scriptId}, url: ${script.url}, context: ${script.executionContextId}`;
+    }
+    else if (isSourceTree(data(value(now(stream))))) {
+      const sourceTree = data(value(now(stream))).sourceTree;
+
+      return () => `${predecessor === undefined ? "" : predecessor() + "\n"}root: ${sourceTree.root}, tree: ${JSON.stringify(sourceTree.branches)}`;
     }
     else {
       return predecessor ? predecessor : () => "Waiting";

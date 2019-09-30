@@ -1,4 +1,4 @@
-testSourceTreeParser();
+//testSourceTreeParser();
 
 function testSourceTreeParser() {
   const [pathA, fileNameA] = parseFilePath("file:///A/B/a.js".slice("file://".length));
@@ -70,3 +70,5 @@ function insertInSourceTree(sourceTree, path, file) {
   return {root: sourceTree.root,
 	  branches: insertInSourceTreeImpl(sourceTree.branches, path.slice(sourceTree.root.length).split("/").slice(1), file)};
 }
+
+module.exports = { parseFilePath, insertInSourceTree };
