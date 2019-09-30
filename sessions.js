@@ -226,16 +226,20 @@ function scriptSource(predecessor) {
 
 function scriptSourceWindowTopAnchor(predecessor) {
   return stream => {
+    const scriptId = predecessor ? predecessor().scriptId : undefined;
+
+    const topLine = predecessor ? predecessor().topLine : 0;
+
     if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "j") {
-      return () => { return {scriptId: predecessor().scriptId, topLine: predecessor().topLine + 1}; };
+      return () => { return {scriptId: scriptId, topLine: topLine + 1}; };
     }
     else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "k") {
-      return () => { return {scriptId: predecessor().scriptId, topLine: predecessor().topLine - 1}; };
+      return () => { return {scriptId: scriptId, topLine: topLine - 1}; };
     }
     else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
       const currentLocation = data(value(now(stream))).params.callFrames[0].location;
 
-      if (!predecessor || currentLocation.scriptId !== predecessor().scriptId) {
+      if (!predecessor || currentLocation.scriptId !== scriptId) {
         return () => { return {scriptId: currentLocation.scriptId, topLine: Math.max(currentLocation.lineNumber - 3, 0)}; }
       }
       else {
@@ -263,17 +267,21 @@ function runLocation(predecessor) {
 
 function breakpoints(predecessor) {
   return stream => {
+    const scriptId = predecessor ? predecessor().scriptId : undefined;
+
+    const breakpoints = predecessor ? predecessor().breakpoints : [];
+
     if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
       return () => {
-        return {scriptId: predecessor().scriptId,
-		breakpoints: [...predecessor().breakpoints, {scriptId: predecessor().scriptId,
-			                                     lineNumber: Number(data(value(now(stream))).breakpoint)}]};
+        return {scriptId: scriptId,
+		breakpoints: [...breakpoints, {scriptId: scriptId,
+			                       lineNumber: Number(data(value(now(stream))).breakpoint)}]};
       };
     }
     else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
       return () => {
         return {scriptId: data(value(now(stream))).params.callFrames[0].location.scriptId,
-	        breakpoints: predecessor ? predecessor().breakpoints : []};
+	        breakpoints: breakpoints};
       };
     }
     else {
@@ -313,18 +321,20 @@ function commandLine(predecessor) {
 
 function messages(predecessor) {
   return stream => {
+    const messages = predecessor ? predecessor() : "Waiting";
+
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => `${predecessor === undefined ? "" : predecessor() + "\n"}${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
+      return () => `${predecessor === undefined ? "" : messages + "\n"}${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
     }
     else if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")) {
       const script = data(value(now(stream))).params;
 
-      return () => `${predecessor === undefined ? "" : predecessor() + "\n"}id: ${script.scriptId}, url: ${script.url}, context: ${script.executionContextId}`;
+      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${script.scriptId}, url: ${script.url}, context: ${script.executionContextId}`;
     }
     else if (isSourceTree(data(value(now(stream))))) {
       const sourceTree = data(value(now(stream))).sourceTree;
 
-      return () => `${predecessor === undefined ? "" : predecessor() + "\n"}root: ${sourceTree.root}, tree: ${JSON.stringify(sourceTree.branches)}`;
+      return () => `${predecessor === undefined ? "" : messages + "\n"}root: ${sourceTree.root}, tree: ${JSON.stringify(sourceTree.branches)}`;
     }
     else {
       return predecessor ? predecessor : () => "Waiting";
@@ -334,11 +344,13 @@ function messages(predecessor) {
 
 function messagesWindowTopAnchor(predecessor) {
   return stream => {
+    const topLine = predecessor ? predecessor() : 0;
+
     if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "j") {
-      return () => predecessor() + 1;
+      return () => topLine + 1;
     }
     else if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "k") {
-      return () => predecessor() - 1;
+      return () => topLine - 1;
     }
     else {
       return predecessor ? predecessor : () => 0;
