@@ -1,4 +1,4 @@
-const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTree, data } = require('./messages.js');
+const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./messages.js');
 const { parseFilePath, insertInSourceTree } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
@@ -14,7 +14,9 @@ function debugSession(send, render) {
 			  environment,
 			  messages,
 			  messagesWindowTopAnchor,
-			  commandLine))
+			  commandLine,
+		          sourceTree,
+		          topRightColumnDisplay))
 	           (await IO(step, send)
 	             (await IO(queryInspector, send)
 		       (await IO(addBreakpoint, send)
@@ -26,8 +28,8 @@ function debugSession(send, render) {
     };
 }
 
-function DEBUG(f, g, h, i, j, k, l, m) {
-  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${j}\n${k}\n${l}\n${m}`;
+function DEBUG(f, g, h, i, j, k, l, m, n, o) {
+  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${o(j, k, l, n)}\n${m}`;
 }
 
 async function changeMode(stream) {
@@ -62,6 +64,9 @@ async function changeMode(stream) {
     }
     else if (data(value(now(stream))).input === "m") {
       return floatOn(commit(stream, modalCapture("focusMessages", changeMode)), JSON.stringify({focusMessages: "", ended: false}));
+    }
+    else if (data(value(now(stream))).input === "w") {
+      return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)), JSON.stringify({focusSourceTree: "", ended: false}));
     }
     else {
       return commit(stream, changeMode);
@@ -358,6 +363,43 @@ function messagesWindowTopAnchor(predecessor) {
   };
 }
 
+function sourceTree(predecessor) {
+  return stream => {
+    if (isSourceTree(data(value(now(stream))))) {
+      return () => `${JSON.stringify(data(value(now(stream))).sourceTree)}`
+    }
+    else {
+     return predecessor ? predecessor : () => "Waiting";
+    }
+  }
+}
+
+function topRightColumnDisplay(predecessor) {
+  return stream => {
+    const environmentAndMessagesDisplay = (environment, messages, messagesWindowTopAnchor, sourceTree) => {
+      return cons(
+	       sizeHeight(50, atom(environment)),
+	       cons(
+	         vindent(50, sizeHeight(50, atom(scrollable(messages, messagesWindowTopAnchor)))),
+		 indent(50, column(50))));
+    };
+
+    const sourceTreeDisplay = (environment, messages, messagesWindowTopAnchor, sourceTree) => {
+      return cons(atom(sourceTree), indent(50, column(50)));
+    };
+
+    if (isSourceTreeFocus(data(value(now(stream)))) && !data(value(now(stream))).ended) {
+      return () => sourceTreeDisplay;
+    }
+    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).ended) {
+      return () => environmentAndMessagesDisplay;
+    }
+    else {
+      return predecessor ? predecessor : () => environmentAndMessagesDisplay;
+    }
+  }
+}
+
 function parseUserInput(parsed, currentInput) {
   if (currentInput === "\x7f") { // If backspace is delete
     return parsed.slice(0, -1);
@@ -413,22 +455,18 @@ function scrollable(content, topLine) {
            `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`, "");
 }
 
-function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command) {
-  return cons
-	   (cons
-	     (sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source, location, sourceWindowTopAnchor, breakpoints))),
-	      cons
-	        (cons
-	          (sizeHeight(50, atom(environment)),
-	           cons
-	             (vindent(50, sizeHeight(50, atom(scrollable(messages, messagesWindowTopAnchor)))),
-		     indent(50, column(50)))),
-		 row(90))),
-	    cons
-	      (cons
-	        (atom(command),
- 		 vindent(90, row(10))),
-	       emptyList()));
+function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command, sourceTree, topRightColumnDisplay) {
+  return cons(
+	   cons(
+	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source, location, sourceWindowTopAnchor, breakpoints))),
+	     cons(
+	       topRightColumnDisplay(environment, messages, messagesWindowTopAnchor, sourceTree),
+	       row(90))),
+	   cons(
+	     cons(
+	       atom(command),
+ 	       vindent(90, row(10))),
+	     emptyList()));
 }
 
 async function loop(stream) {
