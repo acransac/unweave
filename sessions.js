@@ -1,5 +1,5 @@
 const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./messages.js');
-const { parseFilePath, insertInSourceTree } = require('./sourceTreeParser.js');
+const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, lookupBranch } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
@@ -365,11 +365,22 @@ function messagesWindowTopAnchor(predecessor) {
 
 function sourceTree(predecessor) {
   return stream => {
+    const sourceTree = predecessor ? predecessor().sourceTree : {root: undefined, branches: []};
+
+    const activeBranch = predecessor ? predecessor().activeBranch : [];
+
+    const selection = predecessor ? predecessor().selection : "";
+
     if (isSourceTree(data(value(now(stream))))) {
-      return () => `${JSON.stringify(data(value(now(stream))).sourceTree)}`
+      return () => { return {sourceTree: data(value(now(stream))).sourceTree,
+	                     activeBranch: lookupBranch(data(value(now(stream))).sourceTree, 
+				                        selection.split("/").slice(-1).join("")),
+	                     selection: selection ? selection : data(value(now(stream))).sourceTree.branches[0].name}; };
     }
     else {
-     return predecessor ? predecessor : () => "Waiting";
+      return predecessor ? predecessor : () => { return {sourceTree: sourceTree,
+	                                                 activeBranch: activeBranch,
+	                                                 selection: selection}; };
     }
   }
 }
@@ -385,7 +396,7 @@ function topRightColumnDisplay(predecessor) {
     };
 
     const sourceTreeDisplay = (environment, messages, messagesWindowTopAnchor, sourceTree) => {
-      return cons(atom(sourceTree), indent(50, column(50)));
+      return cons(atom(writeTree(sourceTree)), indent(50, column(50)));
     };
 
     if (isSourceTreeFocus(data(value(now(stream)))) && !data(value(now(stream))).ended) {
@@ -453,6 +464,19 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSo
 function scrollable(content, topLine) {
   return content.split("\n").slice(topLine).reduce((visibleContent, line) =>
            `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`, "");
+}
+
+function writeTree(visitedSourceTree) {
+  const writeDirectoryEntry = entry => isDirectoryEntry(entry) ? `${directoryName(entry)}\n` : `${entry.name}\n`;
+
+  if (isDirectoryEntry(visitedSourceTree.activeBranch)) {
+    return directoryName(visitedSourceTree.activeBranch)
+             + `\n${directoryContent(visitedSourceTree.activeBranch).map(entry => "  " + writeDirectoryEntry(entry)).join("")}`;
+  }
+  // The active branch is the root of the source tree
+  else {
+    return visitedSourceTree.activeBranch.map(writeDirectoryEntry).join("");
+  }
 }
 
 function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command, sourceTree, topRightColumnDisplay) {

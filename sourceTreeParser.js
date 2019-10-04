@@ -71,4 +71,23 @@ function insertInSourceTree(sourceTree, path, file) {
 	  branches: insertInSourceTreeImpl(sourceTree.branches, path.slice(sourceTree.root.length).split("/").slice(1), file)};
 }
 
-module.exports = { parseFilePath, insertInSourceTree };
+function lookupBranch(sourceTree, path) {
+  const lookupBranchImpl = (sourceTree, path) => {
+    if (path.length === 0) {
+      return sourceTree;
+    }
+    else if (sourceTree.length === 0) {
+      return [];
+    }
+    else if (isDirectoryEntry(sourceTree[0]) && directoryName(sourceTree[0]) === path[0]) {
+      return lookupBranchImpl(directoryContent(sourceTree[0]), path.slice(1));
+    }
+    else {
+      return lookupBranchImpl(sourceTree.slice(1), path);
+    }
+  };
+
+  return lookupBranchImpl(sourceTree.branches, path.split("/").slice(1));
+}
+
+module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, lookupBranch };
