@@ -43,6 +43,18 @@ function isDirectoryEntry(entry) {
            && Array.isArray(entry[1])
 }
 
+function fileName(fileEntry) {
+  return fileEntry.name;
+}
+
+function fileId(fileEntry) {
+  return fileEntry.id;
+}
+
+function entryName(entry) {
+  return isDirectoryEntry(entry) ? directoryName(entry) : fileName(entry);
+}
+
 function insertInSourceTree(sourceTree, path, file) {
   const insertInSourceTreeImpl = (sourceTree, path, file) => {
     if (path.length === 0) {
@@ -90,4 +102,4 @@ function lookupBranch(sourceTree, path) {
   return lookupBranchImpl(sourceTree.branches, path.split("/").slice(1));
 }
 
-module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, lookupBranch };
+module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileName, fileId, entryName, lookupBranch };

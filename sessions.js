@@ -1,5 +1,5 @@
 const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./messages.js');
-const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, lookupBranch } = require('./sourceTreeParser.js');
+const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
@@ -369,13 +369,34 @@ function sourceTree(predecessor) {
 
     const activeBranch = predecessor ? predecessor().activeBranch : [];
 
-    const selection = predecessor ? predecessor().selection : "";
+    const selection = predecessor ? predecessor().selection : {name: "", id: undefined, type: "file"};
 
     if (isSourceTree(data(value(now(stream))))) {
-      return () => { return {sourceTree: data(value(now(stream))).sourceTree,
-	                     activeBranch: lookupBranch(data(value(now(stream))).sourceTree, 
-				                        selection.split("/").slice(-1).join("")),
-	                     selection: selection ? selection : data(value(now(stream))).sourceTree.branches[0].name}; };
+      const newSourceTree = data(value(now(stream))).sourceTree;
+
+      const branchName = (selection => {
+        if (selection.name === "") {
+	  return "";
+	}
+	else if (selection.type === "file") {
+	  return selection.name.split("/").slice(-1).join("");
+	}
+	else {
+	  return selection.name.split("/").join("");
+	}
+      })(selection);
+
+      return () => {
+        return {
+          sourceTree: newSourceTree,
+	  activeBranch: lookupBranch(newSourceTree, branchName),
+	  selection: selection.name !== "" ? selection : {
+	    name: entryName(newSourceTree.branches[0]),
+	    id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
+	    type: !isDirectoryEntry(newSourceTree.branches[0]) ? "file" : "directory"
+	  }
+        };
+      };
     }
     else {
       return predecessor ? predecessor : () => { return {sourceTree: sourceTree,
@@ -467,15 +488,13 @@ function scrollable(content, topLine) {
 }
 
 function writeTree(visitedSourceTree) {
-  const writeDirectoryEntry = entry => isDirectoryEntry(entry) ? `${directoryName(entry)}\n` : `${entry.name}\n`;
-
   if (isDirectoryEntry(visitedSourceTree.activeBranch)) {
     return directoryName(visitedSourceTree.activeBranch)
-             + `\n${directoryContent(visitedSourceTree.activeBranch).map(entry => "  " + writeDirectoryEntry(entry)).join("")}`;
+             + `\n${directoryContent(visitedSourceTree.activeBranch).map(entry => "  " + entryName(entry) + "\n").join("")}`;
   }
   // The active branch is the root of the source tree
   else {
-    return visitedSourceTree.activeBranch.map(writeDirectoryEntry).join("");
+    return visitedSourceTree.activeBranch.map(entry => `${entryName(entry)}\n`).join("");
   }
 }
 
