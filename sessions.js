@@ -374,34 +374,25 @@ function sourceTree(predecessor) {
     if (isSourceTree(data(value(now(stream))))) {
       const newSourceTree = data(value(now(stream))).sourceTree;
 
-      const branchName = (selection => {
-        if (selection.name === "") {
-	  return "";
-	}
-	else if (selection.type === "file") {
-	  return selection.name.split("/").slice(-1).join("");
-	}
-	else {
-	  return selection.name.split("/").join("");
-	}
-      })(selection);
-
       return () => {
         return {
           sourceTree: newSourceTree,
-	  activeBranch: lookupBranch(newSourceTree, branchName),
+	  activeBranch: lookupBranch(newSourceTree, branchName(selection)),
 	  selection: selection.name !== "" ? selection : {
 	    name: entryName(newSourceTree.branches[0]),
 	    id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
-	    type: !isDirectoryEntry(newSourceTree.branches[0]) ? "file" : "directory"
+	    type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
 	  }
         };
       };
     }
+    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
+
+    }
     else {
-      return predecessor ? predecessor : () => { return {sourceTree: sourceTree,
-	                                                 activeBranch: activeBranch,
-	                                                 selection: selection}; };
+      return predecessor ? predecessor : () => {
+        return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
+      };
     }
   }
 }
@@ -488,13 +479,38 @@ function scrollable(content, topLine) {
 }
 
 function writeTree(visitedSourceTree) {
-  if (isDirectoryEntry(visitedSourceTree.activeBranch)) {
-    return directoryName(visitedSourceTree.activeBranch)
-             + `\n${directoryContent(visitedSourceTree.activeBranch).map(entry => "  " + entryName(entry) + "\n").join("")}`;
+  const formatEntry = entry => (entryName(entry) === visitedSourceTree.selection.name.split("/").slice(-1)[0]
+    ? entryName => `\u001b[7m${entryName}\u001b[0m` : entryName => entryName)
+    ((isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan") : entryName => entryName)(entryName(entry)));
+
+  return (branchName(visitedSourceTree.selection) === ""
+    ? `${colourText("root", "blue")}\n`
+    : `${colourText(branchName(visitedSourceTree.selection), "blue")}\n`) 
+    + visitedSourceTree.activeBranch.map(entry => `  ${formatEntry(entry)}\n`).join("");
+}
+
+function branchName(selection) {
+  if (selection.name === "") {
+    return "";
   }
-  // The active branch is the root of the source tree
+  else if (selection.type === "file") {
+    return selection.name.split("/").slice(0, -1).join("");
+  }
   else {
-    return visitedSourceTree.activeBranch.map(entry => `${entryName(entry)}\n`).join("");
+    return selection.name.split("/").join("");
+  }
+}
+
+function colourText(text, colour) {
+  switch (colour) {
+    case 'black': return `\u001b[30m${text}\u001b[0m`;
+    case 'red': return `\u001b[31m${text}\u001b[0m`;
+    case 'green': return `\u001b[32m${text}\u001b[0m`;
+    case 'yellow': return `\u001b[33m${text}\u001b[0m`;
+    case 'blue': return `\u001b[34m${text}\u001b[0m`;
+    case 'magenta': return `\u001b[35m${text}\u001b[0m`;
+    case 'cyan': return `\u001b[36m${text}\u001b[0m`;
+    case 'white': return `\u001b[37m${text}\u001b[0m`;
   }
 }
 
