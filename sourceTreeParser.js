@@ -102,4 +102,37 @@ function lookupBranch(sourceTree, path) {
   return lookupBranchImpl(sourceTree.branches, path.split("/").slice(1));
 }
 
-module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileName, fileId, entryName, lookupBranch };
+function lookupNextInBranch(branch, namedEntry, errorFunction) {
+  if (branch.length === 0) {
+    return errorFunction(namedEntry);
+  }
+  else if (entryName(branch[0]) === namedEntry) {
+    if (branch.length === 1) {
+      return branch[0];
+    }
+    else {
+      return branch[1];
+    }
+  }
+  else {
+    return lookupNextInBranch(branch.slice(1), namedEntry, errorFunction);
+  }
+}
+
+function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
+  const lookupPreviousInBranchImpl = previous => (branch, namedEntry, errorFunction) => {
+    if (branch.length === 0) {
+      return errorFunction(namedEntry);
+    }
+    else if (entryName(branch[0]) === namedEntry) {
+      return previous;
+    }
+    else {
+      return lookupPreviousInBranchImpl(branch[0])(branch.slice(1), namedEntry, errorFunction);
+    }
+  };
+
+  return lookupPreviousInBranchImpl(branch[0])(branch, namedEntry, errorFunction);
+}
+
+module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileName, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch };

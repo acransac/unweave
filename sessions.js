@@ -1,5 +1,5 @@
 const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./messages.js');
-const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch } = require('./sourceTreeParser.js');
+const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
@@ -387,7 +387,34 @@ function sourceTree(predecessor) {
       };
     }
     else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
+      const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
+      return () => {
+	return {
+          sourceTree: sourceTree,
+	  activeBranch: activeBranch,
+	  selection: {
+	    name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
+            id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
+            type: isDirectoryEntry(nextEntry) ? "directory" : "file"
+	  }
+        };
+      };
+    }
+    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "k") {
+      const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
+
+      return () => {
+	return {
+          sourceTree: sourceTree,
+	  activeBranch: activeBranch,
+	  selection: {
+	    name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
+            id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
+            type: isDirectoryEntry(previousEntry) ? "directory" : "file"
+	  }
+        };
+      };
     }
     else {
       return predecessor ? predecessor : () => {
@@ -493,11 +520,8 @@ function branchName(selection) {
   if (selection.name === "") {
     return "";
   }
-  else if (selection.type === "file") {
-    return selection.name.split("/").slice(0, -1).join("");
-  }
   else {
-    return selection.name.split("/").join("");
+    return selection.name.split("/").slice(0, -1).join("");
   }
 }
 
