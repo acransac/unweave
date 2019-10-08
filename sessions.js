@@ -379,7 +379,7 @@ function sourceTree(predecessor) {
           sourceTree: newSourceTree,
 	  activeBranch: lookupBranch(newSourceTree, branchName(selection)),
 	  selection: selection.name !== "" ? selection : {
-	    name: entryName(newSourceTree.branches[0]),
+	    name: `/${entryName(newSourceTree.branches[0])}`,
 	    id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
 	    type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
 	  }
@@ -413,6 +413,45 @@ function sourceTree(predecessor) {
             id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
             type: isDirectoryEntry(previousEntry) ? "directory" : "file"
 	  }
+        };
+      };
+    }
+    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "l") {
+      if (selection.type === "directory") {
+	const newBranch = lookupBranch(sourceTree, selection.name);
+
+        return () => {
+          return {
+            sourceTree: sourceTree,
+            activeBranch: newBranch,
+            selection: {
+              name: `${selection.name}/${entryName(newBranch[0])}`,
+              id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+              type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
+            }
+          };
+        };
+      }
+      else {
+        return predecessor ? predecessor : () => {
+          return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
+        };
+      }
+    }
+    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "h") {
+      const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
+
+      const newBranch = lookupBranch(sourceTree, newBranchName);
+
+      return () => {
+        return {
+          sourceTree: sourceTree,
+          activeBranch: newBranch,
+          selection: {
+            name: `${newBranchName}/${entryName(newBranch[0])}`,
+            id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+            type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
+          }
         };
       };
     }
