@@ -20,11 +20,12 @@ function debugSession(send, render) {
 	           (await IO(step, send)
 	             (await IO(queryInspector, send)
 		       (await IO(addBreakpoint, send)
-		         (await IO(pullEnvironment, send)
-		           (await IO(pullScriptSource, send)
-			     (await parseSourceTree()
-			       (await parseCaptures()
-		  	         (await changeMode(stream))))))))));
+			 (await IO(pullExploredSource, send)
+		           (await IO(pullEnvironment, send)
+		             (await IO(pullScriptSource, send)
+			       (await parseSourceTree()
+			         (await parseCaptures()
+		  	           (await changeMode(stream)))))))))));
     };
 }
 
@@ -115,7 +116,7 @@ function parseSourceTree() {
 
       const newSourceTree = insertInSourceTree({root: sourceTree.root ? sourceTree.root : path, branches: sourceTree.branches},
 	                                       path,
-	                                       {name: fileName, id: data(value(now(stream))).scriptId});
+	                                       {name: fileName, id: data(value(now(stream))).params.scriptId});
 
       return floatOn(commit(stream, builder(newSourceTree)),
 	             JSON.stringify({sourceTree: {root: newSourceTree.root, branches: newSourceTree.branches}}));
@@ -162,6 +163,26 @@ function pullEnvironment(send) {
   };
 
   return environmentChecker;
+}
+
+function pullExploredSource(send) {
+  const sourceExplorer = (sourceTree, activeBranch, selection) => async (stream) => {
+    if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "\r"
+        && selection.type === "file") {
+      send("Debugger.getScriptSource", {scriptId: selection.id});
+
+      return commit(stream, sourceExplorer(sourceTree, activeBranch, selection));
+    }
+    else {
+      const newSourceTreeWithLocation = exploreSourceTree(sourceTree, activeBranch, selection, stream);
+
+      return commit(stream, sourceExplorer(newSourceTreeWithLocation.sourceTree,
+	                                   newSourceTreeWithLocation.activeBranch,
+	                                   newSourceTreeWithLocation.selection));
+    }
+  };
+
+  return sourceExplorer({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"});
 }
 
 function queryInspector(send) {
@@ -371,96 +392,8 @@ function sourceTree(predecessor) {
 
     const selection = predecessor ? predecessor().selection : {name: "", id: undefined, type: "file"};
 
-    if (isSourceTree(data(value(now(stream))))) {
-      const newSourceTree = data(value(now(stream))).sourceTree;
-
-      return () => {
-        return {
-          sourceTree: newSourceTree,
-	  activeBranch: lookupBranch(newSourceTree, branchName(selection)),
-	  selection: selection.name !== "" ? selection : {
-	    name: `/${entryName(newSourceTree.branches[0])}`,
-	    id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
-	    type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
-	  }
-        };
-      };
-    }
-    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
-      const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
-
-      return () => {
-	return {
-          sourceTree: sourceTree,
-	  activeBranch: activeBranch,
-	  selection: {
-	    name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
-            id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
-            type: isDirectoryEntry(nextEntry) ? "directory" : "file"
-	  }
-        };
-      };
-    }
-    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "k") {
-      const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
-
-      return () => {
-	return {
-          sourceTree: sourceTree,
-	  activeBranch: activeBranch,
-	  selection: {
-	    name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
-            id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
-            type: isDirectoryEntry(previousEntry) ? "directory" : "file"
-	  }
-        };
-      };
-    }
-    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "l") {
-      if (selection.type === "directory") {
-	const newBranch = lookupBranch(sourceTree, selection.name);
-
-        return () => {
-          return {
-            sourceTree: sourceTree,
-            activeBranch: newBranch,
-            selection: {
-              name: `${selection.name}/${entryName(newBranch[0])}`,
-              id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-              type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
-            }
-          };
-        };
-      }
-      else {
-        return predecessor ? predecessor : () => {
-          return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
-        };
-      }
-    }
-    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "h") {
-      const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
-
-      const newBranch = lookupBranch(sourceTree, newBranchName);
-
-      return () => {
-        return {
-          sourceTree: sourceTree,
-          activeBranch: newBranch,
-          selection: {
-            name: `${newBranchName}/${entryName(newBranch[0])}`,
-            id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-            type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
-          }
-        };
-      };
-    }
-    else {
-      return predecessor ? predecessor : () => {
-        return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
-      };
-    }
-  }
+    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream);
+  };
 }
 
 function topRightColumnDisplay(predecessor) {
@@ -574,6 +507,84 @@ function colourText(text, colour) {
     case 'magenta': return `\u001b[35m${text}\u001b[0m`;
     case 'cyan': return `\u001b[36m${text}\u001b[0m`;
     case 'white': return `\u001b[37m${text}\u001b[0m`;
+  }
+}
+
+function exploreSourceTree(sourceTree, activeBranch, selection, stream) {
+  if (isSourceTree(data(value(now(stream))))) {
+    const newSourceTree = data(value(now(stream))).sourceTree;
+
+    return {
+      sourceTree: newSourceTree,
+      activeBranch: lookupBranch(newSourceTree, branchName(selection)),
+      selection: selection.name !== "" ? selection : {
+        name: `/${entryName(newSourceTree.branches[0])}`,
+	id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
+	type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
+      }
+    };
+  }
+  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
+    const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
+
+    return {
+      sourceTree: sourceTree,
+      activeBranch: activeBranch,
+      selection: {
+	name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
+        id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
+        type: isDirectoryEntry(nextEntry) ? "directory" : "file"
+      }
+    };
+  }
+  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "k") {
+    const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
+
+    return {
+      sourceTree: sourceTree,
+      activeBranch: activeBranch,
+      selection: {
+	name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
+        id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
+        type: isDirectoryEntry(previousEntry) ? "directory" : "file"
+      }
+    };
+  }
+  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "l") {
+    if (selection.type === "directory") {
+      const newBranch = lookupBranch(sourceTree, selection.name);
+
+      return {
+        sourceTree: sourceTree,
+        activeBranch: newBranch,
+        selection: {
+          name: `${selection.name}/${entryName(newBranch[0])}`,
+          id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+          type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
+        }
+      };
+    }
+    else {
+      return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
+    }
+  }
+  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "h") {
+    const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
+
+    const newBranch = lookupBranch(sourceTree, newBranchName);
+
+    return {
+      sourceTree: sourceTree,
+      activeBranch: newBranch,
+      selection: {
+        name: `${newBranchName}/${entryName(newBranch[0])}`,
+        id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+        type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
+      }
+    };
+  }
+  else {
+    return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
   }
 }
 
