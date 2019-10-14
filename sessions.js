@@ -20,12 +20,11 @@ function debugSession(send, render) {
 	           (await IO(step, send)
 	             (await IO(queryInspector, send)
 		       (await IO(addBreakpoint, send)
-			 (await IO(pullExploredSource, send)
-		           (await IO(pullEnvironment, send)
-		             (await IO(pullScriptSource, send)
-			       (await parseSourceTree()
-			         (await parseCaptures()
-		  	           (await changeMode(stream)))))))))));
+		         (await IO(pullEnvironment, send)
+		           (await IO(pullScriptSource, send)
+			     (await parseSourceTree()
+			       (await parseCaptures()
+		  	         (await changeMode(stream))))))))));
     };
 }
 
@@ -130,22 +129,32 @@ function parseSourceTree() {
 }
 
 function pullScriptSource(send) {
-  const scriptChecker = scriptId => async (stream) => {
+  const scriptChecker = (sourceTree, activeBranch, selection, displayedSourceScriptId) => async (stream) => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
       const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
 
-      if (scriptId !== currentScriptId) {
+      if (displayedSourceScriptId !== currentScriptId) {
         send("Debugger.getScriptSource", {scriptId: currentScriptId});
       }
 
-      return commit(stream, scriptChecker(currentScriptId));
+      return commit(stream, scriptChecker(sourceTree, activeBranch, selection, currentScriptId));
     }
     else {
-      return commit(stream, scriptChecker(scriptId));
-    }
-  }
+      const commitToStream = (sourceTree, activeBranch, selection) => {
+        return commit(stream, scriptChecker(sourceTree, activeBranch, selection, displayedSourceScriptId));
+      };
 
-  return scriptChecker(undefined);
+      const sendAndCommit = (sourceTree, activeBranch, selection) => {
+        send("Debugger.getScriptSource", {scriptId: selection.id});
+
+        return commit(stream, scriptChecker(sourceTree, activeBranch, selection, selection.id));
+      };
+
+      return exploreSourceTree(sourceTree, activeBranch, selection, stream, commitToStream, sendAndCommit);
+    }
+  };
+
+  return scriptChecker({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"}, undefined);
 }
 
 function pullEnvironment(send) {
@@ -163,24 +172,6 @@ function pullEnvironment(send) {
   };
 
   return environmentChecker;
-}
-
-function pullExploredSource(send) {
-  const sourceExplorer = (sourceTree, activeBranch, selection) => async (stream) => {
-    const commitToStream = (sourceTree, activeBranch, selection) => {
-      return commit(stream, sourceExplorer(sourceTree, activeBranch, selection));
-    };
-
-    const sendAndCommit = (sourceTree, activeBranch, selection) => {
-      send("Debugger.getScriptSource", {scriptId: selection.id});
-
-      return commit(stream, sourceExplorer(sourceTree, activeBranch, selection));
-    };
-
-    return exploreSourceTree(sourceTree, activeBranch, selection, stream, commitToStream, sendAndCommit);
-  };
-
-  return sourceExplorer({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"});
 }
 
 function queryInspector(send) {
