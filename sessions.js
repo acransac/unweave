@@ -167,19 +167,17 @@ function pullEnvironment(send) {
 
 function pullExploredSource(send) {
   const sourceExplorer = (sourceTree, activeBranch, selection) => async (stream) => {
-    if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "\r"
-        && selection.type === "file") {
+    const commitToStream = (sourceTree, activeBranch, selection) => {
+      return commit(stream, sourceExplorer(sourceTree, activeBranch, selection));
+    };
+
+    const sendAndCommit = (sourceTree, activeBranch, selection) => {
       send("Debugger.getScriptSource", {scriptId: selection.id});
 
       return commit(stream, sourceExplorer(sourceTree, activeBranch, selection));
-    }
-    else {
-      const newSourceTreeWithLocation = exploreSourceTree(sourceTree, activeBranch, selection, stream);
+    };
 
-      return commit(stream, sourceExplorer(newSourceTreeWithLocation.sourceTree,
-	                                   newSourceTreeWithLocation.activeBranch,
-	                                   newSourceTreeWithLocation.selection));
-    }
+    return exploreSourceTree(sourceTree, activeBranch, selection, stream, commitToStream, sendAndCommit);
   };
 
   return sourceExplorer({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"});
@@ -392,7 +390,15 @@ function sourceTree(predecessor) {
 
     const selection = predecessor ? predecessor().selection : {name: "", id: undefined, type: "file"};
 
-    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream);
+    const id = (sourceTree, activeBranch, selection) => {
+      return {
+        sourceTree: sourceTree,
+        activeBranch: activeBranch,
+        selection: selection
+      };
+    };
+
+    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream, id, id);
   };
 }
 
@@ -510,62 +516,62 @@ function colourText(text, colour) {
   }
 }
 
-function exploreSourceTree(sourceTree, activeBranch, selection, stream) {
+function exploreSourceTree(sourceTree, activeBranch, selection, stream, continuation, onFilePicked) {
   if (isSourceTree(data(value(now(stream))))) {
     const newSourceTree = data(value(now(stream))).sourceTree;
 
-    return {
-      sourceTree: newSourceTree,
-      activeBranch: lookupBranch(newSourceTree, branchName(selection)),
-      selection: selection.name !== "" ? selection : {
+    return continuation(
+      newSourceTree,
+      lookupBranch(newSourceTree, branchName(selection)),
+      selection.name !== "" ? selection : {
         name: `/${entryName(newSourceTree.branches[0])}`,
 	id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
 	type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
       }
-    };
+    );
   }
   else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
     const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
-    return {
-      sourceTree: sourceTree,
-      activeBranch: activeBranch,
-      selection: {
+    return continuation(
+      sourceTree,
+      activeBranch,
+      {
 	name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
         id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
         type: isDirectoryEntry(nextEntry) ? "directory" : "file"
       }
-    };
+    );
   }
   else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "k") {
     const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
-    return {
-      sourceTree: sourceTree,
-      activeBranch: activeBranch,
-      selection: {
+    return continuation(
+      sourceTree,
+      activeBranch,
+      {
 	name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
         id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
         type: isDirectoryEntry(previousEntry) ? "directory" : "file"
       }
-    };
+    );
   }
   else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "l") {
     if (selection.type === "directory") {
       const newBranch = lookupBranch(sourceTree, selection.name);
 
-      return {
-        sourceTree: sourceTree,
-        activeBranch: newBranch,
-        selection: {
+      return continuation(
+        sourceTree,
+        newBranch,
+        {
           name: `${selection.name}/${entryName(newBranch[0])}`,
           id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
           type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
         }
-      };
+      );
     }
     else {
-      return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
+      return continuation(sourceTree, activeBranch, selection);
     }
   }
   else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "h") {
@@ -573,18 +579,22 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream) {
 
     const newBranch = lookupBranch(sourceTree, newBranchName);
 
-    return {
-      sourceTree: sourceTree,
-      activeBranch: newBranch,
-      selection: {
+    return continuation(
+      sourceTree,
+      newBranch,
+      {
         name: `${newBranchName}/${entryName(newBranch[0])}`,
         id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
         type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
       }
-    };
+    );
+  }
+  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "\r"
+      && selection.type === "file") {
+    return onFilePicked(sourceTree, activeBranch, selection);
   }
   else {
-    return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
+    return continuation(sourceTree, activeBranch, selection);
   }
 }
 
