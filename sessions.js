@@ -129,32 +129,19 @@ function parseSourceTree() {
 }
 
 function pullScriptSource(send) {
-  const scriptChecker = (sourceTree, activeBranch, selection, displayedSourceScriptId) => async (stream) => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
+  const scriptChecker = displayChange => async (stream) => displayChange(stream);
 
-      if (displayedSourceScriptId !== currentScriptId) {
-        send("Debugger.getScriptSource", {scriptId: currentScriptId});
-      }
+  const onDisplayChange = stream => (displayChange, newDisplayScriptId) => {
+    send("Debugger.getScriptSource", {scriptId: newDisplayScriptId});
 
-      return commit(stream, scriptChecker(sourceTree, activeBranch, selection, currentScriptId));
-    }
-    else {
-      const commitToStream = (sourceTree, activeBranch, selection) => {
-        return commit(stream, scriptChecker(sourceTree, activeBranch, selection, displayedSourceScriptId));
-      };
-
-      const sendAndCommit = (sourceTree, activeBranch, selection) => {
-        send("Debugger.getScriptSource", {scriptId: selection.id});
-
-        return commit(stream, scriptChecker(sourceTree, activeBranch, selection, selection.id));
-      };
-
-      return exploreSourceTree(sourceTree, activeBranch, selection, stream, commitToStream, sendAndCommit);
-    }
+    return commit(stream, scriptChecker(displayChange));
   };
 
-  return scriptChecker({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"}, undefined);
+  const onSelectionChange = stream => (displayChange, scriptId) => {
+    return commit(stream, scriptChecker(displayChange));
+  };
+
+  return scriptChecker(displayedScriptSource(onSelectionChange, onDisplayChange));
 }
 
 function pullEnvironment(send) {
@@ -587,6 +574,34 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
   else {
     return continuation(sourceTree, activeBranch, selection);
   }
+}
+
+function displayedScriptSource(continuation, onDisplayChange) {
+  const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => async (stream) => {
+    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+      const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
+
+      if (scriptId !== currentScriptId) {
+        return onDisplayChange(stream)(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+      }
+      else {
+        return continuation(stream)(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+      }
+    }
+    else {
+      const selectionChange = (sourceTree, activeBranch, selection) => {
+        return continuation(stream)(displayUpdater(sourceTree, activeBranch, selection, scriptId), scriptId);
+      };
+
+      const displayChange = (sourceTree, activeBranch, selection) => {
+        return onDisplayChange(stream)(displayUpdater(sourceTree, activeBranch, selection, selection.id), selection.id);
+      };
+      
+      return exploreSourceTree(sourceTree, activeBranch, selection, stream, selectionChange, displayChange);
+    }
+  };
+
+  return displayUpdater({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"}, undefined);
 }
 
 function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command, sourceTree, topRightColumnDisplay) {
