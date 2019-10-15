@@ -198,21 +198,26 @@ function step(send) {
 }
 
 function addBreakpoint(send) {
-  const breakpointSetter = scriptId => async (stream) => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return commit(stream, breakpointSetter(data(value(now(stream))).params.callFrames[0].location.scriptId));
-    }
-    else if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: Number(data(value(now(stream))).breakpoint)}});
+  const breakpointSetter = scriptId => breakpointLine => {
+    send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: breakpointLine}});
+  };
 
-      return commit(stream, breakpointSetter(scriptId));
+  const updateBreakpointSetter = stream => (displayChange, scriptId) => {
+    return commit(stream, breakpointAdder(breakpointSetter(scriptId), displayChange));
+  };
+
+  const breakpointAdder = (setBreakpoint, displayChange) => async (stream) => {
+    if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
+      setBreakpoint(Number(data(value(now(stream))).breakpoint));
+
+      return commit(stream, breakpointAdder(setBreakpoint, displayChange));
     }
     else {
-      return commit(stream, breakpointSetter(scriptId));
+      return displayChange(stream);
     }
   };
 
-  return breakpointSetter(undefined);
+  return breakpointAdder(breakpointSetter(undefined), displayedScriptSource(updateBreakpointSetter, updateBreakpointSetter));
 }
 
 function scriptSource(predecessor) {
