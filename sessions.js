@@ -129,19 +129,21 @@ function parseSourceTree() {
 }
 
 function pullScriptSource(send) {
-  const scriptChecker = displayChange => async (stream) => displayChange(stream);
+  const scriptChecker = displayChange => async (stream) => {
+    const onDisplayChange = (displayChange, newDisplayScriptId) => {
+      send("Debugger.getScriptSource", {scriptId: newDisplayScriptId});
 
-  const onDisplayChange = stream => (displayChange, newDisplayScriptId) => {
-    send("Debugger.getScriptSource", {scriptId: newDisplayScriptId});
+      return commit(stream, scriptChecker(displayChange));
+    };
 
-    return commit(stream, scriptChecker(displayChange));
+    const onSelectionChange = (displayChange, scriptId) => {
+      return commit(stream, scriptChecker(displayChange));
+    };
+	  
+    return displayChange(onSelectionChange, onDisplayChange)(stream);
   };
 
-  const onSelectionChange = stream => (displayChange, scriptId) => {
-    return commit(stream, scriptChecker(displayChange));
-  };
-
-  return scriptChecker(displayedScriptSource(onSelectionChange, onDisplayChange));
+  return scriptChecker(displayedScriptSource());
 }
 
 function pullEnvironment(send) {
@@ -202,22 +204,22 @@ function addBreakpoint(send) {
     send("Debugger.setBreakpoint", {location: {scriptId: scriptId, lineNumber: breakpointLine}});
   };
 
-  const updateBreakpointSetter = stream => (displayChange, scriptId) => {
-    return commit(stream, breakpointAdder(breakpointSetter(scriptId), displayChange));
-  };
-
   const breakpointAdder = (setBreakpoint, displayChange) => async (stream) => {
+    const updateBreakpointSetter = (displayChange, scriptId) => {
+      return commit(stream, breakpointAdder(breakpointSetter(scriptId), displayChange));
+    };
+
     if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
       setBreakpoint(Number(data(value(now(stream))).breakpoint));
 
       return commit(stream, breakpointAdder(setBreakpoint, displayChange));
     }
     else {
-      return displayChange(stream);
+      return displayChange(updateBreakpointSetter, updateBreakpointSetter)(stream);
     }
   };
 
-  return breakpointAdder(breakpointSetter(undefined), displayedScriptSource(updateBreakpointSetter, updateBreakpointSetter));
+  return breakpointAdder(breakpointSetter(undefined), displayedScriptSource());
 }
 
 function scriptSource(predecessor) {
@@ -274,25 +276,27 @@ function runLocation(predecessor) {
 
 function breakpoints(predecessor) {
   return stream => {
+    const displayChange = predecessor ? predecessor().displayChange
+		                      : displayedScriptSource();
+
     const scriptId = predecessor ? predecessor().scriptId : undefined;
 
     const breakpoints = predecessor ? predecessor().breakpoints : [];
 
+    const updateBreakpointRecorder = (displayChange, scriptId) => {
+      return () => { return {displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints}; };
+    };
+
     if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
       return () => {
-        return {scriptId: scriptId,
+        return {displayChange: displayChange,
+		scriptId: scriptId,
 		breakpoints: [...breakpoints, {scriptId: scriptId,
 			                       lineNumber: Number(data(value(now(stream))).breakpoint)}]};
       };
     }
-    else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => {
-        return {scriptId: data(value(now(stream))).params.callFrames[0].location.scriptId,
-	        breakpoints: breakpoints};
-      };
-    }
     else {
-      return predecessor ? predecessor : () => { return {scriptId: undefined, breakpoints: []}; };
+      return displayChange(updateBreakpointRecorder, updateBreakpointRecorder)(stream);
     }
   };
 }
@@ -581,25 +585,25 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
   }
 }
 
-function displayedScriptSource(continuation, onDisplayChange) {
-  const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => async (stream) => {
+function displayedScriptSource() {
+  const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => (continuation, onDisplayChange) => stream => {
     if (isMethod(data(value(now(stream))), "Debugger.paused")) {
       const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
 
       if (scriptId !== currentScriptId) {
-        return onDisplayChange(stream)(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+        return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
       }
       else {
-        return continuation(stream)(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+        return continuation(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
       }
     }
     else {
       const selectionChange = (sourceTree, activeBranch, selection) => {
-        return continuation(stream)(displayUpdater(sourceTree, activeBranch, selection, scriptId), scriptId);
+        return continuation(displayUpdater(sourceTree, activeBranch, selection, scriptId), scriptId);
       };
 
       const displayChange = (sourceTree, activeBranch, selection) => {
-        return onDisplayChange(stream)(displayUpdater(sourceTree, activeBranch, selection, selection.id), selection.id);
+        return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, selection.id), selection.id);
       };
       
       return exploreSourceTree(sourceTree, activeBranch, selection, stream, selectionChange, displayChange);
