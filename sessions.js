@@ -9,6 +9,7 @@ function debugSession(send, render) {
 	         (compose(developerSession,
 			  scriptSource,
 			  runLocation,
+			  displayedScript,
 			  scriptSourceWindowTopAnchor,
 			  breakpoints,
 			  environment,
@@ -274,6 +275,20 @@ function runLocation(predecessor) {
   };
 }
 
+function displayedScript(predecessor) {
+  return stream => {
+    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
+
+    const id = predecessor ? predecessor().id : undefined;
+
+    const updateDisplayedScript = (displayChange, scriptId) => {
+      return () => { return {displayChange: displayChange, id: scriptId}; };
+    };
+
+    return displayChange(updateDisplayedScript, updateDisplayedScript)(stream);
+  };
+}
+
 function breakpoints(predecessor) {
   return stream => {
     const displayChange = predecessor ? predecessor().displayChange
@@ -435,7 +450,11 @@ function describeEnvironment(values) {
   }, "");
 }
 
-function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSourceWindowTopAnchor, breakpointLocations) {
+function scriptSourceWithLocationAndBreakpoints(scriptSource, 
+	                                        runLocation,
+	                                        displayedScript,
+	                                        scriptSourceWindowTopAnchor,
+	                                        breakpointLocations) {
   const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineId) => {
     if (originalLines.length === 0) {
       return formattedLines;
@@ -443,7 +462,8 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSo
     else {
       const hasBreakpoint = !(breakpoints.length === 0) && breakpoints[0].lineNumber === originalLineId;
 
-      const isCurrentExecutionLocation = location.lineNumber === originalLineId;
+      const isCurrentExecutionLocation = runLocation.scriptId === displayedScript.id 
+	                                 && runLocation.lineNumber === originalLineId;
 
       return formatScriptSource(
         [...formattedLines, `${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
@@ -454,7 +474,9 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource, location, scriptSo
   };
 
   return formatScriptSource([],
-	                    breakpointLocations.breakpoints.filter(({scriptId, lineNumber}) => scriptId === location.scriptId)
+	                    breakpointLocations.breakpoints.filter(({scriptId, lineNumber}) => {
+			      return scriptId === displayedScript.id;
+	                    })
 	                                                   .sort(({scriptIdA, lineNumberA}, {scriptIdB, lineNumberB}) =>
 				                             lineNumberA - lineNumberB),
 	                    scriptSource.split("\n"),
@@ -613,10 +635,24 @@ function displayedScriptSource() {
   return displayUpdater({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"}, undefined);
 }
 
-function developerSession(source, location, sourceWindowTopAnchor, breakpoints, environment, messages, messagesWindowTopAnchor, command, sourceTree, topRightColumnDisplay) {
+function developerSession(source,
+	                  runLocation,
+	                  displayedScript,
+	                  sourceWindowTopAnchor,
+	                  breakpoints,
+	                  environment,
+	                  messages,
+	                  messagesWindowTopAnchor,
+	                  command,
+	                  sourceTree,
+	                  topRightColumnDisplay) {
   return cons(
 	   cons(
-	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source, location, sourceWindowTopAnchor, breakpoints))),
+	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source,
+		                                                       runLocation,
+		                                                       displayedScript,
+		                                                       sourceWindowTopAnchor,
+		                                                       breakpoints))),
 	     cons(
 	       topRightColumnDisplay(environment, messages, messagesWindowTopAnchor, sourceTree),
 	       row(90))),
