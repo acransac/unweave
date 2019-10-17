@@ -236,28 +236,41 @@ function scriptSource(predecessor) {
 
 function scriptSourceWindowTopAnchor(predecessor) {
   return stream => {
+    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
+
     const scriptId = predecessor ? predecessor().scriptId : undefined;
 
     const topLine = predecessor ? predecessor().topLine : 0;
 
     if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "j") {
-      return () => { return {scriptId: scriptId, topLine: topLine + 1}; };
+      return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1}; };
     }
     else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "k") {
-      return () => { return {scriptId: scriptId, topLine: topLine - 1}; };
-    }
-    else if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      const currentLocation = data(value(now(stream))).params.callFrames[0].location;
-
-      if (!predecessor || currentLocation.scriptId !== scriptId) {
-        return () => { return {scriptId: currentLocation.scriptId, topLine: Math.max(currentLocation.lineNumber - 3, 0)}; }
-      }
-      else {
-        return predecessor;
-      }
+      return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1}; };
     }
     else {
-      return predecessor ? predecessor : () => { return {scriptId: undefined, topLine: 0}; };
+      const onSelectionChange = (displayChange, scriptId) => {
+        return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine}; };
+      };
+
+      const onDisplayChange = (displayChange, newScriptId) => {
+        if (isMethod(data(value(now(stream))), "Debugger.paused")) {
+          const runLine = data(value(now(stream))).params.callFrames[0].location.lineNumber;
+
+          return () => {
+	    return {
+	      displayChange: displayChange,
+	      scriptId: newScriptId,
+	      topLine: Math.max(runLine - 3, 0)
+	    };
+	  };
+        }
+        else {
+          return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: 0}; };
+        }
+      };
+
+      return displayChange(onSelectionChange, onDisplayChange)(stream);
     }
   };
 }
