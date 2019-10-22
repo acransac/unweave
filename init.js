@@ -1,6 +1,6 @@
 const { inputCapture, isMethod, isResult, data } = require('./messages.js');
 const { debugSession } = require('./sessions.js');
-const { Source, mergeEvents, now, later, value, IO } = require('streamer');
+const { Source, mergeEvents, now, later, value } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
@@ -23,7 +23,7 @@ function startDebugSession(webSocket) {
   //const render = (message) => console.log(message);
 
   Source.from(mergeEvents([[inputCapture(), "input"], [webSocket, "message"]]), "onevent")
-	.withDownstream(async (stream) => debugSession(send, render)(await IO(runProgram, send)(await IO(enableDebugger, send)(await runtimeEnabled(stream)))));
+	.withDownstream(async (stream) => debugSession(send, render)(await runProgram(send)(await enableDebugger(send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
 }
@@ -44,9 +44,11 @@ async function runtimeEnabled(stream) {
 }
 
 function enableDebugger(send) {
-  send("Debugger.enable", {});
+  return stream => {
+    send("Debugger.enable", {});
 
-  return debuggerEnabled;
+    return debuggerEnabled(stream);
+  };
 }
 
 async function debuggerEnabled(stream) {
@@ -59,7 +61,9 @@ async function debuggerEnabled(stream) {
 }
 
 function runProgram(send) {
-  send("Runtime.runIfWaitingForDebugger", {});
+  return async (stream) => {
+    send("Runtime.runIfWaitingForDebugger", {});
 
-  return async (stream) => stream;
+    return stream;
+  };
 }

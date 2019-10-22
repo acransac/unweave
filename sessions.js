@@ -1,11 +1,11 @@
 const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./messages.js');
 const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
-const { now, later, value, continuation, floatOn, commit, forget, IO } = require('streamer');
+const { now, later, value, continuation, floatOn, commit, forget } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
 
 function debugSession(send, render) {
   return async (stream) => {
-    return loop(await IO(show, render)
+    return loop(await show(render)
 	         (compose(developerSession,
 			  scriptSource,
 			  runLocation,
@@ -18,11 +18,11 @@ function debugSession(send, render) {
 			  commandLine,
 		          sourceTree,
 		          topRightColumnDisplay))
-	           (await IO(step, send)
-	             (await IO(queryInspector, send)
-		       (await IO(addBreakpoint, send)
-		         (await IO(pullEnvironment, send)
-		           (await IO(pullScriptSource, send)
+	           (await step(send)
+	             (await queryInspector(send)
+		       (await addBreakpoint(send)
+		         (await pullEnvironment(send)
+		           (await pullScriptSource(send)
 			     (await parseSourceTree()
 			       (await parseCaptures()
 		  	         (await changeMode(stream))))))))));
