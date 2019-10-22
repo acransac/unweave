@@ -1,6 +1,6 @@
 const { inputCapture, isMethod, isResult, data } = require('./messages.js');
 const { debugSession } = require('./sessions.js');
-const { Source, mergeEvents, now, later, value } = require('streamer');
+const { Source, makeEmitter, mergeEvents, now, later, value } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
@@ -22,7 +22,7 @@ function startDebugSession(webSocket) {
   const render = renderer();
   //const render = (message) => console.log(message);
 
-  Source.from(mergeEvents([[inputCapture(), "input"], [webSocket, "message"]]), "onevent")
+  Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
 	.withDownstream(async (stream) => debugSession(send, render)(await runProgram(send)(await enableDebugger(send)(await runtimeEnabled(stream)))));
 
   enableRuntime(send);
