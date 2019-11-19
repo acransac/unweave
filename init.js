@@ -1,6 +1,6 @@
-const { inputCapture, isMethod, isResult, data } = require('./messages.js');
+const { data, inputCapture, isMethod, isResult } = require('./messages.js');
 const { debugSession } = require('./sessions.js');
-const { Source, makeEmitter, mergeEvents, now, later, value } = require('streamer');
+const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
@@ -11,7 +11,7 @@ function connectToInspector(sessionHash) {
 
   webSocket.onopen = () => startDebugSession(webSocket);
 
-  webSocket.onerror = (error) => console.log(error);
+  webSocket.onerror = error => console.log(error);
 }
 
 function startDebugSession(webSocket) {
@@ -19,19 +19,13 @@ function startDebugSession(webSocket) {
 
   const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
 
-  const render = renderer();
-  //const render = (message) => console.log(message);
+  const [render, close] = renderer();
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
-	.withDownstream(async (stream) => debugSession(send, render)(await runProgram(send)(await enableDebugger(send)(await runtimeEnabled(stream)))));
+	.withDownstream(async (stream) => 
+	  debugSession(send, render)(await runProgram(send)(await enableDebugger(send)(await runtimeEnabled(stream)))));
 
-  enableRuntime(send);
-}
-
-function enableRuntime(send) {
   send("Runtime.enable", {});
-
-  return runtimeEnabled;
 }
 
 async function runtimeEnabled(stream) {
@@ -47,17 +41,17 @@ function enableDebugger(send) {
   return stream => {
     send("Debugger.enable", {});
 
+    const debuggerEnabled = async (stream) => {
+      if (isResult(data(value(now(stream))), "debuggerId")) {
+        return stream;
+      }
+      else {
+        return debuggerEnabled(await later(stream));
+      }
+    };
+
     return debuggerEnabled(stream);
   };
-}
-
-async function debuggerEnabled(stream) {
-  if (isResult(data(value(now(stream))), "debuggerId")) {
-    return stream;
-  }
-  else {
-    return debuggerEnabled(await later(stream));
-  }
 }
 
 function runProgram(send) {
