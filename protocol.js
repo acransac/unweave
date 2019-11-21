@@ -36,10 +36,10 @@ function isSourceTreeFocus(message) {
   return message.hasOwnProperty("focusSourceTree");
 }
 
-function parseOneLine(line) {
+function parseInspectorQuery(line) {
   const [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { data, isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, parseOneLine };
+module.exports = { data, isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, parseInspectorQuery };

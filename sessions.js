@@ -1,4 +1,4 @@
-const { parseOneLine, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./protocol.js');
+const { parseInspectorQuery, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./protocol.js');
 const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
@@ -167,7 +167,7 @@ function pullEnvironment(send) {
 function queryInspector(send) {
   const requester = async (stream) => {
     if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send(...parseOneLine(data(value(now(stream))).query));
+      send(...parseInspectorQuery(data(value(now(stream))).query));
 
       return commit(stream, requester);
     }
