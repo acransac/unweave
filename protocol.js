@@ -1,7 +1,8 @@
 const parseJsValue = require('./jsvalueparser.js');
+const { now, value } = require('streamer');
 
-function data(message) {
-  return JSON.parse(message);
+function message(stream) {
+  return JSON.parse(value(now(stream)));
 }
 
 function isMethod(message, methodName) {
@@ -42,4 +43,4 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { data, isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, parseInspectorQuery };
+module.exports = { isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, message, parseInspectorQuery };

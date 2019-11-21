@@ -1,4 +1,4 @@
-const { data, isMethod, isResult } = require('./protocol.js');
+const { isMethod, isResult, message } = require('./protocol.js');
 const Readline = require('readline');
 const { debugSession } = require('./sessions.js');
 const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
@@ -40,7 +40,7 @@ function startDebugSession(webSocket) {
 }
 
 async function runtimeEnabled(stream) {
-  if (isMethod(data(value(now(stream))), "Runtime.executionContextCreated")) {
+  if (isMethod(message(stream), "Runtime.executionContextCreated")) {
     return stream;
   }
   else {
@@ -53,7 +53,7 @@ function enableDebugger(send) {
     send("Debugger.enable", {});
 
     const debuggerEnabled = async (stream) => {
-      if (isResult(data(value(now(stream))), "debuggerId")) {
+      if (isResult(message(stream), "debuggerId")) {
         return stream;
       }
       else {

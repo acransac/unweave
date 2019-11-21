@@ -1,4 +1,4 @@
-const { parseInspectorQuery, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, data } = require('./protocol.js');
+const { parseInspectorQuery, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, message } = require('./protocol.js');
 const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
 const { now, later, value, continuation, floatOn, commit, forget } = require('streamer');
 const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
@@ -36,15 +36,15 @@ function DEBUG(f, g, h, i, j, k, l, m, n, o) {
 async function changeMode(stream) {
   const modalCapture = (category, continuation) => {
     const modeSetter = async (stream) => {
-      if (isInput(data(value(now(stream))))) {
-        if (data(value(now(stream))).input === "\r") {
+      if (isInput(message(stream))) {
+        if (message(stream).input === "\r") {
           return floatOn(commit(stream, continuation), JSON.stringify(
-	    Object.fromEntries([[category, data(value(now(stream))).input], ["ended", true]])
+	    Object.fromEntries([[category, message(stream).input], ["ended", true]])
 	  ));
         }
         else {
           return floatOn(commit(stream, modeSetter), JSON.stringify(
-	    Object.fromEntries([[category, data(value(now(stream))).input], ["ended", false]])
+	    Object.fromEntries([[category, message(stream).input], ["ended", false]])
 	  ));
         }
       }
@@ -56,17 +56,17 @@ async function changeMode(stream) {
     return modeSetter;
   };
 
-  if (isInput(data(value(now(stream))))) {
-    if (data(value(now(stream))).input === "q") {
+  if (isInput(message(stream))) {
+    if (message(stream).input === "q") {
       return floatOn(commit(stream, modalCapture("query", changeMode)), JSON.stringify({query: "", ended: false}));
     }
-    else if (data(value(now(stream))).input === "b") {
+    else if (message(stream).input === "b") {
       return floatOn(commit(stream, modalCapture("breakpoint", changeMode)), JSON.stringify({breakpoint: "", ended: false}));
     }
-    else if (data(value(now(stream))).input === "m") {
+    else if (message(stream).input === "m") {
       return floatOn(commit(stream, modalCapture("focusMessages", changeMode)), JSON.stringify({focusMessages: "", ended: false}));
     }
-    else if (data(value(now(stream))).input === "w") {
+    else if (message(stream).input === "w") {
       return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)), JSON.stringify({focusSourceTree: "", ended: false}));
     }
     else {
@@ -80,22 +80,22 @@ async function changeMode(stream) {
 
 function parseCaptures() {
   const parser = capture => async (stream) => {
-    if (isBreakpointCapture(data(value(now(stream))))) {
-      if (data(value(now(stream))).ended) {
+    if (isBreakpointCapture(message(stream))) {
+      if (message(stream).ended) {
         return floatOn(commit(stream, parser("")), JSON.stringify({breakpoint: capture, ended: true}));
       }
       else {
-	const newCapture = parseUserInput(capture, data(value(now(stream))).breakpoint);
+	const newCapture = parseUserInput(capture, message(stream).breakpoint);
 
         return floatOn(commit(stream, parser(newCapture)), JSON.stringify({breakpoint: newCapture, ended: false}));
       }
     }
-    else if (isQueryCapture(data(value(now(stream))))) {
-      if (data(value(now(stream))).ended) {
+    else if (isQueryCapture(message(stream))) {
+      if (message(stream).ended) {
         return floatOn(commit(stream, parser("")), JSON.stringify({query: capture, ended: true}));
       }
       else {
-	const newCapture = parseUserInput(capture, data(value(now(stream))).query);
+	const newCapture = parseUserInput(capture, message(stream).query);
 
         return floatOn(commit(stream, parser(newCapture)), JSON.stringify({query: newCapture, ended: false}));
       }
@@ -110,13 +110,13 @@ function parseCaptures() {
 
 function parseSourceTree() {
   const builder = sourceTree => async (stream) => {
-    if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")
-	  && data(value(now(stream))).params.url.startsWith("file://")) {
-      const [path, fileName] = parseFilePath(data(value(now(stream))).params.url.slice("file://".length));
+    if (isMethod(message(stream), "Debugger.scriptParsed")
+	  && message(stream).params.url.startsWith("file://")) {
+      const [path, fileName] = parseFilePath(message(stream).params.url.slice("file://".length));
 
       const newSourceTree = insertInSourceTree({root: sourceTree.root ? sourceTree.root : path, branches: sourceTree.branches},
 	                                       path,
-	                                       {name: fileName, id: data(value(now(stream))).params.scriptId});
+	                                       {name: fileName, id: message(stream).params.scriptId});
 
       return floatOn(commit(stream, builder(newSourceTree)),
 	             JSON.stringify({sourceTree: {root: newSourceTree.root, branches: newSourceTree.branches}}));
@@ -149,8 +149,8 @@ function pullScriptSource(send) {
 
 function pullEnvironment(send) {
   const environmentChecker = async (stream) => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      const environmentRemoteObject = data(value(now(stream))).params.callFrames[0].scopeChain[0].object.objectId;
+    if (isMethod(message(stream), "Debugger.paused")) {
+      const environmentRemoteObject = message(stream).params.callFrames[0].scopeChain[0].object.objectId;
 
       send("Runtime.getProperties", {objectId: environmentRemoteObject});
 
@@ -166,8 +166,8 @@ function pullEnvironment(send) {
 
 function queryInspector(send) {
   const requester = async (stream) => {
-    if (isQueryCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      send(...parseInspectorQuery(data(value(now(stream))).query));
+    if (isQueryCapture(message(stream)) && message(stream).ended) {
+      send(...parseInspectorQuery(message(stream).query));
 
       return commit(stream, requester);
     }
@@ -181,16 +181,16 @@ function queryInspector(send) {
 
 function step(send) {
   const stepper = async (stream) => {
-    if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "n") {
+    if (isInput(message(stream)) && message(stream).input === "n") {
       send("Debugger.stepOver", {});
     }
-    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "s") {
+    else if (isInput(message(stream)) && message(stream).input === "s") {
       send("Debugger.stepInto", {});
     }
-    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "c") {
+    else if (isInput(message(stream)) && message(stream).input === "c") {
       send("Debugger.resume", {});
     }
-    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "f") {
+    else if (isInput(message(stream)) && message(stream).input === "f") {
       send("Debugger.stepOut", {});
     }
 
@@ -210,8 +210,8 @@ function addBreakpoint(send) {
       return commit(stream, breakpointAdder(breakpointSetter(scriptId), displayChange));
     };
 
-    if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
-      setBreakpoint(Number(data(value(now(stream))).breakpoint));
+    if (isBreakpointCapture(message(stream)) && message(stream).ended) {
+      setBreakpoint(Number(message(stream).breakpoint));
 
       return commit(stream, breakpointAdder(setBreakpoint, displayChange));
     }
@@ -225,8 +225,8 @@ function addBreakpoint(send) {
 
 function scriptSource(predecessor) {
   return stream => {
-    if (isResult(data(value(now(stream))), "scriptSource")) {
-      return () => data(value(now(stream))).result.scriptSource;
+    if (isResult(message(stream), "scriptSource")) {
+      return () => message(stream).result.scriptSource;
     }
     else {
       return predecessor ? predecessor : () => "Loading script source";
@@ -242,10 +242,10 @@ function scriptSourceWindowTopAnchor(predecessor) {
 
     const topLine = predecessor ? predecessor().topLine : 0;
 
-    if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "j") {
+    if (isInput(message(stream)) && message(stream).input === "j") {
       return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1}; };
     }
-    else if (isInput(data(value(now(stream)))) && data(value(now(stream))).input === "k") {
+    else if (isInput(message(stream)) && message(stream).input === "k") {
       return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1}; };
     }
     else {
@@ -254,8 +254,8 @@ function scriptSourceWindowTopAnchor(predecessor) {
       };
 
       const onDisplayChange = (displayChange, newScriptId) => {
-        if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-          const runLine = data(value(now(stream))).params.callFrames[0].location.lineNumber;
+        if (isMethod(message(stream), "Debugger.paused")) {
+          const runLine = message(stream).params.callFrames[0].location.lineNumber;
 
           return () => {
 	    return {
@@ -277,8 +277,8 @@ function scriptSourceWindowTopAnchor(predecessor) {
 
 function runLocation(predecessor) {
   return stream => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      const executionLocation = data(value(now(stream))).params.callFrames[0].location;
+    if (isMethod(message(stream), "Debugger.paused")) {
+      const executionLocation = message(stream).params.callFrames[0].location;
 
       return () => { return {scriptId: executionLocation.scriptId, lineNumber: executionLocation.lineNumber}; };
     }
@@ -315,12 +315,12 @@ function breakpoints(predecessor) {
       return () => { return {displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints}; };
     };
 
-    if (isBreakpointCapture(data(value(now(stream)))) && data(value(now(stream))).ended) {
+    if (isBreakpointCapture(message(stream)) && message(stream).ended) {
       return () => {
         return {displayChange: displayChange,
 		scriptId: scriptId,
 		breakpoints: [...breakpoints, {scriptId: scriptId,
-			                       lineNumber: Number(data(value(now(stream))).breakpoint)}]};
+			                       lineNumber: Number(message(stream).breakpoint)}]};
       };
     }
     else {
@@ -331,8 +331,8 @@ function breakpoints(predecessor) {
 
 function environment(predecessor) {
   return stream => {
-    if (isResult(data(value(now(stream))), "result")) {
-      return () => describeEnvironment(data(value(now(stream))).result.result);
+    if (isResult(message(stream), "result")) {
+      return () => describeEnvironment(message(stream).result.result);
     }
     else {
       return predecessor ? predecessor : () => "Loading environment";
@@ -344,13 +344,13 @@ function commandLine(predecessor) {
   return stream => {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
 
-    if (isBreakpointCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => defaultMessage
-	                                    : () => `Add breakpoint at line: ${data(value(now(stream))).breakpoint}`;
+    if (isBreakpointCapture(message(stream))) {
+      return message(stream).ended ? () => defaultMessage
+	                                    : () => `Add breakpoint at line: ${message(stream).breakpoint}`;
     }
-    else if (isQueryCapture(data(value(now(stream))))) {
-      return data(value(now(stream))).ended ? () => defaultMessage
-	                                    : () => `Query Inspector: ${data(value(now(stream))).query}`;
+    else if (isQueryCapture(message(stream))) {
+      return message(stream).ended ? () => defaultMessage
+	                                    : () => `Query Inspector: ${message(stream).query}`;
     }
     else {
       return predecessor ? predecessor : () => defaultMessage;
@@ -362,16 +362,16 @@ function messages(predecessor) {
   return stream => {
     const messages = predecessor ? predecessor() : "Waiting";
 
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      return () => `${predecessor === undefined ? "" : messages + "\n"}${Object.entries(data(value(now(stream))).params.callFrames[0].location)}`;
+    if (isMethod(message(stream), "Debugger.paused")) {
+      return () => `${predecessor === undefined ? "" : messages + "\n"}${Object.entries(message(stream).params.callFrames[0].location)}`;
     }
-    else if (isMethod(data(value(now(stream))), "Debugger.scriptParsed")) {
-      const script = data(value(now(stream))).params;
+    else if (isMethod(message(stream), "Debugger.scriptParsed")) {
+      const script = message(stream).params;
 
       return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${script.scriptId}, url: ${script.url}, context: ${script.executionContextId}`;
     }
-    else if (isSourceTree(data(value(now(stream))))) {
-      const sourceTree = data(value(now(stream))).sourceTree;
+    else if (isSourceTree(message(stream))) {
+      const sourceTree = message(stream).sourceTree;
 
       return () => `${predecessor === undefined ? "" : messages + "\n"}root: ${sourceTree.root}, tree: ${JSON.stringify(sourceTree.branches)}`;
     }
@@ -385,10 +385,10 @@ function messagesWindowTopAnchor(predecessor) {
   return stream => {
     const topLine = predecessor ? predecessor() : 0;
 
-    if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "j") {
+    if (isMessagesFocus(message(stream)) && message(stream).focusMessages === "j") {
       return () => topLine + 1;
     }
-    else if (isMessagesFocus(data(value(now(stream)))) && data(value(now(stream))).focusMessages === "k") {
+    else if (isMessagesFocus(message(stream)) && message(stream).focusMessages === "k") {
       return () => topLine - 1;
     }
     else {
@@ -431,10 +431,10 @@ function topRightColumnDisplay(predecessor) {
       return cons(atom(writeTree(sourceTree)), indent(50, column(50)));
     };
 
-    if (isSourceTreeFocus(data(value(now(stream)))) && !data(value(now(stream))).ended) {
+    if (isSourceTreeFocus(message(stream)) && !message(stream).ended) {
       return () => sourceTreeDisplay;
     }
-    else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).ended) {
+    else if (isSourceTreeFocus(message(stream)) && message(stream).ended) {
       return () => environmentAndMessagesDisplay;
     }
     else {
@@ -539,8 +539,8 @@ function colourText(text, colour) {
 }
 
 function exploreSourceTree(sourceTree, activeBranch, selection, stream, continuation, onFilePicked) {
-  if (isSourceTree(data(value(now(stream))))) {
-    const newSourceTree = data(value(now(stream))).sourceTree;
+  if (isSourceTree(message(stream))) {
+    const newSourceTree = message(stream).sourceTree;
 
     return continuation(
       newSourceTree,
@@ -552,7 +552,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       }
     );
   }
-  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "j") {
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "j") {
     const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
     return continuation(
@@ -565,7 +565,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       }
     );
   }
-  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "k") {
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "k") {
     const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
     return continuation(
@@ -578,7 +578,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       }
     );
   }
-  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "l") {
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "l") {
     if (selection.type === "directory") {
       const newBranch = lookupBranch(sourceTree, selection.name);
 
@@ -596,7 +596,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       return continuation(sourceTree, activeBranch, selection);
     }
   }
-  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "h") {
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "h") {
     const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
 
     const newBranch = lookupBranch(sourceTree, newBranchName);
@@ -611,7 +611,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       }
     );
   }
-  else if (isSourceTreeFocus(data(value(now(stream)))) && data(value(now(stream))).focusSourceTree === "\r"
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "\r"
       && selection.type === "file") {
     return onFilePicked(sourceTree, activeBranch, selection);
   }
@@ -622,8 +622,8 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
 
 function displayedScriptSource() {
   const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => (continuation, onDisplayChange) => stream => {
-    if (isMethod(data(value(now(stream))), "Debugger.paused")) {
-      const currentScriptId = data(value(now(stream))).params.callFrames[0].location.scriptId;
+    if (isMethod(message(stream), "Debugger.paused")) {
+      const currentScriptId = message(stream).params.callFrames[0].location.scriptId;
 
       if (scriptId !== currentScriptId) {
         return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
