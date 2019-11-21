@@ -6,7 +6,7 @@ function inputCapture() {
 
   process.stdin.setRawMode(true);
 
-  process.stdin.on('keypress', (key) => process.stdin.emit('input', JSON.stringify({input: key})));
+  process.stdin.on('keypress', key => process.stdin.emit('input', JSON.stringify({input: key})));
 
   return process.stdin;
 }
@@ -16,21 +16,11 @@ function data(message) {
 }
 
 function isMethod(message, methodName) {
-  if (message.method) {
-    return message.method === methodName;
-  }
-  else {
-    return false;
-  }
+  return message.hasOwnProperty("method") && message.method === methodName;
 }
 
 function isResult(message, resultName) {
-  if (message.result) {
-    return message.result.hasOwnProperty(resultName);
-  }
-  else {
-    return false;
-  }
+  return message.hasOwnProperty("result") && message.result.hasOwnProperty(resultName);
 }
 
 function isInput(message) {
@@ -58,8 +48,7 @@ function isSourceTreeFocus(message) {
 }
 
 function parseOneLine(line) {
-  let method, parameters;
-  [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
+  const [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
   return [method, parseJsValue(parameters ? parameters : "")];
 }
