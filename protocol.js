@@ -1,15 +1,4 @@
 const parseJsValue = require('./jsvalueparser.js');
-const Readline = require('readline');
-
-function inputCapture() {
-  Readline.emitKeypressEvents(process.stdin);
-
-  process.stdin.setRawMode(true);
-
-  process.stdin.on('keypress', key => process.stdin.emit('input', JSON.stringify({input: key})));
-
-  return process.stdin;
-}
 
 function data(message) {
   return JSON.parse(message);
@@ -53,4 +42,4 @@ function parseOneLine(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { inputCapture, parseOneLine, data, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree };
+module.exports = { data, isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, parseOneLine };

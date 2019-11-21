@@ -1,4 +1,5 @@
-const { data, inputCapture, isMethod, isResult } = require('./messages.js');
+const { data, isMethod, isResult } = require('./protocol.js');
+const Readline = require('readline');
 const { debugSession } = require('./sessions.js');
 const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
 const { renderer } = require('terminal');
@@ -12,6 +13,16 @@ function connectToInspector(sessionHash) {
   webSocket.onopen = () => startDebugSession(webSocket);
 
   webSocket.onerror = error => console.log(error);
+}
+
+function inputCapture() {
+  Readline.emitKeypressEvents(process.stdin);
+
+  process.stdin.setRawMode(true);
+
+  process.stdin.on('keypress', key => process.stdin.emit('input', JSON.stringify({input: key})));
+
+  return process.stdin;
 }
 
 function startDebugSession(webSocket) {
