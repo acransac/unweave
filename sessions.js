@@ -1,36 +1,31 @@
-const { parseInspectorQuery, isMethod, isResult, isInput, isBreakpointCapture, isQueryCapture, isMessagesFocus, isSourceTreeFocus, isSourceTree, message } = require('./protocol.js');
-const { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
-const { now, later, value, continuation, floatOn, commit, forget } = require('streamer');
-const { emptyList, cons, atom, compose, show, column, row, indent, vindent, sizeHeight, sizeWidth, inline } = require('terminal');
+const { isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, message, parseInspectorQuery } = require('./protocol.js');
+const { entryName, fileId, insertInSourceTree, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, parseFilePath } = require('./sourceTreeParser.js');
+const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
+const { atom, column, compose, cons, emptyList, indent, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render) {
   return async (stream) => {
-    return loop(await show(render)
-	         (compose(developerSession,
-			  scriptSource,
-			  runLocation,
-			  displayedScript,
-			  scriptSourceWindowTopAnchor,
-			  breakpoints,
-			  environment,
-			  messages,
-			  messagesWindowTopAnchor,
-			  commandLine,
-		          sourceTree,
-		          topRightColumnDisplay))
-	           (await step(send)
-	             (await queryInspector(send)
-		       (await addBreakpoint(send)
-		         (await pullEnvironment(send)
-		           (await pullScriptSource(send)
-			     (await parseSourceTree()
-			       (await parseCaptures()
-		  	         (await changeMode(stream))))))))));
+    return loop(await show(render)(compose(developerSession,
+			                   scriptSource,
+			                   scriptSourceWindowTopAnchor,
+			                   runLocation,
+			                   breakpoints,
+			                   displayedScript,
+		                           topRightColumnDisplay,
+			                   environment,
+			                   messages,
+			                   messagesWindowTopAnchor,
+		                           sourceTree,
+			                   commandLine))(
+	                            await step(send)(
+	                              await queryInspector(send)(
+		                        await addBreakpoint(send)(
+		                          await pullEnvironment(send)(
+		                            await pullScriptSource(send)(
+			                      await parseSourceTree()(
+			                        await parseCaptures()(
+		  	                          await changeMode(stream))))))))));
     };
-}
-
-function DEBUG(f, g, h, i, j, k, l, m, n, o) {
-  return `${scriptSourceWithLocationAndBreakpoints(f, g, h, i)}\n${o(j, k, l, n)}\n${m}`;
 }
 
 async function changeMode(stream) {
@@ -58,16 +53,20 @@ async function changeMode(stream) {
 
   if (isInput(message(stream))) {
     if (message(stream).input === "q") {
-      return floatOn(commit(stream, modalCapture("query", changeMode)), JSON.stringify({query: "", ended: false}));
+      return floatOn(commit(stream, modalCapture("query", changeMode)),
+	             JSON.stringify({query: "", ended: false}));
     }
     else if (message(stream).input === "b") {
-      return floatOn(commit(stream, modalCapture("breakpoint", changeMode)), JSON.stringify({breakpoint: "", ended: false}));
+      return floatOn(commit(stream, modalCapture("breakpoint", changeMode)),
+	             JSON.stringify({breakpoint: "", ended: false}));
     }
     else if (message(stream).input === "m") {
-      return floatOn(commit(stream, modalCapture("focusMessages", changeMode)), JSON.stringify({focusMessages: "", ended: false}));
+      return floatOn(commit(stream, modalCapture("focusMessages", changeMode)),
+	             JSON.stringify({focusMessages: "", ended: false}));
     }
     else if (message(stream).input === "w") {
-      return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)), JSON.stringify({focusSourceTree: "", ended: false}));
+      return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)),
+	             JSON.stringify({focusSourceTree: "", ended: false}));
     }
     else {
       return commit(stream, changeMode);
@@ -257,13 +256,7 @@ function scriptSourceWindowTopAnchor(predecessor) {
         if (isMethod(message(stream), "Debugger.paused")) {
           const runLine = message(stream).params.callFrames[0].location.lineNumber;
 
-          return () => {
-	    return {
-	      displayChange: displayChange,
-	      scriptId: newScriptId,
-	      topLine: Math.max(runLine - 3, 0)
-	    };
-	  };
+          return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)}; };
         }
         else {
           return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: 0}; };
@@ -278,12 +271,12 @@ function scriptSourceWindowTopAnchor(predecessor) {
 function runLocation(predecessor) {
   return stream => {
     if (isMethod(message(stream), "Debugger.paused")) {
-      const executionLocation = message(stream).params.callFrames[0].location;
+      const runLocation = message(stream).params.callFrames[0].location;
 
-      return () => { return {scriptId: executionLocation.scriptId, lineNumber: executionLocation.lineNumber}; };
+      return () => { return {scriptId: runLocation.scriptId, lineNumber: runLocation.lineNumber}; };
     }
     else {
-      return predecessor ? predecessor : () => { return {scriptId: undefined, lineNumber: undefined }; };
+      return predecessor ? predecessor : () => { return {scriptId: undefined, lineNumber: undefined}; };
     }
   };
 }
@@ -304,8 +297,7 @@ function displayedScript(predecessor) {
 
 function breakpoints(predecessor) {
   return stream => {
-    const displayChange = predecessor ? predecessor().displayChange
-		                      : displayedScriptSource();
+    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
 
     const scriptId = predecessor ? predecessor().scriptId : undefined;
 
@@ -317,10 +309,11 @@ function breakpoints(predecessor) {
 
     if (isBreakpointCapture(message(stream)) && message(stream).ended) {
       return () => {
-        return {displayChange: displayChange,
-		scriptId: scriptId,
-		breakpoints: [...breakpoints, {scriptId: scriptId,
-			                       lineNumber: Number(message(stream).breakpoint)}]};
+        return {
+	  displayChange: displayChange,
+	  scriptId: scriptId,
+	  breakpoints: [...breakpoints, {scriptId: scriptId, lineNumber: Number(message(stream).breakpoint)}]
+	};
       };
     }
     else {
@@ -345,12 +338,10 @@ function commandLine(predecessor) {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
 
     if (isBreakpointCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage
-	                                    : () => `Add breakpoint at line: ${message(stream).breakpoint}`;
+      return message(stream).ended ? () => defaultMessage : () => `Add breakpoint at line: ${message(stream).breakpoint}`;
     }
     else if (isQueryCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage
-	                                    : () => `Query Inspector: ${message(stream).query}`;
+      return message(stream).ended ? () => defaultMessage : () => `Query Inspector: ${message(stream).query}`;
     }
     else {
       return predecessor ? predecessor : () => defaultMessage;
@@ -405,15 +396,11 @@ function sourceTree(predecessor) {
 
     const selection = predecessor ? predecessor().selection : {name: "", id: undefined, type: "file"};
 
-    const id = (sourceTree, activeBranch, selection) => {
-      return {
-        sourceTree: sourceTree,
-        activeBranch: activeBranch,
-        selection: selection
-      };
+    const identity = (sourceTree, activeBranch, selection) => {
+      return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
     };
 
-    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream, id, id);
+    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream, identity, identity);
   };
 }
 
@@ -440,7 +427,7 @@ function topRightColumnDisplay(predecessor) {
     else {
       return predecessor ? predecessor : () => environmentAndMessagesDisplay;
     }
-  }
+  };
 }
 
 function parseUserInput(parsed, currentInput) {
@@ -457,17 +444,17 @@ function parseUserInput(parsed, currentInput) {
 
 function describeEnvironment(values) {
   return values.filter(item => !(item.name === "exports" || item.name === "require" || item.name === "module"
-			               || item.name === "__filename" || item.name === "__dirname"))
+			         || item.name === "__filename" || item.name === "__dirname"))
                .reduce((description, item) => {
     return `${description}${item.value.type} ${item.name}${item.value  === "undefined" ? "" : ": " + item.value.value}\n`;
   }, "");
 }
 
 function scriptSourceWithLocationAndBreakpoints(scriptSource, 
-	                                        runLocation,
-	                                        displayedScript,
 	                                        scriptSourceWindowTopAnchor,
-	                                        breakpointLocations) {
+	                                        runLocation,
+	                                        breakpointLocations,
+	                                        displayedScript) {
   const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineId) => {
     if (originalLines.length === 0) {
       return formattedLines;
@@ -476,7 +463,7 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
       const hasBreakpoint = !(breakpoints.length === 0) && breakpoints[0].lineNumber === originalLineId;
 
       const isCurrentExecutionLocation = runLocation.scriptId === displayedScript.id 
-	                                 && runLocation.lineNumber === originalLineId;
+		                           && runLocation.lineNumber === originalLineId;
 
       return formatScriptSource(
         [...formattedLines, `${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
@@ -490,29 +477,36 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
 	                    breakpointLocations.breakpoints.filter(({scriptId, lineNumber}) => {
 			      return scriptId === displayedScript.id;
 	                    })
-	                                                   .sort(({scriptIdA, lineNumberA}, {scriptIdB, lineNumberB}) =>
-				                             lineNumberA - lineNumberB),
+	                                                   .sort(({scriptIdA, lineNumberA}, {scriptIdB, lineNumberB}) => {
+			      return lineNumberA - lineNumberB;
+			    }),
 	                    scriptSource.split("\n"),
 	                    0)
 	   .slice(scriptSourceWindowTopAnchor.topLine)
-	   .reduce((formattedVisibleSource, line) =>
-             `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`,
-	     "");
+	   .reduce((formattedVisibleSource, line) => {
+             return `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`;
+	   }, "");
 }
 
 function scrollable(content, topLine) {
-  return content.split("\n").slice(topLine).reduce((visibleContent, line) =>
-           `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`, "");
+  return content.split("\n").slice(topLine).reduce((visibleContent, line) => {
+    return `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`;
+  }, "");
 }
 
 function writeTree(visitedSourceTree) {
-  const formatEntry = entry => (entryName(entry) === visitedSourceTree.selection.name.split("/").slice(-1)[0]
-    ? entryName => `\u001b[7m${entryName}\u001b[0m` : entryName => entryName)
-    ((isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan") : entryName => entryName)(entryName(entry)));
+  const formatEntry = entry => {
+    const selectionName = selection => selection.name.split("/").slice(-1)[0];
 
-  return (branchName(visitedSourceTree.selection) === ""
-    ? `${colourText("root", "blue")}\n`
-    : `${colourText(branchName(visitedSourceTree.selection), "blue")}\n`) 
+    return (entryName(entry) === selectionName(visitedSourceTree.selection) ? entryName => `\u001b[7m${entryName}\u001b[0m`
+	                                                                    : entryName => entryName)(
+      (isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan")
+	                       : entryName => entryName)(
+        entryName(entry)));
+  };
+
+  return (branchName(visitedSourceTree.selection) === "" ? `${colourText("root", "blue")}\n`
+                                                         : `${colourText(branchName(visitedSourceTree.selection), "blue")}\n`) 
     + visitedSourceTree.activeBranch.map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
@@ -542,55 +536,41 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
   if (isSourceTree(message(stream))) {
     const newSourceTree = message(stream).sourceTree;
 
-    return continuation(
-      newSourceTree,
-      lookupBranch(newSourceTree, branchName(selection)),
-      selection.name !== "" ? selection : {
-        name: `/${entryName(newSourceTree.branches[0])}`,
-	id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
-	type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
-      }
-    );
+    return continuation(newSourceTree,
+                        lookupBranch(newSourceTree, branchName(selection)),
+                        selection.name !== "" ? selection : {
+                          name: `/${entryName(newSourceTree.branches[0])}`,
+	                  id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
+	                  type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
+                        });
   }
   else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "j") {
     const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
-    return continuation(
-      sourceTree,
-      activeBranch,
-      {
-	name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
-        id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
-        type: isDirectoryEntry(nextEntry) ? "directory" : "file"
-      }
-    );
+    return continuation(sourceTree,
+                        activeBranch,
+                        {name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
+                         id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
+                         type: isDirectoryEntry(nextEntry) ? "directory" : "file"});
   }
   else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "k") {
     const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
-    return continuation(
-      sourceTree,
-      activeBranch,
-      {
-	name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
-        id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
-        type: isDirectoryEntry(previousEntry) ? "directory" : "file"
-      }
-    );
+    return continuation(sourceTree,
+                        activeBranch,
+                        {name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
+                         id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
+                         type: isDirectoryEntry(previousEntry) ? "directory" : "file"});
   }
   else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "l") {
     if (selection.type === "directory") {
       const newBranch = lookupBranch(sourceTree, selection.name);
 
-      return continuation(
-        sourceTree,
-        newBranch,
-        {
-          name: `${selection.name}/${entryName(newBranch[0])}`,
-          id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-          type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
-        }
-      );
+      return continuation(sourceTree,
+                          newBranch,
+                          {name: `${selection.name}/${entryName(newBranch[0])}`,
+                           id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+                           type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"});
     }
     else {
       return continuation(sourceTree, activeBranch, selection);
@@ -601,18 +581,13 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
 
     const newBranch = lookupBranch(sourceTree, newBranchName);
 
-    return continuation(
-      sourceTree,
-      newBranch,
-      {
-        name: `${newBranchName}/${entryName(newBranch[0])}`,
-        id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-        type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"
-      }
-    );
+    return continuation(sourceTree,
+                        newBranch,
+                        {name: `${newBranchName}/${entryName(newBranch[0])}`,
+                         id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+                         type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"});
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "\r"
-      && selection.type === "file") {
+  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "\r" && selection.type === "file") {
     return onFilePicked(sourceTree, activeBranch, selection);
   }
   else {
@@ -649,23 +624,23 @@ function displayedScriptSource() {
 }
 
 function developerSession(source,
-	                  runLocation,
-	                  displayedScript,
 	                  sourceWindowTopAnchor,
+	                  runLocation,
 	                  breakpoints,
+	                  displayedScript,
+	                  topRightColumnDisplay,
 	                  environment,
 	                  messages,
 	                  messagesWindowTopAnchor,
-	                  command,
 	                  sourceTree,
-	                  topRightColumnDisplay) {
+	                  command) {
   return cons(
 	   cons(
 	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source,
-		                                                       runLocation,
-		                                                       displayedScript,
 		                                                       sourceWindowTopAnchor,
-		                                                       breakpoints))),
+		                                                       runLocation,
+		                                                       breakpoints,
+		                                                       displayedScript))),
 	     cons(
 	       topRightColumnDisplay(environment, messages, messagesWindowTopAnchor, sourceTree),
 	       row(90))),
