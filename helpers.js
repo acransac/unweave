@@ -1,5 +1,5 @@
 const { isMethod, isSourceTree, isSourceTreeFocus, message } = require('./protocol.js');
-const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourceTreeParser.js');
+const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
   if (currentInput === "\x7f") { // If backspace is delete

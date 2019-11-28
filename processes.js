@@ -1,6 +1,6 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
 const { isBreakpointCapture, isInput, isMethod, isQueryCapture, message, parseInspectorQuery } = require('./protocol.js');
-const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourceTreeParser.js');
+const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
