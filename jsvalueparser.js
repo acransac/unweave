@@ -1,60 +1,53 @@
-function parseJson(jsonString) {
-  return syntaxJsValue(lexJson(jsonString));
+function parseJsValue(jsValueString) {
+  return syntaxJsValue(lexJsValue(jsValueString));
 }
 
-function lexJson(jsonString) {
-  return lexJsonImpl([], jsonString)[0];
+function lexJsValue(jsValueString) {
+  const lexJsValueImpl = (tokens, jsValueString) => {
+    if (jsValueString === "") {
+      return [tokens, jsValueString];
+    }
+  
+    switch (jsValueString[0]) {
+      case '{': return lexJsValueImpl([...tokens, 'ObjBegin'], jsValueString.substring(1));
+      case '}': return lexJsValueImpl([...tokens, 'ObjEnd'], jsValueString.substring(1));
+      case '[': return lexJsValueImpl([...tokens, 'ArrayBegin'], jsValueString.substring(1));
+      case ']': return lexJsValueImpl([...tokens, 'ArrayEnd'], jsValueString.substring(1));
+      case ':': return lexJsValueImpl([...tokens, 'KeyValueSeparator'], jsValueString.substring(1));
+      case ',': return lexJsValueImpl([...tokens, 'IterableElementSeparator'], jsValueString.substring(1));
+      case ' ': return lexJsValueImpl(tokens, jsValueString.substring(1));
+      default: return lexJsValueImpl(...lexAtom(tokens, jsValueString));
+    }
+  };
+
+  return lexJsValueImpl([], jsValueString)[0];
 }
 
-function lexJsonImpl(tokens, jsonString) {
-  if (jsonString === "") {
-    return [tokens, jsonString];
-  }
+function lexAtom(tokens, jsValueString) {
+  const tokensWithAtomAndRest = (atom, rest) => [[...tokens, `Atom: ${atom}`], rest === undefined ? "" : rest];
 
-  switch (jsonString[0]) {
-    case '{': return lexJsonImpl([...tokens, 'ObjBegin'],
-jsonString.substring(1));
-    case '}': return lexJsonImpl([...tokens, 'ObjEnd'],
-jsonString.substring(1));
-    case '[': return lexJsonImpl([...tokens, 'ArrayBegin'],
-jsonString.substring(1));
-    case ']': return lexJsonImpl([...tokens, 'ArrayEnd'],
-jsonString.substring(1));
-    case ':': return lexJsonImpl([...tokens, 'KeyValueSeparator'],
-jsonString.substring(1));
-    case ',': return lexJsonImpl([...tokens, 'IterableElementSeparator'],
-jsonString.substring(1));
-    case ' ': return lexJsonImpl(tokens, jsonString.substring(1));
-    default: return lexJsonImpl(...lexAtom(tokens, jsonString));
-  }
-}
-
-function lexAtom(tokens, jsonString) {
-  let atom, rest;
-  if (jsonString[0] === "\"") {
-    [atom, rest] = lexStringAtom(jsonString);
+  if (jsValueString[0] === "\"") {
+    return tokensWithAtomAndRest(...stringAtom(jsValueString));
   }
   else {
-    [atom, rest] = jsonString.match(/^([^:,\s\]\}]+)|[^\1]+/g);
+    return tokensWithAtomAndRest(...jsValueString.match(/^([^:,\s\]\}]+)|[^\1]+/g));
   }
-
-  return [[...tokens, `Atom: ${atom}`], rest === undefined ? "" : rest];
 }
 
-function lexStringAtom(jsonString) {
-  return lexStringAtomImpl("\"", jsonString.slice(1));
-}
+function stringAtom(jsValueString) {
+  const stringAtomImpl = (atom, jsValueString) => {
+    if (jsValueString[0] === "\"") {
+      return [`${atom}"`, jsValueString.slice(1)];
+    }
+    if (jsValueString.startsWith("\\\"")) {
+      return stringAtomImpl(`${atom}"`, jsValueString.slice(2));
+    }
+    else {
+      return stringAtomImpl(`${atom}${jsValueString[0]}`, jsValueString.slice(1));
+    }
+  };
 
-function lexStringAtomImpl(stringAtom, jsonString) {
-  if (jsonString[0] === "\"") {
-    return [`${stringAtom}"`, jsonString.slice(1)];
-  }
-  if (jsonString.startsWith("\\\"")) {
-    return lexStringAtomImpl(`${stringAtom}"`, jsonString.slice(2));
-  }
-  else {
-    return lexStringAtomImpl(`${stringAtom}${jsonString[0]}`, jsonString.slice(1));
-  }
+  return stringAtomImpl("\"", jsValueString.slice(1));
 }
 
 function syntaxJsValue(tokens) {
@@ -65,7 +58,7 @@ function syntaxJsValueImpl(jsValue, tokens) {
   if (tokens.length === 0) {
     return [jsValue, tokens];
   }
-
+  
   switch (tokens[0]) {
     case 'ObjBegin': return syntaxObject({}, tokens.slice(1));
     case 'ArrayBegin': return syntaxArray([], tokens.slice(1));
@@ -86,6 +79,10 @@ function syntaxAtomicValue(atom, tokens) {
     throw "invalid syntax";
   }
 
+  const matchStringOrNumber = jsValueString => {
+    return jsValueString.search(/[0-9.]+/g) === 0 ? Number(jsValueString) : jsValueString.slice(1, -1);
+  };
+
   const value = getAtomicValue(atom);
 
   switch (value) {
@@ -97,10 +94,6 @@ function syntaxAtomicValue(atom, tokens) {
   }
 }
 
-function matchStringOrNumber(valueString) {
-  return valueString.search(/[0-9.]+/g) === 0 ? Number(valueString) : valueString.slice(1, -1);
-}
-
 function syntaxObject(object, tokens) {
   if (tokens.length === 0) {
     throw "invalid syntax";
@@ -108,21 +101,17 @@ function syntaxObject(object, tokens) {
 
   switch (tokens[0]) {
     case 'ObjEnd': return [object, tokens.slice(1)];
-    case 'IterableElementSeparator': return syntaxObject(object,
-tokens.slice(1));
-    default: return syntaxObject(...syntaxObjectKeyValuePair(object,
-tokens));
+    case 'IterableElementSeparator': return syntaxObject(object, tokens.slice(1));
+    default: return syntaxObject(...syntaxObjectKeyValuePair(object, tokens));
   }
 }
 
 function syntaxObjectKeyValuePair(object, tokens) {
-  if (tokens.length < 3 || !isAtom(tokens[0]) || tokens[1] !==
-"KeyValueSeparator") {
+  if (tokens.length < 3 || !isAtom(tokens[0]) || tokens[1] !== "KeyValueSeparator") {
     throw "invalid syntax";
   }
 
-  let objectProperty, rest
-  [objectProperty, rest] = syntaxJsValueImpl(null, tokens.slice(2));
+  const [objectProperty, rest] = syntaxJsValueImpl(null, tokens.slice(2));
 
   object[getAtomicValue(tokens[0])] = objectProperty;
 
@@ -136,17 +125,9 @@ function syntaxArray(array, tokens) {
 
   switch (tokens[0]) {
     case 'ArrayEnd': return [array, tokens.slice(1)];
-    case 'IterableElementSeparator': return syntaxArray(array,
-tokens.slice(1));
-    default: return syntaxArray(...syntaxArrayElement(array, tokens));
+    case 'IterableElementSeparator': return syntaxArray(array, tokens.slice(1));
+    default: return syntaxArray(...((element, rest) => [[...array, element], rest])(...syntaxJsValueImpl(tokens[0], tokens)));
   }
 }
 
-function syntaxArrayElement(array, tokens) {
-  let element, rest;
-  [element, rest] = syntaxJsValueImpl(tokens[0], tokens);
-
-  return [[...array, element], rest];
-}
-
-module.exports = parseJson;
+module.exports = parseJsValue;
