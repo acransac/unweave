@@ -1,6 +1,6 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
 const { isBreakpointCapture, isInput, isMethod, isQueryCapture, message, parseInspectorQuery } = require('./protocol.js');
-const { insertInSourceTree, parseFilePath } = require('./sourceTreeParser.js');
+const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourceTreeParser.js');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
@@ -88,19 +88,19 @@ function parseSourceTree() {
 	  && message(stream).params.url.startsWith("file://")) {
       const [path, fileName] = parseFilePath(message(stream).params.url.slice("file://".length));
 
-      const newSourceTree = insertInSourceTree({root: sourceTree.root ? sourceTree.root : path, branches: sourceTree.branches},
+      const newSourceTree = insertInSourceTree(makeSourceTree(root(sourceTree) ? root(sourceTree) : path, branches(sourceTree)),
 	                                       path,
-	                                       {name: fileName, id: message(stream).params.scriptId});
+	                                       makeFileEntry(fileName, message(stream).params.scriptId));
 
       return floatOn(commit(stream, builder(newSourceTree)),
-	             JSON.stringify({sourceTree: {root: newSourceTree.root, branches: newSourceTree.branches}}));
+	             JSON.stringify({sourceTree: newSourceTree}));
     }
     else {
       return commit(stream, builder(sourceTree));
     }
   };
 
-  return builder({root: undefined, branches: []});
+  return builder(makeSourceTree());
 }
 
 function pullScriptSource(send) {

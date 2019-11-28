@@ -37,69 +37,83 @@ function makeDirectoryEntry(name, content) {
 }
 
 function isDirectoryEntry(entry) {
-  return Array.isArray(entry)
-           && entry.length === 2
-           && typeof entry[0] === "string"
-           && Array.isArray(entry[1])
+  return Array.isArray(entry) && entry.length === 2 && typeof entry[0] === "string" && Array.isArray(entry[1])
 }
 
 function fileName(fileEntry) {
-  return fileEntry.name;
+  return fileEntry[0];
 }
 
 function fileId(fileEntry) {
-  return fileEntry.id;
+  return fileEntry[1];
+}
+
+function makeFileEntry(name, id) {
+  return [name, id];
 }
 
 function entryName(entry) {
   return isDirectoryEntry(entry) ? directoryName(entry) : fileName(entry);
 }
 
+function root(sourceTree) {
+  return sourceTree[0];
+}
+
+function branches(sourceTree) {
+  return sourceTree[1];
+}
+
+function makeSourceTree(root, branches) {
+  return [root, branches ? branches : []];
+}
+
 function insertInSourceTree(sourceTree, path, file) {
-  const insertInSourceTreeImpl = (sourceTree, path, file) => {
+  const insertInSourceTreeImpl = (branch, path, file) => {
     if (path.length === 0) {
-      return [...sourceTree, file];
+      return [...branch, file];
     }
-    else if (sourceTree.length === 0) {
-      return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(sourceTree, path.slice(1), file))];
+    else if (branch.length === 0) {
+      return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(branch, path.slice(1), file))];
     }
     else {
-      if (!isDirectoryEntry(sourceTree[0])) {
-        return [].concat([sourceTree[0]], insertInSourceTreeImpl(sourceTree.slice(1), path, file));
+      if (!isDirectoryEntry(branch[0])) {
+        return [].concat([branch[0]], insertInSourceTreeImpl(branch.slice(1), path, file));
       }
       else {
-        if (directoryName(sourceTree[0]) === path[0]) {
-          return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(directoryContent(sourceTree[0]), path.slice(1), file)),
-		  ...sourceTree.slice(1)];
+        if (directoryName(branch[0]) === path[0]) {
+          return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(directoryContent(branch[0]), path.slice(1), file)),
+		  ...branch.slice(1)];
         }
 	else {
-	  return [].concat([sourceTree[0]], insertInSourceTreeImpl(sourceTree.slice(1), path, file));
+	  return [].concat([branch[0]], insertInSourceTreeImpl(branch.slice(1), path, file));
         }
       }
     }
   };
 
-  return {root: sourceTree.root,
-	  branches: insertInSourceTreeImpl(sourceTree.branches, path.slice(sourceTree.root.length).split("/").slice(1), file)};
+  return makeSourceTree(root(sourceTree),
+	                insertInSourceTreeImpl(branches(sourceTree), path.slice(root(sourceTree).length).split("/").slice(1),
+				               file));
 }
 
 function lookupBranch(sourceTree, path) {
-  const lookupBranchImpl = (sourceTree, path) => {
+  const lookupBranchImpl = (branch, path) => {
     if (path.length === 0) {
-      return sourceTree;
+      return branch;
     }
-    else if (sourceTree.length === 0) {
+    else if (branch.length === 0) {
       return [];
     }
-    else if (isDirectoryEntry(sourceTree[0]) && directoryName(sourceTree[0]) === path[0]) {
-      return lookupBranchImpl(directoryContent(sourceTree[0]), path.slice(1));
+    else if (isDirectoryEntry(branch[0]) && directoryName(branch[0]) === path[0]) {
+      return lookupBranchImpl(directoryContent(branch[0]), path.slice(1));
     }
     else {
-      return lookupBranchImpl(sourceTree.slice(1), path);
+      return lookupBranchImpl(branch.slice(1), path);
     }
   };
 
-  return lookupBranchImpl(sourceTree.branches, path.split("/").slice(1));
+  return lookupBranchImpl(branches(sourceTree), path.split("/").slice(1));
 }
 
 function lookupNextInBranch(branch, namedEntry, errorFunction) {
@@ -120,7 +134,7 @@ function lookupNextInBranch(branch, namedEntry, errorFunction) {
 }
 
 function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
-  const lookupPreviousInBranchImpl = previous => (branch, namedEntry, errorFunction) => {
+  const lookupPreviousInBranchImpl = (previous, branch, namedEntry, errorFunction) => {
     if (branch.length === 0) {
       return errorFunction(namedEntry);
     }
@@ -128,11 +142,11 @@ function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
       return previous;
     }
     else {
-      return lookupPreviousInBranchImpl(branch[0])(branch.slice(1), namedEntry, errorFunction);
+      return lookupPreviousInBranchImpl(branch[0], branch.slice(1), namedEntry, errorFunction);
     }
   };
 
-  return lookupPreviousInBranchImpl(branch[0])(branch, namedEntry, errorFunction);
+  return lookupPreviousInBranchImpl(branch[0], branch, namedEntry, errorFunction);
 }
 
-module.exports = { parseFilePath, insertInSourceTree, isDirectoryEntry, directoryName, directoryContent, fileName, fileId, entryName, lookupBranch, lookupNextInBranch, lookupPreviousInBranch };
+module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeFileEntry, makeSourceTree, parseFilePath, root };

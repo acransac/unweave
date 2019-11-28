@@ -1,5 +1,5 @@
 const { isMethod, isSourceTree, isSourceTreeFocus, message } = require('./protocol.js');
-const { entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch } = require('./sourceTreeParser.js');
+const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourceTreeParser.js');
 
 function parseUserInput(parsed, currentInput) {
   if (currentInput === "\x7f") { // If backspace is delete
@@ -72,9 +72,9 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
     return continuation(newSourceTree,
                         lookupBranch(newSourceTree, branchName(selection)),
                         selection.name !== "" ? selection : {
-                          name: `/${entryName(newSourceTree.branches[0])}`,
-	                  id: isDirectoryEntry(newSourceTree.branches[0]) ? undefined : fileId(newSourceTree.branches[0]),
-	                  type: isDirectoryEntry(newSourceTree.branches[0]) ? "directory" : "file"
+                          name: `/${entryName(branches(newSourceTree)[0])}`,
+	                  id: isDirectoryEntry(branches(newSourceTree)[0]) ? undefined : fileId(branches(newSourceTree)[0]),
+	                  type: isDirectoryEntry(branches(newSourceTree)[0]) ? "directory" : "file"
                         });
   }
   else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "j") {
@@ -153,7 +153,7 @@ function displayedScriptSource() {
     }
   };
 
-  return displayUpdater({root: undefined, branches: []}, [], {name: "", id: undefined, type: "file"}, undefined);
+  return displayUpdater(makeSourceTree(), [], {name: "", id: undefined, type: "file"}, undefined);
 }
 
 module.exports = { describeEnvironment, displayedScriptSource, exploreSourceTree, parseUserInput, scrollable, writeTree };
