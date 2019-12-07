@@ -1,5 +1,6 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
 const { isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, message } = require('./protocol.js');
+const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource(predecessor) {
@@ -144,7 +145,7 @@ function messages(predecessor) {
     else if (isSourceTree(message(stream))) {
       const sourceTree = message(stream).sourceTree;
 
-      return () => `${predecessor === undefined ? "" : messages + "\n"}root: ${sourceTree.root}, tree: ${JSON.stringify(sourceTree.branches)}`;
+      return () => `${predecessor === undefined ? "" : messages + "\n"}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`;
     }
     else {
       return predecessor ? predecessor : () => "Waiting";
@@ -170,7 +171,7 @@ function messagesWindowTopAnchor(predecessor) {
 
 function sourceTree(predecessor) {
   return stream => {
-    const sourceTree = predecessor ? predecessor().sourceTree : {root: undefined, branches: []};
+    const sourceTree = predecessor ? predecessor().sourceTree : makeSourceTree();
 
     const activeBranch = predecessor ? predecessor().activeBranch : [];
 
