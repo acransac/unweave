@@ -37,10 +37,32 @@ function isSourceTreeFocus(message) {
   return message.hasOwnProperty("focusSourceTree");
 }
 
+// Script source message
+function isScriptSource(message) {
+  return isResult(message, "scriptSource");
+}
+
+function readScriptSource(message) {
+  return message.result.scriptSource;
+}
+
+// Debugger paused message
+function isDebuggerPaused(message) {
+  return isMethod(message, "Debugger.paused");
+}
+
+function readPauseLocation(message) {
+  return message.params.callFrames[0].location;
+}
+
+function readEnvironmentRemoteObjectId(message) {
+  return message.params.callFrames[0].scopeChain[0].object.objectId;
+}
+
 function parseInspectorQuery(line) {
   const [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, message, parseInspectorQuery };
+module.exports = { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, message, parseInspectorQuery, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource };

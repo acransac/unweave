@@ -1,4 +1,4 @@
-const { isMethod, isSourceTree, isSourceTreeFocus, message } = require('./protocol.js');
+const { isDebuggerPaused, isMethod, isSourceTree, isSourceTreeFocus, message, readPauseLocation } = require('./protocol.js');
 const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
@@ -130,8 +130,8 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
 
 function displayedScriptSource() {
   const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => (continuation, onDisplayChange) => stream => {
-    if (isMethod(message(stream), "Debugger.paused")) {
-      const currentScriptId = message(stream).params.callFrames[0].location.scriptId;
+    if (isDebuggerPaused(message(stream))) {
+      const currentScriptId = readPauseLocation(message(stream)).scriptId;
 
       if (scriptId !== currentScriptId) {
         return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);

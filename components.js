@@ -1,12 +1,12 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { isBreakpointCapture, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isSourceTree, isSourceTreeFocus, message } = require('./protocol.js');
+const { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, message, readPauseLocation, readScriptSource } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource(predecessor) {
   return stream => {
-    if (isResult(message(stream), "scriptSource")) {
-      return () => message(stream).result.scriptSource;
+    if (isScriptSource(message(stream))) {
+      return () => readScriptSource(message(stream));
     }
     else {
       return predecessor ? predecessor : () => "Loading script source";
@@ -34,8 +34,8 @@ function scriptSourceWindowTopAnchor(predecessor) {
       };
 
       const onDisplayChange = (displayChange, newScriptId) => {
-        if (isMethod(message(stream), "Debugger.paused")) {
-          const runLine = message(stream).params.callFrames[0].location.lineNumber;
+        if (isDebuggerPaused(message(stream))) {
+          const runLine = readPauseLocation(message(stream)).lineNumber;
 
           return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)}; };
         }
@@ -51,8 +51,8 @@ function scriptSourceWindowTopAnchor(predecessor) {
 
 function runLocation(predecessor) {
   return stream => {
-    if (isMethod(message(stream), "Debugger.paused")) {
-      const runLocation = message(stream).params.callFrames[0].location;
+    if (isDebuggerPaused(message(stream))) {
+      const runLocation = readPauseLocation(message(stream));
 
       return () => { return {scriptId: runLocation.scriptId, lineNumber: runLocation.lineNumber}; };
     }
@@ -134,8 +134,8 @@ function messages(predecessor) {
   return stream => {
     const messages = predecessor ? predecessor() : "Waiting";
 
-    if (isMethod(message(stream), "Debugger.paused")) {
-      return () => `${predecessor === undefined ? "" : messages + "\n"}${Object.entries(message(stream).params.callFrames[0].location)}`;
+    if (isDebuggerPaused(message(stream))) {
+      return () => `${predecessor === undefined ? "" : messages + "\n"}${Object.entries(readPauseLocation(message(stream)))}`;
     }
     else if (isMethod(message(stream), "Debugger.scriptParsed")) {
       const script = message(stream).params;
