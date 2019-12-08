@@ -5,6 +5,23 @@ function message(stream) {
   return JSON.parse(value(now(stream)));
 }
 
+// Location
+function makeLocation(scriptHandle, lineNumber) {
+  return [scriptHandle, lineNumber];
+}
+
+function makeLocationFromInspectorLocation(inspectorLocation) {
+  return [inspectorLocation.scriptId, inspectorLocation.lineNumber];
+}
+
+function scriptHandle(location) {
+  return location[0];
+}
+
+function lineNumber(location) {
+  return location[1];
+}
+
 function isMethod(message, methodName) {
   return message.hasOwnProperty("method") && message.method === methodName;
 }
@@ -52,7 +69,7 @@ function isDebuggerPaused(message) {
 }
 
 function readPauseLocation(message) {
-  return message.params.callFrames[0].location;
+  return makeLocationFromInspectorLocation(message.params.callFrames[0].location);
 }
 
 function readEnvironmentRemoteObjectId(message) {
@@ -65,4 +82,4 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, message, parseInspectorQuery, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource };
+module.exports = { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parseInspectorQuery, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };

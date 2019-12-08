@@ -1,5 +1,6 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, messagesWindowTopAnchor, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
+const { lineNumber, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
 const { atom, compose, cons, emptyList, row, show, sizeWidth, vindent } = require('terminal');
 
@@ -65,30 +66,30 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
 	                                        runLocation,
 	                                        breakpointLocations,
 	                                        displayedScript) {
-  const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineId) => {
+  const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineNumber) => {
     if (originalLines.length === 0) {
       return formattedLines;
     }
     else {
-      const hasBreakpoint = !(breakpoints.length === 0) && breakpoints[0].lineNumber === originalLineId;
+      const hasBreakpoint = !(breakpoints.length === 0) && lineNumber(breakpoints[0]) === originalLineNumber;
 
-      const isCurrentExecutionLocation = runLocation.scriptId === displayedScript.id 
-		                           && runLocation.lineNumber === originalLineId;
+      const isCurrentExecutionLocation = scriptHandle(runLocation) === displayedScript.id 
+		                           && lineNumber(runLocation) === originalLineNumber;
 
       return formatScriptSource(
         [...formattedLines, `${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
         hasBreakpoint ? breakpoints.slice(1) : breakpoints,
         originalLines.slice(1),
-        originalLineId + 1);
+        originalLineNumber + 1);
     }
   };
 
   return formatScriptSource([],
-	                    breakpointLocations.breakpoints.filter(({scriptId, lineNumber}) => {
-			      return scriptId === displayedScript.id;
+	                    breakpointLocations.breakpoints.filter(location => {
+			      return scriptHandle(location) === displayedScript.id;
 	                    })
-	                                                   .sort(({scriptIdA, lineNumberA}, {scriptIdB, lineNumberB}) => {
-			      return lineNumberA - lineNumberB;
+	                                                   .sort((locationA, locationB) => {
+			      return lineNumber(locationA) - lineNumber(locationB);
 			    }),
 	                    scriptSource.split("\n"),
 	                    0)
