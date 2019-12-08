@@ -76,10 +76,23 @@ function readEnvironmentRemoteObjectId(message) {
   return message.params.callFrames[0].scopeChain[0].object.objectId;
 }
 
+// Script parsed message
+function isScriptParsed(message) {
+  return isMethod(message, "Debugger.scriptParsed");
+}
+
+function parsedScriptHandle(message) {
+  return message.params.scriptId;
+}
+
+function parsedScriptUrl(message) {
+  return message.params.url;
+}
+
 function parseInspectorQuery(line) {
   const [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parseInspectorQuery, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };
+module.exports = { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };

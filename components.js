@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -135,10 +135,8 @@ function messages(predecessor) {
     if (isDebuggerPaused(message(stream))) {
       return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${scriptHandle(readPauseLocation(message(stream)))}, lineNumber: ${lineNumber(readPauseLocation(message(stream)))}`;
     }
-    else if (isMethod(message(stream), "Debugger.scriptParsed")) {
-      const script = message(stream).params;
-
-      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${script.scriptId}, url: ${script.url}, context: ${script.executionContextId}`;
+    else if (isScriptParsed(message(stream))) {
+      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`;
     }
     else if (isSourceTree(message(stream))) {
       const sourceTree = message(stream).sourceTree;
