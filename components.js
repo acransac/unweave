@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -103,8 +103,8 @@ function breakpoints(predecessor) {
 
 function environment(predecessor) {
   return stream => {
-    if (isResult(message(stream), "result")) {
-      return () => describeEnvironment(message(stream).result.result);
+    if (isEnvironment(message(stream))) {
+      return () => describeEnvironment(readEnvironment(message(stream)));
     }
     else {
       return predecessor ? predecessor : () => "Loading environment";
