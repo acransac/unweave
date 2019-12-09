@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -7,14 +7,14 @@ async function changeMode(stream) {
   const modalCapture = (category, continuation) => {
     const modeSetter = async (stream) => {
       if (isInput(message(stream))) {
-        if (message(stream).input === "\r") {
+        if (input(message(stream)) === "\r") {
           return floatOn(commit(stream, continuation), JSON.stringify(
-	    Object.fromEntries([[category, message(stream).input], ["ended", true]])
+	    Object.fromEntries([[category, input(message(stream))], ["ended", true]])
 	  ));
         }
         else {
           return floatOn(commit(stream, modeSetter), JSON.stringify(
-	    Object.fromEntries([[category, message(stream).input], ["ended", false]])
+	    Object.fromEntries([[category, input(message(stream))], ["ended", false]])
 	  ));
         }
       }
@@ -27,19 +27,19 @@ async function changeMode(stream) {
   };
 
   if (isInput(message(stream))) {
-    if (message(stream).input === "q") {
+    if (input(message(stream)) === "q") {
       return floatOn(commit(stream, modalCapture("query", changeMode)),
 	             JSON.stringify({query: "", ended: false}));
     }
-    else if (message(stream).input === "b") {
+    else if (input(message(stream)) === "b") {
       return floatOn(commit(stream, modalCapture("breakpoint", changeMode)),
 	             JSON.stringify({breakpoint: "", ended: false}));
     }
-    else if (message(stream).input === "m") {
+    else if (input(message(stream)) === "m") {
       return floatOn(commit(stream, modalCapture("focusMessages", changeMode)),
 	             JSON.stringify({focusMessages: "", ended: false}));
     }
-    else if (message(stream).input === "w") {
+    else if (input(message(stream)) === "w") {
       return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)),
 	             JSON.stringify({focusSourceTree: "", ended: false}));
     }
@@ -152,16 +152,16 @@ function queryInspector(send) {
 
 function step(send) {
   const stepper = async (stream) => {
-    if (isInput(message(stream)) && message(stream).input === "n") {
+    if (isInput(message(stream)) && input(message(stream)) === "n") {
       send("Debugger.stepOver", {});
     }
-    else if (isInput(message(stream)) && message(stream).input === "s") {
+    else if (isInput(message(stream)) && input(message(stream)) === "s") {
       send("Debugger.stepInto", {});
     }
-    else if (isInput(message(stream)) && message(stream).input === "c") {
+    else if (isInput(message(stream)) && input(message(stream)) === "c") {
       send("Debugger.resume", {});
     }
-    else if (isInput(message(stream)) && message(stream).input === "f") {
+    else if (isInput(message(stream)) && input(message(stream)) === "f") {
       send("Debugger.stepOut", {});
     }
 

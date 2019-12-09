@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -22,10 +22,10 @@ function scriptSourceWindowTopAnchor(predecessor) {
 
     const topLine = predecessor ? predecessor().topLine : 0;
 
-    if (isInput(message(stream)) && message(stream).input === "j") {
+    if (isInput(message(stream)) && input(message(stream)) === "j") {
       return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1}; };
     }
-    else if (isInput(message(stream)) && message(stream).input === "k") {
+    else if (isInput(message(stream)) && input(message(stream)) === "k") {
       return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1}; };
     }
     else {
