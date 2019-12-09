@@ -114,4 +114,4 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };
+module.exports = { isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };

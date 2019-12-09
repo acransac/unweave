@@ -1,5 +1,5 @@
 const { debugSession } = require('./debugsession.js');
-const { isDebuggerEnabled, isExecutionContextCreated, isMethod, isResult, message } = require('./protocol.js');
+const { isDebuggerEnabled, isExecutionContextCreated, message } = require('./protocol.js');
 const Readline = require('readline');
 const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
 const { renderer } = require('terminal');

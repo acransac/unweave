@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isInput, isMethod, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 

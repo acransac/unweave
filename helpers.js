@@ -1,4 +1,4 @@
-const { isDebuggerPaused, isMethod, isSourceTree, isSourceTreeFocus, message, readPauseLocation, scriptHandle } = require('./protocol.js');
+const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, readPauseLocation, scriptHandle } = require('./protocol.js');
 const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {

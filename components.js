@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isMethod, isQueryCapture, isResult, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
