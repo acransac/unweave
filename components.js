@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -86,7 +86,7 @@ function breakpoints(predecessor) {
       return () => { return {displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints}; };
     };
 
-    if (isBreakpointCapture(message(stream)) && message(stream).ended) {
+    if (isBreakpointCapture(message(stream)) && hasEnded(message(stream))) {
       return () => {
         return {
 	  displayChange: displayChange,
@@ -117,11 +117,11 @@ function commandLine(predecessor) {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
 
     if (isBreakpointCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage
+      return hasEnded(message(stream)) ? () => defaultMessage
 		                   : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
     }
     else if (isQueryCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage : () => `Query Inspector: ${query(message(stream))}`;
+      return hasEnded(message(stream)) ? () => defaultMessage : () => `Query Inspector: ${query(message(stream))}`;
     }
     else {
       return predecessor ? predecessor : () => defaultMessage;
@@ -196,10 +196,10 @@ function topRightColumnDisplay(predecessor) {
       return cons(atom(writeTree(sourceTree)), indent(50, column(50)));
     };
 
-    if (isSourceTreeFocus(message(stream)) && !message(stream).ended) {
+    if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
       return () => sourceTreeDisplay;
     }
-    else if (isSourceTreeFocus(message(stream)) && message(stream).ended) {
+    else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
       return () => environmentAndMessagesDisplay;
     }
     else {

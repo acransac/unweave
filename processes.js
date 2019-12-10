@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -55,7 +55,7 @@ async function changeMode(stream) {
 function parseCaptures() {
   const parser = capture => async (stream) => {
     if (isBreakpointCapture(message(stream))) {
-      if (message(stream).ended) {
+      if (hasEnded(message(stream))) {
         return floatOn(commit(stream, parser("")), JSON.stringify({breakpoint: capture, ended: true}));
       }
       else {
@@ -65,7 +65,7 @@ function parseCaptures() {
       }
     }
     else if (isQueryCapture(message(stream))) {
-      if (message(stream).ended) {
+      if (hasEnded(message(stream))) {
         return floatOn(commit(stream, parser("")), JSON.stringify({query: capture, ended: true}));
       }
       else {
@@ -137,7 +137,7 @@ function pullEnvironment(send) {
 
 function queryInspector(send) {
   const requester = async (stream) => {
-    if (isQueryCapture(message(stream)) && message(stream).ended) {
+    if (isQueryCapture(message(stream)) && hasEnded(message(stream))) {
       send(...parseInspectorQuery(query(message(stream))));
 
       return commit(stream, requester);
@@ -181,7 +181,7 @@ function addBreakpoint(send) {
       return commit(stream, breakpointAdder(breakpointSetter(scriptId), displayChange));
     };
 
-    if (isBreakpointCapture(message(stream)) && message(stream).ended) {
+    if (isBreakpointCapture(message(stream)) && hasEnded(message(stream))) {
       setBreakpoint(breakpointLine(message(stream)));
 
       return commit(stream, breakpointAdder(setBreakpoint, displayChange));
