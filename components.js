@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -121,7 +121,7 @@ function commandLine(predecessor) {
 		                   : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
     }
     else if (isQueryCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage : () => `Query Inspector: ${message(stream).query}`;
+      return message(stream).ended ? () => defaultMessage : () => `Query Inspector: ${query(message(stream))}`;
     }
     else {
       return predecessor ? predecessor : () => defaultMessage;

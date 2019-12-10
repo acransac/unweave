@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -69,7 +69,7 @@ function parseCaptures() {
         return floatOn(commit(stream, parser("")), JSON.stringify({query: capture, ended: true}));
       }
       else {
-	const newCapture = parseUserInput(capture, message(stream).query);
+	const newCapture = parseUserInput(capture, query(message(stream)));
 
         return floatOn(commit(stream, parser(newCapture)), JSON.stringify({query: newCapture, ended: false}));
       }
@@ -138,7 +138,7 @@ function pullEnvironment(send) {
 function queryInspector(send) {
   const requester = async (stream) => {
     if (isQueryCapture(message(stream)) && message(stream).ended) {
-      send(...parseInspectorQuery(message(stream).query));
+      send(...parseInspectorQuery(query(message(stream))));
 
       return commit(stream, requester);
     }
