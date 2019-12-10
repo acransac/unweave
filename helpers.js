@@ -1,4 +1,4 @@
-const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, readPauseLocation, scriptHandle } = require('./protocol.js');
+const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, readPauseLocation, scriptHandle, sourceTreeFocusInput } = require('./protocol.js');
 const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
@@ -77,7 +77,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
 	                  type: isDirectoryEntry(branches(newSourceTree)[0]) ? "directory" : "file"
                         });
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "j") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "j") {
     const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
     return continuation(sourceTree,
@@ -86,7 +86,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
                          id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
                          type: isDirectoryEntry(nextEntry) ? "directory" : "file"});
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "k") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "k") {
     const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
 
     return continuation(sourceTree,
@@ -95,7 +95,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
                          id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
                          type: isDirectoryEntry(previousEntry) ? "directory" : "file"});
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "l") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "l") {
     if (selection.type === "directory") {
       const newBranch = lookupBranch(sourceTree, selection.name);
 
@@ -109,7 +109,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
       return continuation(sourceTree, activeBranch, selection);
     }
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "h") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "h") {
     const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
 
     const newBranch = lookupBranch(sourceTree, newBranchName);
@@ -120,7 +120,7 @@ function exploreSourceTree(sourceTree, activeBranch, selection, stream, continua
                          id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
                          type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"});
   }
-  else if (isSourceTreeFocus(message(stream)) && message(stream).focusSourceTree === "\r" && selection.type === "file") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "\r" && selection.type === "file") {
     return onFilePicked(sourceTree, activeBranch, selection);
   }
   else {

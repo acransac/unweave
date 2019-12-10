@@ -74,8 +74,13 @@ function isSourceTree(message) {
   return message.hasOwnProperty("sourceTree");
 }
 
+// Focus on source tree message
 function isSourceTreeFocus(message) {
   return message.hasOwnProperty("focusSourceTree");
+}
+
+function sourceTreeFocusInput(message) {
+  return message.focusSourceTree;
 }
 
 // Execution context created message
@@ -138,4 +143,4 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle };
+module.exports = { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle, sourceTreeFocusInput };
