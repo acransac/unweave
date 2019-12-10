@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -154,10 +154,10 @@ function messagesWindowTopAnchor(predecessor) {
   return stream => {
     const topLine = predecessor ? predecessor() : 0;
 
-    if (isMessagesFocus(message(stream)) && message(stream).focusMessages === "j") {
+    if (isMessagesFocus(message(stream)) && messagesFocusInput(message(stream)) === "j") {
       return () => topLine + 1;
     }
-    else if (isMessagesFocus(message(stream)) && message(stream).focusMessages === "k") {
+    else if (isMessagesFocus(message(stream)) && messagesFocusInput(message(stream)) === "k") {
       return () => topLine - 1;
     }
     else {
