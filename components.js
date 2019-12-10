@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, parsedScriptHandle, parsedScriptUrl, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -91,7 +91,7 @@ function breakpoints(predecessor) {
         return {
 	  displayChange: displayChange,
 	  scriptId: scriptId,
-	  breakpoints: [...breakpoints, makeLocation(scriptId, Number(message(stream).breakpoint))]
+	  breakpoints: [...breakpoints, makeLocation(scriptId, breakpointLine(message(stream)))]
 	};
       };
     }
@@ -117,7 +117,8 @@ function commandLine(predecessor) {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
 
     if (isBreakpointCapture(message(stream))) {
-      return message(stream).ended ? () => defaultMessage : () => `Add breakpoint at line: ${message(stream).breakpoint}`;
+      return message(stream).ended ? () => defaultMessage
+		                   : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
     }
     else if (isQueryCapture(message(stream))) {
       return message(stream).ended ? () => defaultMessage : () => `Query Inspector: ${message(stream).query}`;

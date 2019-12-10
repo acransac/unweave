@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -59,7 +59,7 @@ function parseCaptures() {
         return floatOn(commit(stream, parser("")), JSON.stringify({breakpoint: capture, ended: true}));
       }
       else {
-	const newCapture = parseUserInput(capture, message(stream).breakpoint);
+	const newCapture = parseUserInput(capture, breakpointCapture(message(stream)));
 
         return floatOn(commit(stream, parser(newCapture)), JSON.stringify({breakpoint: newCapture, ended: false}));
       }
@@ -182,7 +182,7 @@ function addBreakpoint(send) {
     };
 
     if (isBreakpointCapture(message(stream)) && message(stream).ended) {
-      setBreakpoint(Number(message(stream).breakpoint));
+      setBreakpoint(breakpointLine(message(stream)));
 
       return commit(stream, breakpointAdder(setBreakpoint, displayChange));
     }
