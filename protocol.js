@@ -34,7 +34,22 @@ function hasEnded(message) {
   return message.hasOwnProperty("ended") && message.ended;
 }
 
+function makeCapture(category, value) {
+  return JSON.stringify(Object.fromEntries([[category, value], ["ended", false]]));
+}
+
+function endCapture(captureString) {
+  return (capture => {
+    capture.ended = true;
+   
+    return JSON.stringify(capture);
+  })(JSON.parse(captureString));
+}
+
 // Input message
+function makeInput(key) {
+  return JSON.stringify({input: key});
+}
 function isInput(message) {
   return message.hasOwnProperty("input");
 }
@@ -44,6 +59,10 @@ function input(message) {
 }
 
 // Breakpoint capture message
+function makeBreakpointCapture(capture) {
+  return makeCapture("breakpoint", capture ? capture : "");
+}
+
 function isBreakpointCapture(message) {
   return message.hasOwnProperty("breakpoint");
 }
@@ -57,6 +76,10 @@ function breakpointLine(message) {
 }
 
 // Query capture message
+function makeQueryCapture(capture) {
+  return makeCapture("query", capture ? capture : "");
+}
+
 function isQueryCapture(message) {
   return message.hasOwnProperty("query");
 }
@@ -66,6 +89,10 @@ function query(message) {
 }
 
 // Focus on log message
+function makeMessagesFocus(capture) {
+  return makeCapture("focusMessages", capture ? capture : "");
+}
+
 function isMessagesFocus(message) {
   return message.hasOwnProperty("focusMessages");
 }
@@ -78,7 +105,16 @@ function isSourceTree(message) {
   return message.hasOwnProperty("sourceTree");
 }
 
+// Source tree message
+function makeSourceTreeMessage(sourceTree) {
+  return JSON.stringify({sourceTree: sourceTree});
+}
+
 // Focus on source tree message
+function makeSourceTreeFocus(capture) {
+  return makeCapture("focusSourceTree", capture ? capture : "");
+}
+
 function isSourceTreeFocus(message) {
   return message.hasOwnProperty("focusSourceTree");
 }
@@ -141,10 +177,15 @@ function parsedScriptUrl(message) {
   return message.params.url;
 }
 
+// Inspector query
+function makeInspectorQuery(method, parameters) {
+  return JSON.stringify({method: method, params: parameters, id: 0})
+}
+
 function parseInspectorQuery(line) {
   const [method, parameters] = line.match(/^([^\s]+)|[^\1]+/g);
 
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-module.exports = { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle, sourceTreeFocusInput };
+module.exports = { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerEnabled, isDebuggerPaused, isEnvironment, isExecutionContextCreated, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeBreakpointCapture, makeInput, makeInspectorQuery, makeLocation, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironment, readEnvironmentRemoteObjectId, readPauseLocation, readScriptSource, scriptHandle, sourceTreeFocusInput };

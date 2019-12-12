@@ -1,5 +1,5 @@
 const { debugSession } = require('./debugsession.js');
-const { isDebuggerEnabled, isExecutionContextCreated, message } = require('./protocol.js');
+const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message } = require('./protocol.js');
 const Readline = require('readline');
 const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
 const { renderer } = require('terminal');
@@ -20,7 +20,7 @@ function inputCapture() {
 
   process.stdin.setRawMode(true);
 
-  process.stdin.on('keypress', key => process.stdin.emit('input', JSON.stringify({input: key})));
+  process.stdin.on('keypress', key => process.stdin.emit('input', makeInput(key)));
 
   return process.stdin;
 }
@@ -28,7 +28,7 @@ function inputCapture() {
 function startDebugSession(webSocket) {
   console.log("Connection opened");
 
-  const send = (methodName, parameters) => webSocket.send(JSON.stringify({method: methodName, params: parameters, id: 0}));
+  const send = (methodName, parameters) => webSocket.send(makeInspectorQuery(methodName, parameters));
 
   const [render, close] = renderer();
 

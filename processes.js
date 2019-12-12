@@ -1,21 +1,17 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironmentRemoteObjectId } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query, readEnvironmentRemoteObjectId } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
-  const modalCapture = (category, continuation) => {
+  const modalCapture = (makeCapture, continuation) => {
     const modeSetter = async (stream) => {
       if (isInput(message(stream))) {
         if (input(message(stream)) === "\r") {
-          return floatOn(commit(stream, continuation), JSON.stringify(
-	    Object.fromEntries([[category, input(message(stream))], ["ended", true]])
-	  ));
+          return floatOn(commit(stream, continuation), endCapture(makeCapture(input(message(stream)))));
         }
         else {
-          return floatOn(commit(stream, modeSetter), JSON.stringify(
-	    Object.fromEntries([[category, input(message(stream))], ["ended", false]])
-	  ));
+          return floatOn(commit(stream, modeSetter), makeCapture(input(message(stream))));
         }
       }
       else {
@@ -28,20 +24,16 @@ async function changeMode(stream) {
 
   if (isInput(message(stream))) {
     if (input(message(stream)) === "q") {
-      return floatOn(commit(stream, modalCapture("query", changeMode)),
-	             JSON.stringify({query: "", ended: false}));
+      return floatOn(commit(stream, modalCapture(makeQueryCapture, changeMode)), makeQueryCapture());
     }
     else if (input(message(stream)) === "b") {
-      return floatOn(commit(stream, modalCapture("breakpoint", changeMode)),
-	             JSON.stringify({breakpoint: "", ended: false}));
+      return floatOn(commit(stream, modalCapture(makeBreakpointCapture, changeMode)), makeBreakpointCapture());
     }
     else if (input(message(stream)) === "m") {
-      return floatOn(commit(stream, modalCapture("focusMessages", changeMode)),
-	             JSON.stringify({focusMessages: "", ended: false}));
+      return floatOn(commit(stream, modalCapture(makeMessagesFocus, changeMode)), makeMessagesFocus());
     }
     else if (input(message(stream)) === "w") {
-      return floatOn(commit(stream, modalCapture("focusSourceTree", changeMode)),
-	             JSON.stringify({focusSourceTree: "", ended: false}));
+      return floatOn(commit(stream, modalCapture(makeSourceTreeFocus, changeMode)), makeSourceTreeFocus());
     }
     else {
       return commit(stream, changeMode);
@@ -56,22 +48,22 @@ function parseCaptures() {
   const parser = capture => async (stream) => {
     if (isBreakpointCapture(message(stream))) {
       if (hasEnded(message(stream))) {
-        return floatOn(commit(stream, parser("")), JSON.stringify({breakpoint: capture, ended: true}));
+        return floatOn(commit(stream, parser("")), endCapture(makeBreakpointCapture(capture)));
       }
       else {
 	const newCapture = parseUserInput(capture, breakpointCapture(message(stream)));
 
-        return floatOn(commit(stream, parser(newCapture)), JSON.stringify({breakpoint: newCapture, ended: false}));
+        return floatOn(commit(stream, parser(newCapture)), makeBreakpointCapture(newCapture));
       }
     }
     else if (isQueryCapture(message(stream))) {
       if (hasEnded(message(stream))) {
-        return floatOn(commit(stream, parser("")), JSON.stringify({query: capture, ended: true}));
+        return floatOn(commit(stream, parser("")), endCapture(makeQueryCapture(capture)));
       }
       else {
 	const newCapture = parseUserInput(capture, query(message(stream)));
 
-        return floatOn(commit(stream, parser(newCapture)), JSON.stringify({query: newCapture, ended: false}));
+        return floatOn(commit(stream, parser(newCapture)), makeQueryCapture(newCapture));
       }
     }
     else {
@@ -91,8 +83,7 @@ function parseSourceTree() {
 	                                       path,
 	                                       makeFileEntry(fileName, parsedScriptHandle(message(stream))));
 
-      return floatOn(commit(stream, builder(newSourceTree)),
-	             JSON.stringify({sourceTree: newSourceTree}));
+      return floatOn(commit(stream, builder(newSourceTree)), makeSourceTreeMessage(newSourceTree));
     }
     else {
       return commit(stream, builder(sourceTree));
