@@ -101,13 +101,17 @@ function messagesFocusInput(message) {
   return message.focusMessages;
 }
 
+// Source tree message
+function makeSourceTreeMessage(sourceTree) {
+  return JSON.stringify({sourceTree: sourceTree});
+}
+
 function isSourceTree(message) {
   return message.hasOwnProperty("sourceTree");
 }
 
-// Source tree message
-function makeSourceTreeMessage(sourceTree) {
-  return JSON.stringify({sourceTree: sourceTree});
+function readSourceTree(message) {
+  return message.sourceTree;
 }
 
 // Focus on source tree message

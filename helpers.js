@@ -29,27 +29,18 @@ function scrollable(content, topLine) {
 
 function writeTree(visitedSourceTree) {
   const formatEntry = entry => {
-    const selectionName = selection => selection.name.split("/").slice(-1)[0];
-
-    return (entryName(entry) === selectionName(visitedSourceTree.selection) ? entryName => `\u001b[7m${entryName}\u001b[0m`
-	                                                                    : entryName => entryName)(
-      (isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan")
-	                       : entryName => entryName)(
-        entryName(entry)));
+    return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedSourceTree))
+      ? entryName => `\u001b[7m${entryName}\u001b[0m`
+      : entryName => entryName)(
+        (isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan")
+	                         : entryName => entryName)(
+          entryName(entry)));
   };
 
-  return (branchName(visitedSourceTree.selection) === "" ? `${colourText("root", "blue")}\n`
-                                                         : `${colourText(branchName(visitedSourceTree.selection), "blue")}\n`) 
-    + visitedSourceTree.activeBranch.map(entry => `  ${formatEntry(entry)}\n`).join("");
-}
-
-function branchName(selection) {
-  if (selection.name === "") {
-    return "";
-  }
-  else {
-    return selection.name.split("/").slice(0, -1).join("");
-  }
+  return (selectedEntryBranchName(selectedEntry(visitedSourceTree)) === "" 
+    ? `${colourText("root", "blue")}\n`
+    : `${colourText(selectedEntryBranchName(selectedEntry(visitedSourceTree)), "blue")}\n`) 
+    + selectedBranch(visitedSourceTree).map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
 function colourText(text, colour) {
@@ -65,26 +56,12 @@ function colourText(text, colour) {
   }
 }
 
-function exploreSourceTree(sourceTree, activeBranch, selection, stream, continuation, onFilePicked) {
+function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePicked) {
   if (isSourceTree(message(stream))) {
-    const newSourceTree = message(stream).sourceTree;
-
-    return continuation(newSourceTree,
-                        lookupBranch(newSourceTree, branchName(selection)),
-                        selection.name !== "" ? selection : {
-                          name: `/${entryName(branches(newSourceTree)[0])}`,
-	                  id: isDirectoryEntry(branches(newSourceTree)[0]) ? undefined : fileId(branches(newSourceTree)[0]),
-	                  type: isDirectoryEntry(branches(newSourceTree)[0]) ? "directory" : "file"
-                        });
+    return continuation(refreshSelectedSourceTree(selectionInSourceTree, readSourceTree(message(stream))));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "j") {
-    const nextEntry = lookupNextInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
-
-    return continuation(sourceTree,
-                        activeBranch,
-                        {name: [...selection.name.split("/").slice(0, -1), entryName(nextEntry)].join("/"),
-                         id: isDirectoryEntry(nextEntry) ? undefined : fileId(nextEntry),
-                         type: isDirectoryEntry(nextEntry) ? "directory" : "file"});
+    return continuation(selectNext(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "k") {
     const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});

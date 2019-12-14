@@ -149,4 +149,81 @@ function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
   return lookupPreviousInBranchImpl(branch[0], branch, namedEntry, errorFunction);
 }
 
+function makeSelectionInSourceTree(sourceTree, selectedBranch, selectedEntry) {
+  return [sourceTree,
+	  selectedBranch,
+	  selectedEntryName(selectedEntry) === ""
+	    ? makeSelectedEntry(`/${entryName(branches(sourceTree)[0])}`,
+	                        isDirectoryEntry(branches(sourceTree)[0]) ? undefined : fileId(branches(sourceTree)[0]),
+	                        isDirectoryEntry(branches(sourceTree)[0]) ? "directory" : "file")
+	    : selectedEntry];
+}
+
+function selectedSourceTree(selectionInSourceTree) {
+  return selectionInSourceTree[0];
+}
+
+function selectedBranch(selection) {
+  return selection[1];
+}
+
+function selectedEntry(selection) {
+  return selection[2];
+}
+
+function makeSelectedEntry(name, handle, type) {
+  return [name ? name : "", handle, type ? type : "directory"];
+}
+
+function selectedEntryName(selectedEntry) {
+  return selectedEntry[0];
+}
+
+function selectedEntryLeafName(selectedEntry) {
+  return selectedEntryName(selectedEntry).split("/").slice(-1)[0];
+}
+
+function selectedEntryBranchName(selectedEntry) {
+  if (selectedEntryName(selectedEntry) === "") {
+    return "";
+  }
+  else {
+    return selectedEntryName(selectedEntry).split("/").slice(0, -1).join("");
+  }
+}
+
+function selectedEntryHandle(selectedEntry) {
+  return selectedEntry[1];
+}
+
+function selectedEntryType(selectedEntry) {
+  return selectedEntry[2];
+}
+
+function refreshSelectedSourceTree(selectionInSourceTree, newSourceTree) {
+  return makeSelectionInSourceTree(newSourceTree, 
+                                   lookupBranch(newSourceTree, selectedEntryBranchName(selectedEntry(selectionInSourceTree))),
+	                           selectedEntry(selectionInSourceTree));
+}
+
+function selectAnother(selectionInSourceTree, selector) {
+  const otherEntry = selector(selectedBranch(selectionInSourceTree),
+	                      selectedEntryLeafName(selectedEntry(selectionInSourceTree)),
+	                      entry => {});
+
+  return makeSelectionInSourceTree(selectedSourceTree(selectionInSourceTree),
+                                   selectedBranch(selectionInSourceTree),
+	                           makeSelectedEntry(selectedEntryBranchName(selectedEntry(selectionInSourceTree)) + `/${entryName(otherEntry)}`,
+                                                     isDirectoryEntry(otherEntry) ? undefined : fileId(otherEntry),
+                                                     isDirectoryEntry(otherEntry) ? "directory" : "file"));
+}
+
+function selectNext(selectionInSourceTree) {
+  return selectAnother(selectionInSourceTree, lookupNextInBranch);
+}
+
+function selectPrevious(selectionInSourceTree) {
+  return selectAnother(selectionInSourceTree, lookupPreviousInBranch);
+}
+
 module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeFileEntry, makeSourceTree, parseFilePath, root };
