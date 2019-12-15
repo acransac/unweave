@@ -1,5 +1,5 @@
-const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, readPauseLocation, scriptHandle, sourceTreeFocusInput } = require('./protocol.js');
-const { branches, entryName, fileId, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeSourceTree } = require('./sourcetree.js');
+const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, readPauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput } = require('./protocol.js');
+const { branches, entryName, fileId, isDirectoryEntry, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryType, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
   if (currentInput === "\x7f") { // If backspace is delete
@@ -83,31 +83,33 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
 }
 
 function displayedScriptSource() {
-  const displayUpdater = (sourceTree, activeBranch, selection, scriptId) => (continuation, onDisplayChange) => stream => {
+  const displayUpdater = (selectionInSourceTree, scriptId) => (continuation, onDisplayChange) => stream => {
     if (isDebuggerPaused(message(stream))) {
       const currentScriptId = scriptHandle(readPauseLocation(message(stream)));
 
       if (scriptId !== currentScriptId) {
-        return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+        return onDisplayChange(displayUpdater(selectionInSourceTree, currentScriptId), currentScriptId);
       }
       else {
-        return continuation(displayUpdater(sourceTree, activeBranch, selection, currentScriptId), currentScriptId);
+        return continuation(displayUpdater(selectionInSourceTree, currentScriptId), currentScriptId);
       }
     }
     else {
-      const selectionChange = (sourceTree, activeBranch, selection) => {
-        return continuation(displayUpdater(sourceTree, activeBranch, selection, scriptId), scriptId);
+      const selectionChange = selectionInSourceTree => {
+        return continuation(displayUpdater(selectionInSourceTree, scriptId), scriptId);
       };
 
-      const displayChange = (sourceTree, activeBranch, selection) => {
-        return onDisplayChange(displayUpdater(sourceTree, activeBranch, selection, selection.id), selection.id);
+      const displayChange = selectionInSourceTree => {
+	const selectedEntryHandle = selectedEntryHandle(selectedEntry(selectionInSourceTree));
+
+        return onDisplayChange(displayUpdater(selectionInSourceTree, selectedEntryHandle), selectedEntryHandle);
       };
       
-      return exploreSourceTree(sourceTree, activeBranch, selection, stream, selectionChange, displayChange);
+      return exploreSourceTree(selectionInSourceTree, stream, selectionChange, displayChange);
     }
   };
 
-  return displayUpdater(makeSourceTree(), [], {name: "", id: undefined, type: "file"}, undefined);
+  return displayUpdater(makeSelectionInSourceTree(makeSourceTree()), undefined);
 }
 
 module.exports = { describeEnvironment, displayedScriptSource, exploreSourceTree, parseUserInput, scrollable, writeTree };

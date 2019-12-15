@@ -150,13 +150,18 @@ function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
 }
 
 function makeSelectionInSourceTree(sourceTree, selectedBranch, selectedEntry) {
-  return [sourceTree,
-	  selectedBranch,
-	  selectedEntryName(selectedEntry) === ""
-	    ? makeSelectedEntry(`/${entryName(branches(sourceTree)[0])}`,
-	                        isDirectoryEntry(branches(sourceTree)[0]) ? undefined : fileId(branches(sourceTree)[0]),
-	                        isDirectoryEntry(branches(sourceTree)[0]) ? "directory" : "file")
-	    : selectedEntry];
+  if (branches(sourceTree).length === 0) {
+    return [sourceTree, [], makeSelectedEntry()];
+  }
+  else {
+    return [sourceTree,
+	    selectedBranch,
+	    selectedEntryName(selectedEntry) === ""
+	      ? makeSelectedEntry(`/${entryName(branches(sourceTree)[0])}`,
+	                          isDirectoryEntry(branches(sourceTree)[0]) ? undefined : fileId(branches(sourceTree)[0]),
+	                          isDirectoryEntry(branches(sourceTree)[0]) ? "directory" : "file")
+	      : selectedEntry];
+  }
 }
 
 function selectedSourceTree(selectionInSourceTree) {
@@ -172,7 +177,7 @@ function selectedEntry(selection) {
 }
 
 function makeSelectedEntry(name, handle, type) {
-  return [name ? name : "", handle, type ? type : "directory"];
+  return [name ? name : "", handle, type ? type : "file"];
 }
 
 function selectedEntryName(selectedEntry) {
@@ -253,4 +258,4 @@ function visitParentBranch(selectionInSourceTree) {
   return selectAnotherBranch(selectionInSourceTree, newBranchName);
 }
 
-module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeFileEntry, makeSourceTree, parseFilePath, root };
+module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, makeFileEntry, makeSelectionInSourceTree, makeSourceTree, parseFilePath, refreshSelectedSourceTree, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryType, selectNext, selectPrevious, visitChildBranch, visitParentBranch };

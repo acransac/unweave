@@ -1,6 +1,6 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
-const { branches, makeSourceTree, root } = require('./sourcetree.js');
+const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource(predecessor) {
@@ -168,17 +168,11 @@ function messagesWindowTopAnchor(predecessor) {
 
 function sourceTree(predecessor) {
   return stream => {
-    const sourceTree = predecessor ? predecessor().sourceTree : makeSourceTree();
+    const selection = predecessor ? predecessor() : makeSelectionInSourceTree(makeSourceTree());
 
-    const activeBranch = predecessor ? predecessor().activeBranch : [];
+    const identity = selection => selection;
 
-    const selection = predecessor ? predecessor().selection : {name: "", id: undefined, type: "file"};
-
-    const identity = (sourceTree, activeBranch, selection) => {
-      return {sourceTree: sourceTree, activeBranch: activeBranch, selection: selection};
-    };
-
-    return () => exploreSourceTree(sourceTree, activeBranch, selection, stream, identity, identity);
+    return () => exploreSourceTree(selection, stream, identity, identity);
   };
 }
 
