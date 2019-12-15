@@ -1,7 +1,7 @@
 const { debugSession } = require('./debugsession.js');
 const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message } = require('./protocol.js');
 const Readline = require('readline');
-const { makeEmitter, mergeEvents, now, later, Source, value } = require('streamer');
+const { makeEmitter, mergeEvents, later, Source } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
