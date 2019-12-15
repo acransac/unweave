@@ -64,44 +64,21 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
     return continuation(selectNext(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "k") {
-    const previousEntry = lookupPreviousInBranch(activeBranch, selection.name.split("/").slice(-1)[0], entry => {});
-
-    return continuation(sourceTree,
-                        activeBranch,
-                        {name: [...selection.name.split("/").slice(0, -1), entryName(previousEntry)].join("/"),
-                         id: isDirectoryEntry(previousEntry) ? undefined : fileId(previousEntry),
-                         type: isDirectoryEntry(previousEntry) ? "directory" : "file"});
+    return continuation(selectPrevious(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "l") {
-    if (selection.type === "directory") {
-      const newBranch = lookupBranch(sourceTree, selection.name);
-
-      return continuation(sourceTree,
-                          newBranch,
-                          {name: `${selection.name}/${entryName(newBranch[0])}`,
-                           id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-                           type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"});
-    }
-    else {
-      return continuation(sourceTree, activeBranch, selection);
-    }
+    return continuation(visitChildBranch(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "h") {
-    const newBranchName = branchName(selection) === "" ? "" : branchName(selection).split("/").slice(0, -1).join("/");
-
-    const newBranch = lookupBranch(sourceTree, newBranchName);
-
-    return continuation(sourceTree,
-                        newBranch,
-                        {name: `${newBranchName}/${entryName(newBranch[0])}`,
-                         id: isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-                         type: isDirectoryEntry(newBranch[0]) ? "directory" : "file"});
+    return continuation(visitParentBranch(selectionInSourceTree));
   }
-  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "\r" && selection.type === "file") {
-    return onFilePicked(sourceTree, activeBranch, selection);
+  else if (isSourceTreeFocus(message(stream))
+	     && sourceTreeFocusInput(message(stream)) === "\r"
+	     && selectedEntryType(selectedEntry(selectionInSourceTree)) === "file") {
+    return onFilePicked(selectionInSourceTree);
   }
   else {
-    return continuation(sourceTree, activeBranch, selection);
+    return continuation(selectionInSourceTree);
   }
 }
 

@@ -206,7 +206,7 @@ function refreshSelectedSourceTree(selectionInSourceTree, newSourceTree) {
 	                           selectedEntry(selectionInSourceTree));
 }
 
-function selectAnother(selectionInSourceTree, selector) {
+function selectAnotherEntryInBranch(selectionInSourceTree, selector) {
   const otherEntry = selector(selectedBranch(selectionInSourceTree),
 	                      selectedEntryLeafName(selectedEntry(selectionInSourceTree)),
 	                      entry => {});
@@ -219,11 +219,38 @@ function selectAnother(selectionInSourceTree, selector) {
 }
 
 function selectNext(selectionInSourceTree) {
-  return selectAnother(selectionInSourceTree, lookupNextInBranch);
+  return selectAnotherEntryInBranch(selectionInSourceTree, lookupNextInBranch);
 }
 
 function selectPrevious(selectionInSourceTree) {
-  return selectAnother(selectionInSourceTree, lookupPreviousInBranch);
+  return selectAnotherEntryInBranch(selectionInSourceTree, lookupPreviousInBranch);
+}
+
+function selectAnotherBranch(selectionInSourceTree, branchName) {
+  const newBranch = lookupBranch(selectedSourceTree(selectionInSourceTree), branchName);
+
+  return makeSelectionInSourceTree(selectedSourceTree(selectionInSourceTree),
+                                   newBranch,
+	                           makeSelectedEntry(selectedEntryBranchName(selectedEntry(selectionInSourceTree)) + `/${entryName(newBranch[0])}`,
+                                                     isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
+                                                     isDirectoryEntry(newBranch[0]) ? "directory" : "file"}));
+}
+
+function visitChildBranch(selectionInSourceTree) {
+  if (selectedEntryType(selectedEntry(selectionInSourceTree)) === "directory") {
+    return selectAnotherBranch(selectionInSourceTree, selectedEntryName(selectedEntry(selectionInSourceTree)));
+  }
+  else {
+    return selectionInSourceTree;
+  }
+}
+
+function visitParentBranch(selectionInSourceTree) {
+  const newBranchName = selectedEntryBranchName(selectedEntry(selectionInSourceTree)) === ""
+    ? ""
+    : selectedEntryBranchName(selectedEntry(selectionInSourceTree)).split("/").slice(0, -1).join("/");
+
+  return selectAnotherBranch(selectionInSourceTree, newBranchName);
 }
 
 module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, lookupBranch, lookupNextInBranch, lookupPreviousInBranch, makeFileEntry, makeSourceTree, parseFilePath, root };
