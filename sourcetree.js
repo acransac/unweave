@@ -238,7 +238,7 @@ function selectAnotherBranch(selectionInSourceTree, branchName) {
                                    newBranch,
 	                           makeSelectedEntry(selectedEntryBranchName(selectedEntry(selectionInSourceTree)) + `/${entryName(newBranch[0])}`,
                                                      isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
-                                                     isDirectoryEntry(newBranch[0]) ? "directory" : "file"}));
+                                                     isDirectoryEntry(newBranch[0]) ? "directory" : "file"));
 }
 
 function visitChildBranch(selectionInSourceTree) {

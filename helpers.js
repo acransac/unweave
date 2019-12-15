@@ -100,9 +100,9 @@ function displayedScriptSource() {
       };
 
       const displayChange = selectionInSourceTree => {
-	const selectedEntryHandle = selectedEntryHandle(selectedEntry(selectionInSourceTree));
+	const scriptId = selectedEntryHandle(selectedEntry(selectionInSourceTree));
 
-        return onDisplayChange(displayUpdater(selectionInSourceTree, selectedEntryHandle), selectedEntryHandle);
+        return onDisplayChange(displayUpdater(selectionInSourceTree, scriptId), scriptId);
       };
       
       return exploreSourceTree(selectionInSourceTree, stream, selectionChange, displayChange);
