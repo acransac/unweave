@@ -1,5 +1,5 @@
 const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, query, readEnvironment, readPauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
@@ -35,7 +35,7 @@ function scriptSourceWindowTopAnchor(predecessor) {
 
       const onDisplayChange = (displayChange, newScriptId) => {
         if (isDebuggerPaused(message(stream))) {
-          const runLine = lineNumber(readPauseLocation(message(stream)));
+          const runLine = lineNumber(pauseLocation(message(stream)));
 
           return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)}; };
         }
@@ -52,7 +52,7 @@ function scriptSourceWindowTopAnchor(predecessor) {
 function runLocation(predecessor) {
   return stream => {
     if (isDebuggerPaused(message(stream))) {
-      return () => readPauseLocation(message(stream));
+      return () => pauseLocation(message(stream));
     }
     else {
       return predecessor ? predecessor : () => makeLocation();
@@ -134,7 +134,7 @@ function messages(predecessor) {
     const messages = predecessor ? predecessor() : "Waiting";
 
     if (isDebuggerPaused(message(stream))) {
-      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${scriptHandle(readPauseLocation(message(stream)))}, lineNumber: ${lineNumber(readPauseLocation(message(stream)))}`;
+      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`;
     }
     else if (isScriptParsed(message(stream))) {
       return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`;
