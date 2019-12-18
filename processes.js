@@ -46,25 +46,22 @@ async function changeMode(stream) {
 
 function parseCaptures() {
   const parser = capture => async (stream) => {
-    if (isBreakpointCapture(message(stream))) {
+    const parse = (makeCapture, readCapture) => {
       if (hasEnded(message(stream))) {
-        return floatOn(commit(stream, parser("")), endCapture(makeBreakpointCapture(capture)));
+        return floatOn(commit(stream, parser("")), endCapture(makeCapture(capture)));
       }
       else {
-	const newCapture = parseUserInput(capture, breakpointCapture(message(stream)));
+	const newCapture = parseUserInput(capture, readCapture(message(stream)));
 
-        return floatOn(commit(stream, parser(newCapture)), makeBreakpointCapture(newCapture));
+        return floatOn(commit(stream, parser(newCapture)), makeCapture(newCapture));
       }
+    };
+   
+    if (isBreakpointCapture(message(stream))) {
+      return parse(makeBreakpointCapture, breakpointCapture);
     }
     else if (isQueryCapture(message(stream))) {
-      if (hasEnded(message(stream))) {
-        return floatOn(commit(stream, parser("")), endCapture(makeQueryCapture(capture)));
-      }
-      else {
-	const newCapture = parseUserInput(capture, query(message(stream)));
-
-        return floatOn(commit(stream, parser(newCapture)), makeQueryCapture(newCapture));
-      }
+      return parse(makeQueryCapture, query);
     }
     else {
       return commit(stream, parser(capture));
