@@ -73,12 +73,20 @@ function isScriptParsed(message) {
   return isMethod(message, "Debugger.scriptParsed");
 }
 
+function isUserScriptParsed(message) {
+  return isScriptParsed(message) && parsedScriptUrl(message).startsWith("file://");
+}
+
 function parsedScriptHandle(message) {
   return message.params.scriptId;
 }
 
 function parsedScriptUrl(message) {
   return message.params.url;
+}
+
+function parsedUserScriptPath(message) {
+  return parsedScriptUrl(message).slice("file://".length);
 }
 
 // Input message
@@ -216,6 +224,7 @@ module.exports = {
   isScriptSource,
   isSourceTree,
   isSourceTreeFocus,
+  isUserScriptParsed,
   lineNumber,
   makeBreakpointCapture,
   makeInput,
@@ -229,6 +238,7 @@ module.exports = {
   messagesFocusInput,
   parsedScriptHandle,
   parsedScriptUrl,
+  parsedUserScriptPath,
   parseInspectorQuery,
   pauseLocation,
   query,

@@ -118,7 +118,7 @@ function commandLine(predecessor) {
 
     if (isBreakpointCapture(message(stream))) {
       return hasEnded(message(stream)) ? () => defaultMessage
-		                   : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
+		                       : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
     }
     else if (isQueryCapture(message(stream))) {
       return hasEnded(message(stream)) ? () => defaultMessage : () => `Query Inspector: ${query(message(stream))}`;

@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, environmentRemoteObjectId, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parseInspectorQuery, query } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, endCapture, environmentRemoteObjectId, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, parseInspectorQuery, query } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath, root } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -76,10 +76,10 @@ function parseCaptures() {
 
 function parseSourceTree() {
   const builder = sourceTree => async (stream) => {
-    if (isScriptParsed(message(stream)) && parsedScriptUrl(message(stream)).startsWith("file://")) {
-      const [path, fileName] = parseFilePath(parsedScriptUrl(message(stream)).slice("file://".length));
+    if (isUserScriptParsed(message(stream))) {
+      const [path, fileName] = parseFilePath(parsedUserScriptPath(message(stream)));
 
-      const newSourceTree = insertInSourceTree(makeSourceTree(root(sourceTree) ? root(sourceTree) : path, branches(sourceTree)),
+      const newSourceTree = insertInSourceTree(sourceTree,
 	                                       path,
 	                                       makeFileEntry(fileName, parsedScriptHandle(message(stream))));
 

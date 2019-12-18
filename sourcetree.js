@@ -92,9 +92,15 @@ function insertInSourceTree(sourceTree, path, file) {
     }
   };
 
-  return makeSourceTree(root(sourceTree),
-	                insertInSourceTreeImpl(branches(sourceTree), path.slice(root(sourceTree).length).split("/").slice(1),
-				               file));
+  if (root(sourceTree) === undefined) {
+    return makeSourceTree(path, [file]);
+  }
+  else {
+    return makeSourceTree(root(sourceTree),
+	                  insertInSourceTreeImpl(branches(sourceTree),
+				                 path.slice(root(sourceTree).length).split("/").slice(1),
+				                 file));
+  }
 }
 
 function lookupBranch(sourceTree, path) {
