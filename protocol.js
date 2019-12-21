@@ -45,6 +45,10 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
+function sendQuery(send, message) {
+  send(...parseInspectorQuery(query(message)));
+}
+
 // Execution context created message
 function isExecutionContextCreated(message) {
   return isMethod(message, "Runtime.executionContextCreated");
@@ -242,13 +246,13 @@ module.exports = {
   parsedScriptHandle,
   parsedScriptUrl,
   parsedUserScriptPath,
-  parseInspectorQuery,
   pauseLocation,
   query,
   readEnvironment,
   readScriptSource,
   readSourceTree,
   scriptHandle,
+  sendQuery,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
   sourceTreeFocusInput
