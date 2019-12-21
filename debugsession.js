@@ -1,4 +1,5 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, messagesWindowTopAnchor, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
+const { isCtrlC } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
@@ -31,7 +32,7 @@ function debugSession(send, render, terminate) {
 
 function loop(terminate) {
   const looper = async (stream) => {
-    if (isInput(message(stream)) && input(message(stream)) === "\x03") { // Ctrl+C quits
+    if (isInput(message(stream)) && isCtrlC(input(message(stream)))) {
       return terminate();
     }
     else {

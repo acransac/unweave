@@ -2,7 +2,7 @@ const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, pauseLocatio
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
-  if (currentInput === "\x7f") { // If backspace is delete
+  if (isBackspace(currentInput)) {
     return parsed.slice(0, -1);
   }
   else if (currentInput === "\r") {
@@ -11,6 +11,14 @@ function parseUserInput(parsed, currentInput) {
   else {
     return `${parsed}${currentInput}`;
   }
+}
+
+function isBackspace(input) {
+  return input === "\x7f";
+}
+
+function isCtrlC(input) {
+  return input === "\x03";
 }
 
 function describeEnvironment(values) {
@@ -112,4 +120,12 @@ function displayedScriptSource() {
   return displayUpdater(makeSelectionInSourceTree(makeSourceTree()), undefined);
 }
 
-module.exports = { describeEnvironment, displayedScriptSource, exploreSourceTree, parseUserInput, scrollable, writeTree };
+module.exports = {
+  describeEnvironment,
+  displayedScriptSource,
+  exploreSourceTree,
+  isCtrlC,
+  parseUserInput,
+  scrollable,
+  writeTree
+};
