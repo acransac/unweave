@@ -1,36 +1,45 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, messagesWindowTopAnchor, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { lineNumber, scriptHandle } = require('./protocol.js');
+const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
 const { atom, compose, cons, emptyList, row, show, sizeWidth, vindent } = require('terminal');
 
-function debugSession(send, render) {
+function debugSession(send, render, terminate) {
   return async (stream) => {
-    return loop(await show(render)(compose(developerSession,
-			                   scriptSource,
-			                   scriptSourceWindowTopAnchor,
-			                   runLocation,
-			                   breakpoints,
-			                   displayedScript,
-		                           topRightColumnDisplay,
-			                   environment,
-			                   messages,
-			                   messagesWindowTopAnchor,
-		                           sourceTree,
-			                   commandLine))(
-	                            await step(send)(
-	                              await queryInspector(send)(
-		                        await addBreakpoint(send)(
-		                          await pullEnvironment(send)(
-		                            await pullScriptSource(send)(
-			                      await parseSourceTree()(
-			                        await parseCaptures()(
-		  	                          await changeMode(stream))))))))));
+    return loop(terminate)(await show(render)(compose(developerSession,
+			                              scriptSource,
+			                              scriptSourceWindowTopAnchor,
+			                              runLocation,
+			                              breakpoints,
+			                              displayedScript,
+		                                      topRightColumnDisplay,
+			                              environment,
+			                              messages,
+			                              messagesWindowTopAnchor,
+		                                      sourceTree,
+			                              commandLine))(
+	                                        await step(send)(
+	                                          await queryInspector(send)(
+		                                    await addBreakpoint(send)(
+		                                      await pullEnvironment(send)(
+		                                        await pullScriptSource(send)(
+			                                  await parseSourceTree()(
+			                                    await parseCaptures()(
+		  	                                      await changeMode(stream))))))))));
   };
 }
 
-async function loop(stream) {
-  return loop(await continuation(now(stream))(forget(await later(stream))));
+function loop(terminate) {
+  const looper = async (stream) => {
+    if (isInput(message(stream)) && input(message(stream)) === "\x03") { // Ctrl+C quits
+      return terminate();
+    }
+    else {
+      return looper(await continuation(now(stream))(forget(await later(stream))));
+    }
+  };
+
+  return looper;
 }
 
 function developerSession(source,

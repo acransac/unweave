@@ -10,9 +10,19 @@ connectToInspector(process.argv[2]);
 function connectToInspector(sessionHash) {
   const webSocket = new WebSocket(`ws://localhost:9230/${sessionHash}`);
 
-  webSocket.onopen = () => startDebugSession(webSocket);
+  webSocket.onopen = () => {
+    console.log("Connection opened");
+ 
+    startDebugSession(webSocket);
+  };
 
   webSocket.onerror = error => console.log(error);
+
+  webSocket.onclose = () => {
+    console.log("Connection closed");
+  
+    process.exit();
+  };
 }
 
 function inputCapture() {
@@ -26,15 +36,22 @@ function inputCapture() {
 }
 
 function startDebugSession(webSocket) {
-  console.log("Connection opened");
-
   const send = (methodName, parameters) => webSocket.send(makeInspectorQuery(methodName, parameters));
 
-  const [render, close] = renderer();
+  const [render, closeDisplay] = renderer();
+
+  const terminate = () => {
+    closeDisplay();
+
+    webSocket.close();
+  };
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
 	.withDownstream(async (stream) => 
-	  debugSession(send, render)(await runProgram(send)(await enableDebugger(send)(await runtimeEnabled(stream)))));
+	  debugSession(send, render, terminate)(
+	    await runProgram(send)(
+	      await enableDebugger(send)(
+	        await runtimeEnabled(stream)))));
 
   send("Runtime.enable", {});
 }
