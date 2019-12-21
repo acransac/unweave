@@ -43,7 +43,7 @@ function startDebugSession(webSocket) {
   const terminate = () => {
     closeDisplay();
 
-    webSocket.close();
+    setImmediate(() => webSocket.close());
   };
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
