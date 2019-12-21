@@ -174,6 +174,10 @@ function breakpointLine(message) {
   return Number(breakpointCapture(message));
 }
 
+function sendSetBreakpoint(send, scriptHandle, breakpointLine) {
+  send("Debugger.setBreakpoint", {location: {scriptId: scriptHandle, lineNumber: breakpointLine}});
+}
+
 // Query capture message
 function makeQueryCapture(capture) {
   return makeCapture("query", capture ? capture : "");
@@ -255,5 +259,6 @@ module.exports = {
   sendQuery,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
+  sendSetBreakpoint,
   sourceTreeFocusInput
 };
