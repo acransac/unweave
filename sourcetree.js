@@ -20,8 +20,19 @@ function testSourceTreeParser() {
   console.log(JSON.stringify(sourceTreeE));
 }
 
-function parseFilePath(url) {
-  return (elements => [elements.slice(0, -1).join("/"), elements[elements.length - 1]])(url.split("/"));
+// Helpers --
+function parseFilePath(fullPath) {
+  return (elements => [elements.slice(0, -1).join("/"), elements[elements.length - 1]])(fullPath.split("/"));
+}
+
+// Types --
+// Directory
+function makeDirectoryEntry(name, content) {
+  return [name, content];
+}
+
+function isDirectoryEntry(entry) {
+  return Array.isArray(entry) && entry.length === 2 && typeof entry[0] === "string" && Array.isArray(entry[1])
 }
 
 function directoryName(directoryEntry) {
@@ -32,12 +43,9 @@ function directoryContent(directoryEntry) {
   return directoryEntry[1];
 }
 
-function makeDirectoryEntry(name, content) {
-  return [name, content];
-}
-
-function isDirectoryEntry(entry) {
-  return Array.isArray(entry) && entry.length === 2 && typeof entry[0] === "string" && Array.isArray(entry[1])
+// File
+function makeFileEntry(name, id) {
+  return [name, id];
 }
 
 function fileName(fileEntry) {
@@ -48,12 +56,14 @@ function fileId(fileEntry) {
   return fileEntry[1];
 }
 
-function makeFileEntry(name, id) {
-  return [name, id];
-}
-
+// Entry
 function entryName(entry) {
   return isDirectoryEntry(entry) ? directoryName(entry) : fileName(entry);
+}
+
+// Source tree
+function makeSourceTree(root, branches) {
+  return [root, branches ? branches : []];
 }
 
 function root(sourceTree) {
@@ -62,10 +72,6 @@ function root(sourceTree) {
 
 function branches(sourceTree) {
   return sourceTree[1];
-}
-
-function makeSourceTree(root, branches) {
-  return [root, branches ? branches : []];
 }
 
 function insertInSourceTree(sourceTree, path, file) {
@@ -155,6 +161,7 @@ function lookupPreviousInBranch(branch, namedEntry, errorFunction) {
   return lookupPreviousInBranchImpl(branch[0], branch, namedEntry, errorFunction);
 }
 
+// Selection in source tree
 function makeSelectionInSourceTree(sourceTree, selectedBranch, selectedEntry) {
   if (branches(sourceTree).length === 0) {
     return [sourceTree, [], makeSelectedEntry()];
@@ -174,41 +181,12 @@ function selectedSourceTree(selectionInSourceTree) {
   return selectionInSourceTree[0];
 }
 
-function selectedBranch(selection) {
-  return selection[1];
+function selectedBranch(selectionInSourceTree) {
+  return selectionInSourceTree[1];
 }
 
-function selectedEntry(selection) {
-  return selection[2];
-}
-
-function makeSelectedEntry(name, handle, type) {
-  return [name ? name : "", handle, type ? type : "file"];
-}
-
-function selectedEntryName(selectedEntry) {
-  return selectedEntry[0];
-}
-
-function selectedEntryLeafName(selectedEntry) {
-  return selectedEntryName(selectedEntry).split("/").slice(-1)[0];
-}
-
-function selectedEntryBranchName(selectedEntry) {
-  if (selectedEntryName(selectedEntry) === "") {
-    return "";
-  }
-  else {
-    return selectedEntryName(selectedEntry).split("/").slice(0, -1).join("");
-  }
-}
-
-function selectedEntryHandle(selectedEntry) {
-  return selectedEntry[1];
-}
-
-function selectedEntryType(selectedEntry) {
-  return selectedEntry[2];
+function selectedEntry(selectionInSourceTree) {
+  return selectionInSourceTree[2];
 }
 
 function refreshSelectedSourceTree(selectionInSourceTree, newSourceTree) {
@@ -248,7 +226,7 @@ function selectAnotherBranch(selectionInSourceTree, branchName) {
 }
 
 function visitChildBranch(selectionInSourceTree) {
-  if (selectedEntryType(selectedEntry(selectionInSourceTree)) === "directory") {
+  if (isDirectorySelected(selectedEntry(selectionInSourceTree))) {
     return selectAnotherBranch(selectionInSourceTree, selectedEntryName(selectedEntry(selectionInSourceTree)));
   }
   else {
@@ -264,4 +242,64 @@ function visitParentBranch(selectionInSourceTree) {
   return selectAnotherBranch(selectionInSourceTree, newBranchName);
 }
 
-module.exports = { branches, directoryContent, directoryName, entryName, fileId, fileName, insertInSourceTree, isDirectoryEntry, makeFileEntry, makeSelectionInSourceTree, makeSourceTree, parseFilePath, refreshSelectedSourceTree, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryType, selectNext, selectPrevious, visitChildBranch, visitParentBranch };
+// Selected entry
+function makeSelectedEntry(name, handle, type) {
+  return [name ? name : "", handle, type ? type : "file"];
+}
+
+function selectedEntryName(selectedEntry) {
+  return selectedEntry[0];
+}
+
+function selectedEntryLeafName(selectedEntry) {
+  return selectedEntryName(selectedEntry).split("/").slice(-1)[0];
+}
+
+function selectedEntryBranchName(selectedEntry) {
+  if (selectedEntryName(selectedEntry) === "") {
+    return "";
+  }
+  else {
+    return selectedEntryName(selectedEntry).split("/").slice(0, -1).join("");
+  }
+}
+
+function selectedEntryHandle(selectedEntry) {
+  return selectedEntry[1];
+}
+
+function selectedEntryType(selectedEntry) {
+  return selectedEntry[2];
+}
+
+function isFileSelected(selectedEntry) {
+  return selectedEntryType(selectedEntry) === "file";
+}
+
+function isDirectorySelected(selectedEntry) {
+  return selectedEntryType(selectedEntry) === "directory";
+}
+
+module.exports = {
+  branches,
+  entryName,
+  fileName,
+  insertInSourceTree,
+  isDirectoryEntry,
+  isFileSelected,
+  makeFileEntry,
+  makeSelectionInSourceTree,
+  makeSourceTree,
+  parseFilePath,
+  refreshSelectedSourceTree,
+  root,
+  selectedBranch,
+  selectedEntry,
+  selectedEntryBranchName,
+  selectedEntryHandle,
+  selectedEntryLeafName,
+  selectNext,
+  selectPrevious,
+  visitChildBranch,
+  visitParentBranch
+};

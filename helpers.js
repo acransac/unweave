@@ -1,5 +1,5 @@
 const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput } = require('./protocol.js');
-const { entryName, isDirectoryEntry, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryType, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
+const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
   if (currentInput === "\x7f") { // If backspace is delete
@@ -74,7 +74,7 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
   }
   else if (isSourceTreeFocus(message(stream))
 	     && sourceTreeFocusInput(message(stream)) === "\r"
-	     && selectedEntryType(selectedEntry(selectionInSourceTree)) === "file") {
+	     && isFileSelected(selectedEntry(selectionInSourceTree))) {
     return onFilePicked(selectionInSourceTree);
   }
   else {
