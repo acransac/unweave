@@ -54,9 +54,21 @@ function isExecutionContextCreated(message) {
   return isMethod(message, "Runtime.executionContextCreated");
 }
 
+function sendEnableRuntime(send) {
+  send("Runtime.enable", {}); 
+}
+
 // Debugger enabled message
 function isDebuggerEnabled(message) {
   return isResult(message, "debuggerId");
+}
+
+function sendEnableDebugger(send) {
+  send("Debugger.enable", {}); 
+}
+
+function sendStartRun(send) {
+  send("Runtime.runIfWaitingForDebugger", {}); 
 }
 
 // Debugger paused message
@@ -273,10 +285,13 @@ module.exports = {
   readSourceTree,
   scriptHandle,
   sendContinue,
+  sendEnableDebugger,
+  sendEnableRuntime,
   sendQuery,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
   sendSetBreakpoint,
+  sendStartRun,
   sendStepInto,
   sendStepOut,
   sendStepOver,

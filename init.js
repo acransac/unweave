@@ -1,5 +1,5 @@
 const { debugSession } = require('./debugsession.js');
-const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message } = require('./protocol.js');
+const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message, sendEnableDebugger, sendEnableRuntime, sendStartRun } = require('./protocol.js');
 const Readline = require('readline');
 const { makeEmitter, mergeEvents, later, Source } = require('streamer');
 const { renderer } = require('terminal');
@@ -53,7 +53,7 @@ function startDebugSession(webSocket) {
 	      await enableDebugger(send)(
 	        await runtimeEnabled(stream)))));
 
-  send("Runtime.enable", {});
+  sendEnableRuntime(send);
 }
 
 async function runtimeEnabled(stream) {
@@ -67,7 +67,7 @@ async function runtimeEnabled(stream) {
 
 function enableDebugger(send) {
   return stream => {
-    send("Debugger.enable", {});
+    sendEnableDebugger(send);
 
     const debuggerEnabled = async (stream) => {
       if (isDebuggerEnabled(message(stream))) {
@@ -84,7 +84,7 @@ function enableDebugger(send) {
 
 function runProgram(send) {
   return async (stream) => {
-    send("Runtime.runIfWaitingForDebugger", {});
+    sendStartRun(send);
 
     return stream;
   };
