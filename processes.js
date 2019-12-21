@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, environmentRemoteObjectId, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, parseInspectorQuery, query } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, parseInspectorQuery, query, sendRequestForEnvironmentDescription, sendRequestForScriptSource } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -93,7 +93,7 @@ function parseSourceTree() {
 function pullScriptSource(send) {
   const scriptChecker = displayChange => async (stream) => {
     const onDisplayChange = (displayChange, newDisplayScriptId) => {
-      send("Debugger.getScriptSource", {scriptId: newDisplayScriptId});
+      sendRequestForScriptSource(send, newDisplayScriptId);
 
       return commit(stream, scriptChecker(displayChange));
     };
@@ -111,7 +111,7 @@ function pullScriptSource(send) {
 function pullEnvironment(send) {
   const environmentChecker = async (stream) => {
     if (isDebuggerPaused(message(stream))) {
-      send("Runtime.getProperties", {objectId: environmentRemoteObjectId(message(stream))});
+      sendRequestForEnvironmentDescription(send, message(stream));
 
       return commit(stream, environmentChecker);
     }

@@ -64,10 +64,6 @@ function pauseLocation(message) {
   return makeLocationFromInspectorLocation(message.params.callFrames[0].location);
 }
 
-function environmentRemoteObjectId(message) {
-  return message.params.callFrames[0].scopeChain[0].object.objectId;
-}
-
 // Script parsed message
 function isScriptParsed(message) {
   return isMethod(message, "Debugger.scriptParsed");
@@ -110,6 +106,10 @@ function readScriptSource(message) {
   return message.result.scriptSource;
 }
 
+function sendRequestForScriptSource(send, scriptHandle) {
+  send("Debugger.getScriptSource", {scriptId: scriptHandle});
+}
+
 // Environment message
 function isEnvironment(message) {
   return isResult(message, "result");
@@ -117,6 +117,10 @@ function isEnvironment(message) {
 
 function readEnvironment(message) {
   return message.result.result;
+}
+
+function sendRequestForEnvironmentDescription(send, message) {
+  send("Runtime.getProperties", {objectId: message.params.callFrames[0].scopeChain[0].object.objectId});
 }
 
 // Source tree message
@@ -209,7 +213,6 @@ module.exports = {
   breakpointCapture,
   breakpointLine,
   endCapture,
-  environmentRemoteObjectId,
   hasEnded,
   input,
   isBreakpointCapture,
@@ -246,5 +249,7 @@ module.exports = {
   readScriptSource,
   readSourceTree,
   scriptHandle,
+  sendRequestForEnvironmentDescription,
+  sendRequestForScriptSource,
   sourceTreeFocusInput
 };
