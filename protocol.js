@@ -68,6 +68,22 @@ function pauseLocation(message) {
   return makeLocationFromInspectorLocation(message.params.callFrames[0].location);
 }
 
+function sendStepOver(send) {
+  send("Debugger.stepOver", {});
+}
+
+function sendStepInto(send) {
+  send("Debugger.stepInto", {});
+}
+
+function sendContinue(send) {
+  send("Debugger.resume", {});
+}
+
+function sendStepOut(send) {
+  send("Debugger.stepOut", {});
+}
+
 // Script parsed message
 function isScriptParsed(message) {
   return isMethod(message, "Debugger.scriptParsed");
@@ -256,9 +272,13 @@ module.exports = {
   readScriptSource,
   readSourceTree,
   scriptHandle,
+  sendContinue,
   sendQuery,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
   sendSetBreakpoint,
+  sendStepInto,
+  sendStepOut,
+  sendStepOver,
   sourceTreeFocusInput
 };

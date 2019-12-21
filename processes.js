@@ -1,5 +1,5 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint } = require('./protocol.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
 const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath } = require('./sourcetree.js');
 const { commit, floatOn } = require('streamer');
 
@@ -141,16 +141,16 @@ function queryInspector(send) {
 function step(send) {
   const stepper = async (stream) => {
     if (isInput(message(stream)) && input(message(stream)) === "n") {
-      send("Debugger.stepOver", {});
+      sendStepOver(send);
     }
     else if (isInput(message(stream)) && input(message(stream)) === "s") {
-      send("Debugger.stepInto", {});
+      sendStepInto(send);
     }
     else if (isInput(message(stream)) && input(message(stream)) === "c") {
-      send("Debugger.resume", {});
+      sendContinue(send);
     }
     else if (isInput(message(stream)) && input(message(stream)) === "f") {
-      send("Debugger.stepOut", {});
+      sendStepOut(send);
     }
 
     return commit(stream, stepper);
