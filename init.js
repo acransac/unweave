@@ -5,10 +5,81 @@ const { makeEmitter, mergeEvents, later, Source } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
-connectToInspector(process.argv[2]);
+// Inspector uri type --
+function makeInspectorUri(address, port, sessionHash) {
+  return [address ? address : "127.0.0.1", port ? port : "9229", sessionHash];
+}
 
-function connectToInspector(sessionHash) {
-  const webSocket = new WebSocket(`ws://localhost:9230/${sessionHash}`);
+function address(inspectorUri) {
+  return inspectorUri[0];
+}
+
+function port(inspectorUri) {
+  return inspectorUri[1];
+}
+
+function sessionHash(inspectorUri) {
+  return inspectorUri[2];
+}
+
+function parseInspectorUri(uriString) {
+}
+
+// Debug session initializer --
+connectToInspector(parseCliArguments(process.argv));
+
+function parseCliArguments(cliArguments) {
+  const parseUriOptions = (inspectorUri, uriOptions) => {
+    if (uriOptions.length === 0) {
+      return inspectorUri;
+    }
+    else {
+      switch (uriOptions[0]) {
+        case "--uri":
+        case "-u":
+          return makeInspectorUri(parseInspectorUri(uriOptions[1]));
+	  break;
+        case "--address":
+	case "-a":
+          return parseUriOptions(makeInspectorUri(uriOptions[1], port(inspectorUri), sessionHash(inspectorUri)),
+		                 uriOptions.slice(2));
+	  break;
+        case "--port":
+	case "-p":
+          return parseUriOptions(makeInspectorUri(address(inspectorUri), uriOptions[1], sessionHash(inspectorUri)),
+		                 uriOptions.slice(2));
+	  break;
+        case "--session":
+	case "-s":
+          return parseUriOptions(makeInspectorUri(address(inspectorUri), port(inspectorUri), uriOptions[1]),
+		                 uriOptions.slice(2));
+	  break;
+	default:
+	  throw "Uri option not valid";
+      }
+    }
+  };
+
+  // Command line is [node binary] ["init.js"] [script | uri options]
+  if (cliArguments.length === 2) {
+    throw "Specify either a script to debug or an Inspector session uri";
+  }
+  else if (cliArguments.length === 3) {
+    return startInspectedProcess(cliArguments[2]);
+  }
+  else if (cliArguments.length % 2 > 0) {
+    throw "Specify one value for each uri option provided";
+  }
+  else {
+    return parseUriOptions(makeInspectorUri(), cliArguments.slice(2));
+  }
+}
+
+function startInspectedProcess(scriptPath) {
+}
+
+function connectToInspector(inspectorUri) {
+  const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
 
   webSocket.onopen = () => {
     console.log("Connection opened");
