@@ -1,3 +1,4 @@
+const { fork } = require('child_process');
 const { debugSession } = require('./debugsession.js');
 const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message, sendEnableDebugger, sendEnableRuntime, sendStartRun } = require('./protocol.js');
 const Readline = require('readline');
@@ -22,23 +23,16 @@ function sessionHash(inspectorUri) {
   return inspectorUri[2];
 }
 
-function parseInspectorUri(uriString) {
-}
-
 // Debug session initializer --
-connectToInspector(parseCliArguments(process.argv));
+(async () => connectToInspector(await parseCliArguments(process.argv)))();
 
-function parseCliArguments(cliArguments) {
+async function parseCliArguments(cliArguments) {
   const parseUriOptions = (inspectorUri, uriOptions) => {
     if (uriOptions.length === 0) {
       return inspectorUri;
     }
     else {
       switch (uriOptions[0]) {
-        case "--uri":
-        case "-u":
-          return makeInspectorUri(parseInspectorUri(uriOptions[1]));
-	  break;
         case "--address":
 	case "-a":
           return parseUriOptions(makeInspectorUri(uriOptions[1], port(inspectorUri), sessionHash(inspectorUri)),
@@ -65,7 +59,7 @@ function parseCliArguments(cliArguments) {
     throw "Specify either a script to debug or an Inspector session uri";
   }
   else if (cliArguments.length === 3) {
-    return startInspectedProcess(cliArguments[2]);
+    return await startInspectedProcess(cliArguments[2]);
   }
   else if (cliArguments.length % 2 > 0) {
     throw "Specify one value for each uri option provided";
@@ -76,6 +70,23 @@ function parseCliArguments(cliArguments) {
 }
 
 function startInspectedProcess(scriptPath) {
+  return new Promise(resolve => {
+    const inspectedProcess = fork(scriptPath, options = {stdio: ["ignore", "ignore", "pipe", "ipc"],
+	                                                 execArgv: ["--inspect-brk"]});
+
+    const stderrLines = Readline.createInterface({input: inspectedProcess.stderr});
+
+    stderrLines.on('line', line => {
+      const uriLinePrefix = "Debugger listening on ws://";
+
+      if (line.startsWith(uriLinePrefix)) {
+        resolve((uriString => makeInspectorUri(uriString.match(/^.+:/g)[0].slice(0, -1),
+		                               uriString.match(/:.+\//g)[0].slice(1, -1),
+					       uriString.match(/\/.+/g)[0].slice(1)))
+		  (line.slice(uriLinePrefix.length)));
+      }
+    });
+  });
 }
 
 function connectToInspector(inspectorUri) {
