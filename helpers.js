@@ -22,10 +22,50 @@ function isCtrlC(input) {
 }
 
 function describeEnvironment(values) {
+  const describeValue = environmentItem => {
+    const makeValueDescription = (environmentItem, valueTypeName) => {
+      return {
+        name: environmentItem.name,
+	type: valueTypeName ? valueTypeName : environmentItem.value.className,
+	value: (environmentItem.value.type === "string" ? value => `\"${value}\"` :  value => value)
+	         (environmentItem.value.value)
+      };
+    };
+
+    const describeObject = environmentItem => {
+      if (environmentItem.value.subtype === "null") {
+	return makeValueDescription(environmentItem, "Null");
+      }
+      else if (environmentItem.value.subtype === "proxy") {
+	return makeValueDescription(environmentItem, "Proxy");
+      }
+      else {
+	return makeValueDescription(environmentItem);
+      }
+    };
+
+    switch (environmentItem.value.type) {
+      case "undefined":
+	return makeValueDescription(environmentItem, "Undefined");
+      case "symbol":
+	return makeValueDescription(environmentItem, "Symbol");
+      case "boolean":
+	return makeValueDescription(environmentItem, "Boolean");
+      case "string":
+	return makeValueDescription(environmentItem, "String");
+      case "number":
+	return makeValueDescription(environmentItem, "Number");
+      case "function":
+	return makeValueDescription(environmentItem);
+      case "object":
+	return describeObject(environmentItem);
+    }
+  };
+
   return values.filter(item => !(item.name === "exports" || item.name === "require" || item.name === "module"
 			         || item.name === "__filename" || item.name === "__dirname"))
                .reduce((description, item) => {
-    return `${description}${item.value.type} ${item.name}${item.value  === "undefined" ? "" : ": " + item.value.value}\n`;
+    return (value => `${description}${value.type} ${value.name}${value.value ? ": " + value.value : ""}\n`)(describeValue(item));
   }, "");
 }
 
