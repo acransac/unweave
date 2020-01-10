@@ -1,4 +1,4 @@
-const { isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput } = require('./protocol.js');
+const { entryValue, isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
@@ -21,40 +21,11 @@ function isCtrlC(input) {
   return input === "\x03";
 }
 
-function describeEnvironment(values) {
-  const capitalizeName = name => name.charAt(0).toUpperCase() + name.slice(1);
-
-  const describeValue = environmentItem => {
-    const makeValueDescription = (environmentItem, valueTypeName) => {
-      return {
-        name: environmentItem.name,
-	type: valueTypeName ? valueTypeName : environmentItem.value.className,
-	value: (environmentItem.value.type === "string" ? value => `\"${value}\"` :  value => value)
-	         (environmentItem.value.value)
-      };
-    };
-
-    const describeObject = environmentItem => {
-      if (environmentItem.value.subtype === "null" || environmentItem.value.subtype === "proxy") {
-	return makeValueDescription(environmentItem, capitalizeName(environmentItem.value.subtype));
-      }
-      else {
-	return makeValueDescription(environmentItem);
-      }
-    };
-
-    if (environmentItem.value.type === "object" || environmentItem.value.type === "function") {
-      return describeObject(environmentItem);
-    }
-    else {
-      return makeValueDescription(environmentItem, capitalizeName(environmentItem.value.type));
-    }
-  };
-
-  return values.filter(item => !(item.name === "exports" || item.name === "require" || item.name === "module"
-			         || item.name === "__filename" || item.name === "__dirname"))
-               .reduce((description, item) => {
-    return (value => `${description}${value.type} ${value.name}${value.value ? ": " + value.value : ""}\n`)(describeValue(item));
+function describeEnvironment(entries) {
+  return entries.filter(entry => !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
+			           || name(entry) === "__filename" || name(entry) === "__dirname"))
+               .reduce((description, entry) => {
+    return `${description}${type(entry)} ${name(entry)}${entryValue(entry) ? ": " + entryValue(entry) : ""}\n`;
   }, "");
 }
 

@@ -151,6 +151,30 @@ function readEnvironment(message) {
   return message.result.result;
 }
 
+function name(entry) {
+  return entry.name;
+}
+
+function type(entry) {
+  const capitalizeName = name => name.charAt(0).toUpperCase() + name.slice(1);
+
+  if (entry.value.type === "object" || entry.value.type === "function") {
+    if (entry.value.subtype === "null" || entry.value.subtype === "proxy") {
+      return capitalizeName(entry.value.subtype);
+    }
+    else {
+      return entry.value.className;
+    }
+  }
+  else {
+    return capitalizeName(entry.value.type);
+  }
+}
+
+function entryValue(entry) {
+  return (entry.value.type === "string" ? value => `\"${value}\"` :  value => value)(entry.value.value)
+}
+
 function sendRequestForEnvironmentDescription(send, message) {
   send("Runtime.getProperties", {objectId: message.params.callFrames[0].scopeChain[0].object.objectId});
 }
@@ -249,6 +273,7 @@ module.exports = {
   breakpointCapture,
   breakpointLine,
   endCapture,
+  entryValue,
   hasEnded,
   input,
   isBreakpointCapture,
@@ -275,6 +300,7 @@ module.exports = {
   makeSourceTreeMessage,
   message,
   messagesFocusInput,
+  name,
   parsedScriptHandle,
   parsedScriptUrl,
   parsedUserScriptPath,
@@ -295,5 +321,6 @@ module.exports = {
   sendStepInto,
   sendStepOut,
   sendStepOver,
-  sourceTreeFocusInput
+  sourceTreeFocusInput,
+  type
 };
