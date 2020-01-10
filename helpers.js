@@ -22,6 +22,8 @@ function isCtrlC(input) {
 }
 
 function describeEnvironment(values) {
+  const capitalizeName = name => name.charAt(0).toUpperCase() + name.slice(1);
+
   const describeValue = environmentItem => {
     const makeValueDescription = (environmentItem, valueTypeName) => {
       return {
@@ -33,32 +35,19 @@ function describeEnvironment(values) {
     };
 
     const describeObject = environmentItem => {
-      if (environmentItem.value.subtype === "null") {
-	return makeValueDescription(environmentItem, "Null");
-      }
-      else if (environmentItem.value.subtype === "proxy") {
-	return makeValueDescription(environmentItem, "Proxy");
+      if (environmentItem.value.subtype === "null" || environmentItem.value.subtype === "proxy") {
+	return makeValueDescription(environmentItem, capitalizeName(environmentItem.value.subtype));
       }
       else {
 	return makeValueDescription(environmentItem);
       }
     };
 
-    switch (environmentItem.value.type) {
-      case "undefined":
-	return makeValueDescription(environmentItem, "Undefined");
-      case "symbol":
-	return makeValueDescription(environmentItem, "Symbol");
-      case "boolean":
-	return makeValueDescription(environmentItem, "Boolean");
-      case "string":
-	return makeValueDescription(environmentItem, "String");
-      case "number":
-	return makeValueDescription(environmentItem, "Number");
-      case "function":
-	return makeValueDescription(environmentItem);
-      case "object":
-	return describeObject(environmentItem);
+    if (environmentItem.value.type === "object" || environmentItem.value.type === "function") {
+      return describeObject(environmentItem);
+    }
+    else {
+      return makeValueDescription(environmentItem, capitalizeName(environmentItem.value.type));
     }
   };
 
