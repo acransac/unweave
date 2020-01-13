@@ -1,4 +1,4 @@
-const { breakpoints, commandLine, displayedScript, environment, messages, messagesWindowTopAnchor, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
+const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { isCtrlC } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
@@ -16,7 +16,6 @@ function debugSession(send, render, terminate) {
 		                                      topRightColumnDisplay,
 			                              environment,
 			                              messages,
-			                              messagesWindowTopAnchor,
 		                                      sourceTree,
 			                              commandLine))(
 	                                        await step(send)(
@@ -51,7 +50,6 @@ function developerSession(source,
 	                  topRightColumnDisplay,
 	                  environment,
 	                  messages,
-	                  messagesWindowTopAnchor,
 	                  sourceTree,
 	                  command) {
   return cons(
@@ -62,7 +60,7 @@ function developerSession(source,
 		                                                       breakpoints,
 		                                                       displayedScript))),
 	     cons(
-	       topRightColumnDisplay(environment, messages, messagesWindowTopAnchor, sourceTree),
+	       topRightColumnDisplay(environment, messages, sourceTree),
 	       row(90))),
 	   cons(
 	     cons(

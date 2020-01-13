@@ -1,4 +1,4 @@
-const { describeEnvironment, displayedScriptSource, exploreSourceTree, scrollable, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, makeDisplayedContent, scrollable, scrollableContent, topLine, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
@@ -131,37 +131,21 @@ function commandLine(predecessor) {
 
 function messages(predecessor) {
   return stream => {
-    const messages = predecessor ? predecessor() : "Waiting";
+    const displayedContent = predecessor ? predecessor() : makeDisplayedContent("Waiting");
 
     if (isDebuggerPaused(message(stream))) {
-      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`;
+      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`, topLine(displayedContent));
     }
     else if (isScriptParsed(message(stream))) {
-      return () => `${predecessor === undefined ? "" : messages + "\n"}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`;
+      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`, topLine(displayedContent));
     }
     else if (isSourceTree(message(stream))) {
       const sourceTree = message(stream).sourceTree;
 
-      return () => `${predecessor === undefined ? "" : messages + "\n"}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`;
+      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`, topLine(displayedContent));
     }
     else {
-      return predecessor ? predecessor : () => "Waiting";
-    }
-  };
-}
-
-function messagesWindowTopAnchor(predecessor) {
-  return stream => {
-    const topLine = predecessor ? predecessor() : 0;
-
-    if (isMessagesFocus(message(stream)) && messagesFocusInput(message(stream)) === "j") {
-      return () => topLine + 1;
-    }
-    else if (isMessagesFocus(message(stream)) && messagesFocusInput(message(stream)) === "k") {
-      return () => topLine - 1;
-    }
-    else {
-      return predecessor ? predecessor : () => 0;
+      return scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream);
     }
   };
 }
@@ -178,15 +162,15 @@ function sourceTree(predecessor) {
 
 function topRightColumnDisplay(predecessor) {
   return stream => {
-    const environmentAndMessagesDisplay = (environment, messages, messagesWindowTopAnchor, sourceTree) => {
+    const environmentAndMessagesDisplay = (environment, messages, sourceTree) => {
       return cons(
 	       sizeHeight(50, atom(environment)),
 	       cons(
-	         vindent(50, sizeHeight(50, atom(scrollable(messages, messagesWindowTopAnchor)))),
+	         vindent(50, sizeHeight(50, atom(scrollableContent(messages)))),
 		 indent(50, column(50))));
     };
 
-    const sourceTreeDisplay = (environment, messages, messagesWindowTopAnchor, sourceTree) => {
+    const sourceTreeDisplay = (environment, messages, sourceTree) => {
       return cons(atom(writeTree(sourceTree)), indent(50, column(50)));
     };
 
@@ -202,4 +186,4 @@ function topRightColumnDisplay(predecessor) {
   };
 }
 
-module.exports = { breakpoints, commandLine, displayedScript, environment, messages, messagesWindowTopAnchor, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay };
+module.exports = { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay };

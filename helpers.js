@@ -29,8 +29,36 @@ function describeEnvironment(entries) {
   }, "");
 }
 
-function scrollable(content, topLine) {
-  return content.split("\n").slice(topLine).reduce((visibleContent, line) => {
+function makeDisplayedContent(content, topLine) {
+  return [content, topLine ? topLine : 0];
+}
+
+function content(displayedContent) {
+  return displayedContent[0];
+}
+
+function topLine(displayedContent) {
+  return displayedContent[1];
+}
+
+function scrollable(isInput, input) {
+  return (displayedContent, stream) => {
+    if (isInput(message(stream)) && input(message(stream)) === "j") {
+      return () => makeDisplayedContent(content(displayedContent),
+                                        Math.min(content(displayedContent).split("\n").length - 1,
+						 topLine(displayedContent) + 1));
+    }
+    else if (isInput(message(stream)) && input(message(stream)) === "k") {
+      return () => makeDisplayedContent(content(displayedContent), Math.max(0, topLine(displayedContent) - 1));
+    }
+    else {
+      return () => displayedContent;
+    }
+  };
+}
+
+function scrollableContent(displayedContent) {
+  return content(displayedContent).split("\n").slice(topLine(displayedContent)).reduce((visibleContent, line) => {
     return `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`;
   }, "");
 }
@@ -121,11 +149,15 @@ function displayedScriptSource() {
 }
 
 module.exports = {
+  content,
   describeEnvironment,
   displayedScriptSource,
   exploreSourceTree,
   isCtrlC,
+  makeDisplayedContent,
   parseUserInput,
   scrollable,
+  scrollableContent,
+  topLine,
   writeTree
 };
