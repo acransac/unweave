@@ -75,26 +75,20 @@ function branches(sourceTree) {
 }
 
 function insertInSourceTree(sourceTree, path, file) {
-  const insertInSourceTreeImpl = (branch, path, file) => {
+  const insertInSourceTreeImpl = (entries, branch, path, file) => {
     if (path.length === 0) {
-      return [...branch, file];
+      return [...entries, ...branch, file];
     }
     else if (branch.length === 0) {
-      return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(branch, path.slice(1), file))];
+      return [...entries, makeDirectoryEntry(path[0], insertInSourceTreeImpl([], [], path.slice(1), file))];
+    }
+    else if (isDirectoryEntry(branch[0]) && directoryName(branch[0]) === path[0]) {
+      return [...entries,
+	      makeDirectoryEntry(path[0], insertInSourceTreeImpl([], directoryContent(branch[0]), path.slice(1), file)),
+	      ...branch.slice(1)];
     }
     else {
-      if (!isDirectoryEntry(branch[0])) {
-        return [].concat([branch[0]], insertInSourceTreeImpl(branch.slice(1), path, file));
-      }
-      else {
-        if (directoryName(branch[0]) === path[0]) {
-          return [makeDirectoryEntry(path[0], insertInSourceTreeImpl(directoryContent(branch[0]), path.slice(1), file)),
-		  ...branch.slice(1)];
-        }
-	else {
-	  return [].concat([branch[0]], insertInSourceTreeImpl(branch.slice(1), path, file));
-        }
-      }
+      return insertInSourceTreeImpl([...entries, branch[0]], branch.slice(1), path, file);
     }
   };
 
@@ -103,7 +97,8 @@ function insertInSourceTree(sourceTree, path, file) {
   }
   else {
     return makeSourceTree(root(sourceTree),
-	                  insertInSourceTreeImpl(branches(sourceTree),
+	                  insertInSourceTreeImpl([],
+				                 branches(sourceTree),
 				                 path.slice(root(sourceTree).length).split("/").slice(1),
 				                 file));
   }
