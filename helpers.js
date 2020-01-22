@@ -44,15 +44,15 @@ function topLine(displayedContent) {
 function scrollable(isInput, input) {
   return (displayedContent, stream) => {
     if (isInput(message(stream)) && input(message(stream)) === "j") {
-      return () => makeDisplayedContent(content(displayedContent),
-                                        Math.min(content(displayedContent).split("\n").length - 1,
-						 topLine(displayedContent) + 1));
+      return makeDisplayedContent(content(displayedContent),
+                                  Math.min(content(displayedContent).split("\n").length - 1,
+					   topLine(displayedContent) + 1));
     }
     else if (isInput(message(stream)) && input(message(stream)) === "k") {
-      return () => makeDisplayedContent(content(displayedContent), Math.max(0, topLine(displayedContent) - 1));
+      return makeDisplayedContent(content(displayedContent), Math.max(0, topLine(displayedContent) - 1));
     }
     else {
-      return () => displayedContent;
+      return displayedContent;
     }
   };
 }
@@ -62,6 +62,10 @@ function scrollableContent(displayedContent) {
     return `${visibleContent === "" ? visibleContent : visibleContent + "\n"}${line}`;
   }, "");
 }
+
+//function focusableContent(content, focusHeader) {
+//  return `${focusHeader}\n${content}`;
+//}
 
 function writeTree(visitedSourceTree) {
   const formatEntry = entry => {
@@ -153,6 +157,7 @@ module.exports = {
   describeEnvironment,
   displayedScriptSource,
   exploreSourceTree,
+  //focusableContent,
   isCtrlC,
   makeDisplayedContent,
   parseUserInput,

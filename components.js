@@ -3,44 +3,44 @@ const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture,
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
-function scriptSource(predecessor) {
-  return stream => {
+function scriptSource() {
+  return noParameters => predecessor => stream => {
     if (isScriptSource(message(stream))) {
-      return () => readScriptSource(message(stream));
+      return f => f(noParameters)(readScriptSource(message(stream)));
     }
     else {
-      return predecessor ? predecessor : () => "Loading script source";
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("Loading script source");
     }
   }
 }
 
-function scriptSourceWindowTopAnchor(predecessor) {
-  return stream => {
-    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
+function scriptSourceWindowTopAnchor() {
+  return noParameters => predecessor => stream => {
+    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
 
-    const scriptId = predecessor ? predecessor().scriptId : undefined;
+    const scriptId = predecessor ? predecessor.scriptId : undefined;
 
-    const topLine = predecessor ? predecessor().topLine : 0;
+    const topLine = predecessor ? predecessor.topLine : 0;
 
     if (isInput(message(stream)) && input(message(stream)) === "j") {
-      return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1}; };
+      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1});
     }
     else if (isInput(message(stream)) && input(message(stream)) === "k") {
-      return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1}; };
+      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1});
     }
     else {
       const onSelectionChange = (displayChange, scriptId) => {
-        return () => { return {displayChange: displayChange, scriptId: scriptId, topLine: topLine}; };
+        return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine});
       };
 
       const onDisplayChange = (displayChange, newScriptId) => {
         if (isDebuggerPaused(message(stream))) {
           const runLine = lineNumber(pauseLocation(message(stream)));
 
-          return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)}; };
+          return f => f(noParameters)({displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)});
         }
         else {
-          return () => { return {displayChange: displayChange, scriptId: newScriptId, topLine: 0}; };
+          return f => f(noParemeters)({displayChange: displayChange, scriptId: newScriptId, topLine: 0});
         }
       };
 
@@ -49,51 +49,49 @@ function scriptSourceWindowTopAnchor(predecessor) {
   };
 }
 
-function runLocation(predecessor) {
-  return stream => {
+function runLocation() {
+  return noParameters => predecessor => stream => {
     if (isDebuggerPaused(message(stream))) {
-      return () => pauseLocation(message(stream));
+      return f => f(noParameters)(pauseLocation(message(stream)));
     }
     else {
-      return predecessor ? predecessor : () => makeLocation();
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(makeLocation());
     }
   };
 }
 
-function displayedScript(predecessor) {
-  return stream => {
-    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
+function displayedScript() {
+  return noParameters => predecessor => stream => {
+    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
 
-    const id = predecessor ? predecessor().id : undefined;
+    const id = predecessor ? predecessor.id : undefined;
 
     const updateDisplayedScript = (displayChange, scriptId) => {
-      return () => { return {displayChange: displayChange, id: scriptId}; };
+      return f => f(noParameters)({displayChange: displayChange, id: scriptId});
     };
 
     return displayChange(updateDisplayedScript, updateDisplayedScript)(stream);
   };
 }
 
-function breakpoints(predecessor) {
-  return stream => {
-    const displayChange = predecessor ? predecessor().displayChange : displayedScriptSource();
+function breakpoints() {
+  return noParameters => predecessor => stream => {
+    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
 
-    const scriptId = predecessor ? predecessor().scriptId : undefined;
+    const scriptId = predecessor ? predecessor.scriptId : undefined;
 
-    const breakpoints = predecessor ? predecessor().breakpoints : [];
+    const breakpoints = predecessor ? predecessor.breakpoints : [];
 
     const updateBreakpointRecorder = (displayChange, scriptId) => {
-      return () => { return {displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints}; };
+      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints});
     };
 
     if (isBreakpointCapture(message(stream)) && hasEnded(message(stream))) {
-      return () => {
-        return {
-	  displayChange: displayChange,
-	  scriptId: scriptId,
-	  breakpoints: [...breakpoints, makeLocation(scriptId, breakpointLine(message(stream)))]
-	};
-      };
+      return f => f(noParameters)({
+        displayChange: displayChange,
+	scriptId: scriptId,
+	breakpoints: [...breakpoints, makeLocation(scriptId, breakpointLine(message(stream)))]
+      });
     }
     else {
       return displayChange(updateBreakpointRecorder, updateBreakpointRecorder)(stream);
@@ -101,67 +99,82 @@ function breakpoints(predecessor) {
   };
 }
 
-function environment(predecessor) {
-  return stream => {
+function environment() {
+  return noParameters => predecessor => stream => {
     if (isEnvironment(message(stream))) {
-      return () => describeEnvironment(readEnvironment(message(stream)));
+      return f => f(noParameters)(describeEnvironment(readEnvironment(message(stream))));
     }
     else {
-      return predecessor ? predecessor : () => "Loading environment";
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("Loading environment");
     }
   }
 }
 
-function commandLine(predecessor) {
-  return stream => {
+function commandLine() {
+  return noParameters => predecessor => stream => {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
 
     if (isBreakpointCapture(message(stream))) {
-      return hasEnded(message(stream)) ? () => defaultMessage
-		                       : () => `Add breakpoint at line: ${breakpointCapture(message(stream))}`;
+      return hasEnded(message(stream)) ? f => f(noParameters)(defaultMessage)
+		                       : f => f(noParameters)(`Add breakpoint at line: ${breakpointCapture(message(stream))}`);
     }
     else if (isQueryCapture(message(stream))) {
-      return hasEnded(message(stream)) ? () => defaultMessage : () => `Query Inspector: ${query(message(stream))}`;
+      return hasEnded(message(stream)) ? f => f(noParameters)(defaultMessage)
+		                       : f => f(noParameters)(`Query Inspector: ${query(message(stream))}`);
     }
     else {
-      return predecessor ? predecessor : () => defaultMessage;
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(defaultMessage);
     }
   };
 }
 
-function messages(predecessor) {
-  return stream => {
-    const displayedContent = predecessor ? predecessor() : makeDisplayedContent("Waiting");
+function messages() {
+  return noParameters => predecessor => stream => {
+    const displayedContent = predecessor ? predecessor : makeDisplayedContent("Waiting");
 
     if (isDebuggerPaused(message(stream))) {
-      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`, topLine(displayedContent));
+      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`, topLine(displayedContent)));
     }
     else if (isScriptParsed(message(stream))) {
-      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`, topLine(displayedContent));
+      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`, topLine(displayedContent)));
     }
     else if (isSourceTree(message(stream))) {
       const sourceTree = message(stream).sourceTree;
 
-      return () => makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`, topLine(displayedContent));
+      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`, topLine(displayedContent)));
     }
     else {
-      return scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream);
+      return f => f(noParameters)(scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream));
     }
   };
 }
 
-function sourceTree(predecessor) {
-  return stream => {
-    const selection = predecessor ? predecessor() : makeSelectionInSourceTree(makeSourceTree());
+function sourceTree() {
+  return noParameters => predecessor => stream => {
+    const selection = predecessor ? predecessor : makeSelectionInSourceTree(makeSourceTree());
 
     const identity = selection => selection;
 
-    return () => exploreSourceTree(selection, stream, identity, identity);
+    return f => f(noParameters)(exploreSourceTree(selection, stream, identity, identity));
   };
 }
 
-function topRightColumnDisplay(predecessor) {
-  return stream => {
+//function sourceTreeWindowHeader() {
+//  return noParameters => predecessor => stream => {
+//    if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
+//      return f => f(noParameters)("\u001b[7mworkspace\u001b[0m");
+//    }
+//    else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
+//      return f => f(noParameters)("\u001b[4mw\u001b[0morkspace");
+//    }
+//    else {
+//      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("\u001b[4mw\u001b[0morkspace");
+//    }
+//  };
+//}
+
+function topRightColumnDisplay() {
+  return noParameters => predecessor => stream => {
     const environmentAndMessagesDisplay = (environment, messages, sourceTree) => {
       return cons(
 	       sizeHeight(50, atom(environment)),
@@ -175,13 +188,13 @@ function topRightColumnDisplay(predecessor) {
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
-      return () => sourceTreeDisplay;
+      return f => f(noParameters)(sourceTreeDisplay);
     }
     else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
-      return () => environmentAndMessagesDisplay;
+      return f => f(noParameters)(environmentAndMessagesDisplay);
     }
     else {
-      return predecessor ? predecessor : () => environmentAndMessagesDisplay;
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(environmentAndMessagesDisplay);
     }
   };
 }
