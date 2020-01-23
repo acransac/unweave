@@ -40,7 +40,7 @@ function scriptSourceWindowTopAnchor() {
           return f => f(noParameters)({displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)});
         }
         else {
-          return f => f(noParemeters)({displayChange: displayChange, scriptId: newScriptId, topLine: 0});
+          return f => f(noParameters)({displayChange: displayChange, scriptId: newScriptId, topLine: 0});
         }
       };
 

@@ -8,16 +8,16 @@ const { atom, compose, cons, emptyList, row, show, sizeWidth, vindent } = requir
 function debugSession(send, render, terminate) {
   return async (stream) => {
     return loop(terminate)(await show(render)(compose(developerSession,
-			                              scriptSource,
-			                              scriptSourceWindowTopAnchor,
-			                              runLocation,
-			                              breakpoints,
-			                              displayedScript,
-		                                      topRightColumnDisplay,
-			                              environment,
-			                              messages,
-		                                      sourceTree,
-			                              commandLine))(
+			                              scriptSource(),
+			                              scriptSourceWindowTopAnchor(),
+			                              runLocation(),
+			                              breakpoints(),
+			                              displayedScript(),
+		                                      topRightColumnDisplay(),
+			                              environment(),
+			                              messages(),
+		                                      sourceTree(),
+			                              commandLine()))(
 	                                        await step(send)(
 	                                          await queryInspector(send)(
 		                                    await addBreakpoint(send)(
