@@ -72,7 +72,7 @@ function developerSession(source,
 function scriptSourceWithLocationAndBreakpoints(scriptSource, 
 	                                        scriptSourceWindowTopAnchor,
 	                                        runLocation,
-	                                        breakpointLocations,
+	                                        breakpoints,
 	                                        displayedScript) {
   const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineNumber) => {
     if (originalLines.length === 0) {
@@ -93,12 +93,8 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
   };
 
   return formatScriptSource([],
-	                    breakpointLocations.breakpoints.filter(location => {
-			      return scriptHandle(location) === displayedScript.id;
-	                    })
-	                                                   .sort((locationA, locationB) => {
-			      return lineNumber(locationA) - lineNumber(locationB);
-			    }),
+	                    breakpoints.filter(breakpoint => scriptHandle(breakpoint) === displayedScript.id)
+	                               .sort((breakpointA, breakpointB) => lineNumber(breakpointA) - lineNumber(breakpointB)),
 	                    scriptSource.split("\n"),
 	                    0)
 	   .slice(scriptSourceWindowTopAnchor.topLine)

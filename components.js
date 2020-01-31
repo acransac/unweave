@@ -75,26 +75,18 @@ function displayedScript() {
 }
 
 function breakpoints() {
-  return noParameters => predecessor => stream => {
-    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
+  return (displayChange, scriptId) => predecessor => stream => {
+    const checkDisplayChange = displayChange ? displayChange : displayedScriptSource();
 
-    const scriptId = predecessor ? predecessor.scriptId : undefined;
-
-    const breakpoints = predecessor ? predecessor.breakpoints : [];
-
-    const updateBreakpointRecorder = (displayChange, scriptId) => {
-      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, breakpoints: breakpoints});
-    };
+    const breakpoints = predecessor ? predecessor : [];
 
     if (isBreakpointCapture(message(stream)) && hasEnded(message(stream))) {
-      return f => f(noParameters)({
-        displayChange: displayChange,
-	scriptId: scriptId,
-	breakpoints: [...breakpoints, makeLocation(scriptId, breakpointLine(message(stream)))]
-      });
+      return f => f(checkDisplayChange, scriptId)([...breakpoints, makeLocation(scriptId, breakpointLine(message(stream)))]);
     }
     else {
-      return displayChange(updateBreakpointRecorder, updateBreakpointRecorder)(stream);
+      const updateBreakpointRecorder = (displayChange, scriptId) => f => f(displayChange, scriptId)(breakpoints);
+
+      return checkDisplayChange(updateBreakpointRecorder, updateBreakpointRecorder)(stream);
     }
   };
 }
