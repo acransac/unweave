@@ -97,7 +97,7 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
 	                               .sort((breakpointA, breakpointB) => lineNumber(breakpointA) - lineNumber(breakpointB)),
 	                    scriptSource.split("\n"),
 	                    0)
-	   .slice(scriptSourceWindowTopAnchor.topLine)
+	   .slice(scriptSourceWindowTopAnchor)
 	   .reduce((formattedVisibleSource, line) => {
              return `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`;
 	   }, "");

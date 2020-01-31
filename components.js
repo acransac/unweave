@@ -15,36 +15,30 @@ function scriptSource() {
 }
 
 function scriptSourceWindowTopAnchor() {
-  return noParameters => predecessor => stream => {
-    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
+  return (displayChange, scriptId) => predecessor => stream => {
+    const checkDisplayChange = displayChange ? displayChange : displayedScriptSource();
 
-    const scriptId = predecessor ? predecessor.scriptId : undefined;
-
-    const topLine = predecessor ? predecessor.topLine : 0;
+    const topLine = predecessor ? predecessor : 0;
 
     if (isInput(message(stream)) && input(message(stream)) === "j") {
-      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine + 1});
+      return f => f(checkDisplayChange, scriptId)(topLine + 1);
     }
     else if (isInput(message(stream)) && input(message(stream)) === "k") {
-      return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine - 1});
+      return f => f(checkDisplayChange, scriptId)(topLine - 1);
     }
     else {
-      const onSelectionChange = (displayChange, scriptId) => {
-        return f => f(noParameters)({displayChange: displayChange, scriptId: scriptId, topLine: topLine});
-      };
+      const onSelectionChange = (displayChange, scriptId) => f => f(displayChange, scriptId)(topLine);
 
       const onDisplayChange = (displayChange, newScriptId) => {
         if (isDebuggerPaused(message(stream))) {
-          const runLine = lineNumber(pauseLocation(message(stream)));
-
-          return f => f(noParameters)({displayChange: displayChange, scriptId: newScriptId, topLine: Math.max(runLine - 3, 0)});
+          return f => f(displayChange, newScriptId)(Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0));
         }
         else {
-          return f => f(noParameters)({displayChange: displayChange, scriptId: newScriptId, topLine: 0});
+          return f => f(displayChange, newScriptId)(0);
         }
       };
 
-      return displayChange(onSelectionChange, onDisplayChange)(stream);
+      return checkDisplayChange(onSelectionChange, onDisplayChange)(stream);
     }
   };
 }
