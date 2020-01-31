@@ -61,16 +61,10 @@ function runLocation() {
 }
 
 function displayedScript() {
-  return noParameters => predecessor => stream => {
-    const displayChange = predecessor ? predecessor.displayChange : displayedScriptSource();
+  return displayChange => predecessor => stream => {
+    const updateDisplayedScript = (displayChange, scriptId) => f => f(displayChange)(scriptId);
 
-    const id = predecessor ? predecessor.id : undefined;
-
-    const updateDisplayedScript = (displayChange, scriptId) => {
-      return f => f(noParameters)({displayChange: displayChange, id: scriptId});
-    };
-
-    return displayChange(updateDisplayedScript, updateDisplayedScript)(stream);
+    return (displayChange ? displayChange : displayedScriptSource())(updateDisplayedScript, updateDisplayedScript)(stream);
   };
 }
 

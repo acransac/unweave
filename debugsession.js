@@ -81,7 +81,7 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
     else {
       const hasBreakpoint = !(breakpoints.length === 0) && lineNumber(breakpoints[0]) === originalLineNumber;
 
-      const isCurrentExecutionLocation = scriptHandle(runLocation) === displayedScript.id 
+      const isCurrentExecutionLocation = scriptHandle(runLocation) === displayedScript
 		                           && lineNumber(runLocation) === originalLineNumber;
 
       return formatScriptSource(
@@ -93,7 +93,7 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
   };
 
   return formatScriptSource([],
-	                    breakpoints.filter(breakpoint => scriptHandle(breakpoint) === displayedScript.id)
+	                    breakpoints.filter(breakpoint => scriptHandle(breakpoint) === displayedScript)
 	                               .sort((breakpointA, breakpointB) => lineNumber(breakpointA) - lineNumber(breakpointB)),
 	                    scriptSource.split("\n"),
 	                    0)
