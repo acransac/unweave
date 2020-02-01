@@ -1,5 +1,5 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
-const { content, isCtrlC, topLine } = require('./helpers.js');
+const { content, isCtrlC, makeDisplayedContent, scrollableContent, topLine } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
@@ -88,15 +88,16 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
     }
   };
 
-  return formatScriptSource([],
-	                    breakpoints.filter(breakpoint => scriptHandle(breakpoint) === displayedScript)
-	                               .sort((breakpointA, breakpointB) => lineNumber(breakpointA) - lineNumber(breakpointB)),
-	                    content(scriptSource).split("\n"),
-	                    0)
-	   .slice(topLine(scriptSource))
-	   .reduce((formattedVisibleSource, line) => {
-             return `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`;
-	   }, "");
+  return scrollableContent(makeDisplayedContent(formatScriptSource([],
+	                                                           breakpoints.filter(breakpoint => {
+								     return scriptHandle(breakpoint) === displayedScript;
+	                                                           })
+	                                                                      .sort((breakpointA, breakpointB) => {
+								     return lineNumber(breakpointA) - lineNumber(breakpointB);
+							           }),
+	                                                           content(scriptSource).split("\n"),
+	                                                           0).join("\n"),
+	                                        topLine(scriptSource)));
 }
 
 module.exports = { debugSession };

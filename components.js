@@ -5,42 +5,31 @@ const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource() {
   return (displayChange, scriptId) => predecessor => stream => {
-    const checkDisplayChange = displayChange ? displayChange : displayedScriptSource();
-
     const displayedContent = predecessor ? predecessor : makeDisplayedContent("Loading script source");
 
-    if (isInput(message(stream)) && input(message(stream)) === "j") {
-      return f => f(checkDisplayChange, scriptId)(makeDisplayedContent(content(displayedContent),
-	                                                               topLine(displayedContent) + 1));
-    }
-    if (isInput(message(stream)) && input(message(stream)) === "k") {
-      return f => f(checkDisplayChange, scriptId)(makeDisplayedContent(content(displayedContent),
-	                                                               topLine(displayedContent) - 1));
-    }
-    else {
-      const onSelectionChange = (displayChange, scriptId) => {
-        if (isScriptSource(message(stream))) {
-          return f => f(displayChange, scriptId)(makeDisplayedContent(readScriptSource(message(stream)),
-		                                                      topLine(displayedContent)));
-        }
-	else {
-          return f => f(displayChange, scriptId)(displayedContent);
-        }
-      };
+    const onSelectionChange = (displayChange, scriptId) => {
+      if (isScriptSource(message(stream))) {
+        return f => f(displayChange, scriptId)
+                      (scrollable(isInput, input)
+		        (makeDisplayedContent(readScriptSource(message(stream)), topLine(displayedContent)), stream));
+      }
+      else {
+        return f => f(displayChange, scriptId)(scrollable(isInput, input)(displayedContent, stream));
+      }
+    };
 
-      const onDisplayChange = (displayChange, newScriptId) => {
-	if (isDebuggerPaused(message(stream))) {
-          return f => f(displayChange, newScriptId)
-		        (makeDisplayedContent(content(displayedContent),
-				              Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0)));
-        }
-        else {
-          return f => f(displayChange, newScriptId)(makeDisplayedContent(content(displayedContent), 0));
-        }
-      };
+    const onDisplayChange = (displayChange, newScriptId) => {
+      if (isDebuggerPaused(message(stream))) {
+        return f => f(displayChange, newScriptId)
+		      (makeDisplayedContent(content(displayedContent),
+				            Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0)));
+      }
+      else {
+        return f => f(displayChange, newScriptId)(makeDisplayedContent(content(displayedContent), 0));
+      }
+    };
 
-      return checkDisplayChange(onSelectionChange, onDisplayChange)(stream);
-    }
+    return (displayChange ? displayChange : displayedScriptSource())(onSelectionChange, onDisplayChange)(stream);
   };
 }
 
