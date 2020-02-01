@@ -135,7 +135,7 @@ function isScriptSource(message) {
 }
 
 function readScriptSource(message) {
-  return message.result.scriptSource;
+  return message.result.scriptSource.trim();
 }
 
 function sendRequestForScriptSource(send, scriptHandle) {
