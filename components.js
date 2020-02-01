@@ -4,37 +4,38 @@ const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('.
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource() {
-  return noParameters => predecessor => stream => {
-    if (isScriptSource(message(stream))) {
-      return f => f(noParameters)(readScriptSource(message(stream)));
-    }
-    else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("Loading script source");
-    }
-  }
-}
-
-function scriptSourceWindowTopAnchor() {
   return (displayChange, scriptId) => predecessor => stream => {
     const checkDisplayChange = displayChange ? displayChange : displayedScriptSource();
 
-    const topLine = predecessor ? predecessor : 0;
+    const displayedContent = predecessor ? predecessor : makeDisplayedContent("Loading script source");
 
     if (isInput(message(stream)) && input(message(stream)) === "j") {
-      return f => f(checkDisplayChange, scriptId)(topLine + 1);
+      return f => f(checkDisplayChange, scriptId)(makeDisplayedContent(content(displayedContent),
+	                                                               topLine(displayedContent) + 1));
     }
-    else if (isInput(message(stream)) && input(message(stream)) === "k") {
-      return f => f(checkDisplayChange, scriptId)(topLine - 1);
+    if (isInput(message(stream)) && input(message(stream)) === "k") {
+      return f => f(checkDisplayChange, scriptId)(makeDisplayedContent(content(displayedContent),
+	                                                               topLine(displayedContent) - 1));
     }
     else {
-      const onSelectionChange = (displayChange, scriptId) => f => f(displayChange, scriptId)(topLine);
+      const onSelectionChange = (displayChange, scriptId) => {
+        if (isScriptSource(message(stream))) {
+          return f => f(displayChange, scriptId)(makeDisplayedContent(readScriptSource(message(stream)),
+		                                                      topLine(displayedContent)));
+        }
+	else {
+          return f => f(displayChange, scriptId)(displayedContent);
+        }
+      };
 
       const onDisplayChange = (displayChange, newScriptId) => {
-        if (isDebuggerPaused(message(stream))) {
-          return f => f(displayChange, newScriptId)(Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0));
+	if (isDebuggerPaused(message(stream))) {
+          return f => f(displayChange, newScriptId)
+		        (makeDisplayedContent(content(displayedContent),
+				              Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0)));
         }
         else {
-          return f => f(displayChange, newScriptId)(0);
+          return f => f(displayChange, newScriptId)(makeDisplayedContent(content(displayedContent), 0));
         }
       };
 
@@ -179,4 +180,4 @@ function topRightColumnDisplay() {
   };
 }
 
-module.exports = { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay };
+module.exports = { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay };

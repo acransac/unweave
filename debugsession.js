@@ -1,5 +1,5 @@
-const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, scriptSourceWindowTopAnchor, sourceTree, topRightColumnDisplay } = require('./components.js');
-const { isCtrlC } = require('./helpers.js');
+const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
+const { content, isCtrlC, topLine } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
@@ -9,7 +9,6 @@ function debugSession(send, render, terminate) {
   return async (stream) => {
     return loop(terminate)(await show(render)(compose(developerSession,
 			                              scriptSource(),
-			                              scriptSourceWindowTopAnchor(),
 			                              runLocation(),
 			                              breakpoints(),
 			                              displayedScript(),
@@ -43,7 +42,6 @@ function loop(terminate) {
 }
 
 function developerSession(source,
-	                  sourceWindowTopAnchor,
 	                  runLocation,
 	                  breakpoints,
 	                  displayedScript,
@@ -55,7 +53,6 @@ function developerSession(source,
   return cons(
 	   cons(
 	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source,
-		                                                       sourceWindowTopAnchor,
 		                                                       runLocation,
 		                                                       breakpoints,
 		                                                       displayedScript))),
@@ -70,7 +67,6 @@ function developerSession(source,
 }
 
 function scriptSourceWithLocationAndBreakpoints(scriptSource, 
-	                                        scriptSourceWindowTopAnchor,
 	                                        runLocation,
 	                                        breakpoints,
 	                                        displayedScript) {
@@ -95,9 +91,9 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
   return formatScriptSource([],
 	                    breakpoints.filter(breakpoint => scriptHandle(breakpoint) === displayedScript)
 	                               .sort((breakpointA, breakpointB) => lineNumber(breakpointA) - lineNumber(breakpointB)),
-	                    scriptSource.split("\n"),
+	                    content(scriptSource).split("\n"),
 	                    0)
-	   .slice(scriptSourceWindowTopAnchor)
+	   .slice(topLine(scriptSource))
 	   .reduce((formattedVisibleSource, line) => {
              return `${formattedVisibleSource === "" ? formattedVisibleSource : formattedVisibleSource + "\n"}${line}`;
 	   }, "");
