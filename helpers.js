@@ -68,19 +68,19 @@ function writeTree(visitedSourceTree) {
     return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedSourceTree))
       ? entryName => `\u001b[7m${entryName}\u001b[0m`
       : entryName => entryName)(
-        (isDirectoryEntry(entry) ? entryName => colourText(entryName, "cyan")
+        (isDirectoryEntry(entry) ? entryName => styleText(entryName, "bold")
 	                         : entryName => entryName)(
           entryName(entry)));
   };
 
   return (selectedEntryBranchName(selectedEntry(visitedSourceTree)) === "" 
-    ? `${colourText("root", "blue")}\n`
-    : `${colourText(selectedEntryBranchName(selectedEntry(visitedSourceTree)), "blue")}\n`) 
+    ? `${styleText("root", "bold")}\n`
+    : `${styleText(selectedEntryBranchName(selectedEntry(visitedSourceTree)), "bold")}\n`) 
     + selectedBranch(visitedSourceTree).map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
-function colourText(text, colour) {
-  switch (colour) {
+function styleText(text, style) {
+  switch (style) {
     case 'black': return `\u001b[30m${text}\u001b[0m`;
     case 'red': return `\u001b[31m${text}\u001b[0m`;
     case 'green': return `\u001b[32m${text}\u001b[0m`;
@@ -89,6 +89,7 @@ function colourText(text, colour) {
     case 'magenta': return `\u001b[35m${text}\u001b[0m`;
     case 'cyan': return `\u001b[36m${text}\u001b[0m`;
     case 'white': return `\u001b[37m${text}\u001b[0m`;
+    case 'bold': return `\u001b[1m${text}\u001b[0m`;
   }
 }
 
