@@ -1,4 +1,4 @@
-const { entryValue, isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
+const { entryValue, hasEnded, isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
 
 function parseUserInput(parsed, currentInput) {
@@ -161,17 +161,56 @@ function unpackedContent(packagedContent) {
   return packagedContent[1];
 }
 
+function focusable(isFocus, alwaysHighlightedCharacter) {
+  return (text, stream) => {
+    const clearText = text => text.replace("\u001b[1m", "").replace("\u001b[0m", "");
+
+    if (isFocus(message(stream)) && hasEnded(message(stream))) {
+      return styleText(clearText(text), "bold");
+    }
+    else if (isFocus(message(stream)) && !hasEnded(message(stream))) {
+      return highlightOneCharacter(clearText(text), alwaysHighlightedCharacter ? alwaysHighlightedCharacter : "");
+    }
+    else {
+      return text;
+    }
+  };
+}
+
+function highlightOneCharacter(text, character) {
+  const highlightCharacter = (processedText, originalText) => {
+    if (originalText.length === 0) {
+      return processedText;
+    }
+    else if (originalText[0] === character) {
+      return `${processedText}${styleText(originalText[0], "bold")}${originalText.slice(1)}`;
+    }
+    else {
+      return highlightCharacter(`${processedText}${originalText[0]}`, originalText.slice(1));
+    }
+  };
+
+  if (character === "") {
+    return text;
+  }
+  else {
+    return highlightCharacter("", text);
+  }
+}
+
 module.exports = {
   content,
   describeEnvironment,
   displayedScriptSource,
   exploreSourceTree,
+  focusable,
   isCtrlC,
   makeDisplayedContent,
   makePackagedContent,
   parseUserInput,
   scrollable,
   scrollableContent,
+  styleText,
   tag,
   topLine,
   unpackedContent,

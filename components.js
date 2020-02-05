@@ -1,13 +1,20 @@
-const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, focusable, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource() {
   return (displayChange, scriptId) => predecessor => stream => {
-    const label = predecessor ? tag(predecessor) : "script source";
+    const label = predecessor ? tag(predecessor) : styleText("script source", "bold");
 
     const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Loading script source");
+
+    const focusableScriptSource = focusable(message => {
+      return (isBreakpointCapture(message)
+	        || isQueryCapture(message)
+		|| isMessagesFocus(message)
+		|| isSourceTreeFocus(message));
+    });
 
     const onSelectionChange = (displayChange, scriptId) => {
       if (isScriptSource(message(stream))) {
@@ -19,7 +26,8 @@ function scriptSource() {
       }
       else {
         return f => f(displayChange, scriptId)
-	              (makePackagedContent(label, scrollable(isInput, input)(displayedContent, stream)));
+	              (makePackagedContent(focusableScriptSource(label, stream),
+			                   scrollable(isInput, input)(displayedContent, stream)));
       }
     };
 
@@ -32,7 +40,8 @@ function scriptSource() {
       }
       else {
         return f => f(displayChange, newScriptId)
-	              (makePackagedContent(label, makeDisplayedContent(content(displayedContent), 0)));
+	              (makePackagedContent(focusableScriptSource(label, stream),
+			                   makeDisplayedContent(content(displayedContent), 0)));
       }
     };
 
@@ -135,20 +144,6 @@ function sourceTree() {
     return f => f(noParameters)(exploreSourceTree(selection, stream, identity, identity));
   };
 }
-
-//function sourceTreeWindowHeader() {
-//  return noParameters => predecessor => stream => {
-//    if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
-//      return f => f(noParameters)("\u001b[7mworkspace\u001b[0m");
-//    }
-//    else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
-//      return f => f(noParameters)("\u001b[4mw\u001b[0morkspace");
-//    }
-//    else {
-//      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("\u001b[4mw\u001b[0morkspace");
-//    }
-//  };
-//}
 
 function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
