@@ -1,31 +1,38 @@
-const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, makeDisplayedContent, scrollable, scrollableContent, topLine, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
 
 function scriptSource() {
   return (displayChange, scriptId) => predecessor => stream => {
-    const displayedContent = predecessor ? predecessor : makeDisplayedContent("Loading script source");
+    const label = predecessor ? tag(predecessor) : "script source";
+
+    const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Loading script source");
 
     const onSelectionChange = (displayChange, scriptId) => {
       if (isScriptSource(message(stream))) {
         return f => f(displayChange, scriptId)
-                      (scrollable(isInput, input)
-		        (makeDisplayedContent(readScriptSource(message(stream)), topLine(displayedContent)), stream));
+                      (makePackagedContent(label, scrollable(isInput, input)
+		                                    (makeDisplayedContent(readScriptSource(message(stream)),
+					                                  topLine(displayedContent)),
+					             stream)));
       }
       else {
-        return f => f(displayChange, scriptId)(scrollable(isInput, input)(displayedContent, stream));
+        return f => f(displayChange, scriptId)
+	              (makePackagedContent(label, scrollable(isInput, input)(displayedContent, stream)));
       }
     };
 
     const onDisplayChange = (displayChange, newScriptId) => {
       if (isDebuggerPaused(message(stream))) {
         return f => f(displayChange, newScriptId)
-		      (makeDisplayedContent(content(displayedContent),
-				            Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0)));
+		      (makePackagedContent(label,
+			                   makeDisplayedContent(content(displayedContent),
+				                                Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0))));
       }
       else {
-        return f => f(displayChange, newScriptId)(makeDisplayedContent(content(displayedContent), 0));
+        return f => f(displayChange, newScriptId)
+	              (makePackagedContent(label, makeDisplayedContent(content(displayedContent), 0)));
       }
     };
 

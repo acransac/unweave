@@ -1,9 +1,9 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
-const { content, isCtrlC, makeDisplayedContent, scrollableContent, topLine } = require('./helpers.js');
+const { content, isCtrlC, makeDisplayedContent, scrollableContent, tag, topLine, unpackedContent } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
-const { atom, compose, cons, emptyList, row, show, sizeWidth, vindent } = require('terminal');
+const { atom, compose, cons, emptyList, label, row, show, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render, terminate) {
   return async (stream) => {
@@ -52,10 +52,11 @@ function developerSession(source,
 	                  command) {
   return cons(
 	   cons(
-	     sizeWidth(50, atom(scriptSourceWithLocationAndBreakpoints(source,
-		                                                       runLocation,
-		                                                       breakpoints,
-		                                                       displayedScript))),
+	     sizeWidth(50, label(atom(scriptSourceWithLocationAndBreakpoints(unpackedContent(source),
+		                                                             runLocation,
+		                                                             breakpoints,
+		                                                             displayedScript)),
+	                         tag(source))),
 	     cons(
 	       topRightColumnDisplay(environment, messages, sourceTree),
 	       row(90))),

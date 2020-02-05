@@ -63,10 +63,6 @@ function scrollableContent(displayedContent) {
   }, "");
 }
 
-//function focusableContent(content, focusHeader) {
-//  return `${focusHeader}\n${content}`;
-//}
-
 function writeTree(visitedSourceTree) {
   const formatEntry = entry => {
     return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedSourceTree))
@@ -152,17 +148,31 @@ function displayedScriptSource() {
   return displayUpdater(makeSelectionInSourceTree(makeSourceTree()), undefined);
 }
 
+function makePackagedContent(tag, content) {
+  return [tag, content];
+}
+
+function tag(packagedContent) {
+  return packagedContent[0];
+}
+
+function unpackedContent(packagedContent) {
+  return packagedContent[1];
+}
+
 module.exports = {
   content,
   describeEnvironment,
   displayedScriptSource,
   exploreSourceTree,
-  //focusableContent,
   isCtrlC,
   makeDisplayedContent,
+  makePackagedContent,
   parseUserInput,
   scrollable,
   scrollableContent,
+  tag,
   topLine,
+  unpackedContent,
   writeTree
 };
