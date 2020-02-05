@@ -19,10 +19,8 @@ function scriptSource() {
     const onSelectionChange = (displayChange, scriptId) => {
       if (isScriptSource(message(stream))) {
         return f => f(displayChange, scriptId)
-                      (makePackagedContent(label, scrollable(isInput, input)
-		                                    (makeDisplayedContent(readScriptSource(message(stream)),
-					                                  topLine(displayedContent)),
-					             stream)));
+                      (makePackagedContent(label, makeDisplayedContent(readScriptSource(message(stream)),
+			                                               topLine(displayedContent))));
       }
       else {
         return f => f(displayChange, scriptId)
