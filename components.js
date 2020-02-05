@@ -1,7 +1,7 @@
-const { content, describeEnvironment, displayedScriptSource, exploreSourceTree, focusable, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
-const { atom, column, cons, indent, sizeHeight, vindent } = require('terminal');
+const { atom, column, cons, indent, label, sizeHeight, vindent } = require('terminal');
 
 function scriptSource() {
   return (displayChange, scriptId) => predecessor => stream => {
@@ -9,11 +9,11 @@ function scriptSource() {
 
     const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Loading script source");
 
-    const focusableScriptSource = focusable(message => {
+    const focusableScriptSource = focusableByDefault(message => {
       return (isBreakpointCapture(message)
-	        || isQueryCapture(message)
-		|| isMessagesFocus(message)
-		|| isSourceTreeFocus(message));
+	       || isQueryCapture(message)
+	       || isMessagesFocus(message)
+	       || isSourceTreeFocus(message));
     });
 
     const onSelectionChange = (displayChange, scriptId) => {
@@ -135,11 +135,14 @@ function messages() {
 
 function sourceTree() {
   return noParameters => predecessor => stream => {
-    const selection = predecessor ? predecessor : makeSelectionInSourceTree(makeSourceTree());
+    const label = predecessor ? tag(predecessor) : highlightOneCharacter("workspace", "w");
+
+    const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInSourceTree(makeSourceTree());
 
     const identity = selection => selection;
 
-    return f => f(noParameters)(exploreSourceTree(selection, stream, identity, identity));
+    return f => f(noParameters)(makePackagedContent(focusable(isSourceTreeFocus, "w")(label, stream),
+	                                            exploreSourceTree(selection, stream, identity, identity)));
   };
 }
 
@@ -154,7 +157,7 @@ function topRightColumnDisplay() {
     };
 
     const sourceTreeDisplay = (environment, messages, sourceTree) => {
-      return cons(atom(writeTree(sourceTree)), indent(50, column(50)));
+      return cons(label(atom(writeTree(unpackedContent(sourceTree))), tag(sourceTree)), indent(50, column(50)));
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {

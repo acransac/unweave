@@ -161,20 +161,32 @@ function unpackedContent(packagedContent) {
   return packagedContent[1];
 }
 
-function focusable(isFocus, alwaysHighlightedCharacter) {
+function focusableImpl(onFocus, onLoseFocus, alwaysHighlightedCharacter) {
   return (text, stream) => {
     const clearText = text => text.replace("\u001b[1m", "").replace("\u001b[0m", "");
 
-    if (isFocus(message(stream)) && hasEnded(message(stream))) {
+    if (onFocus(message(stream))) {
       return styleText(clearText(text), "bold");
     }
-    else if (isFocus(message(stream)) && !hasEnded(message(stream))) {
+    else if (onLoseFocus(message(stream))) {
       return highlightOneCharacter(clearText(text), alwaysHighlightedCharacter ? alwaysHighlightedCharacter : "");
     }
     else {
       return text;
     }
   };
+}
+
+function focusable(isFocus, alwaysHighlightedCharacter) {
+  return focusableImpl(message => isFocus(message) && !hasEnded(message),
+	               message => isFocus(message) && hasEnded(message),
+	               alwaysHighlightedCharacter);
+}
+
+function focusableByDefault(isNotFocus, alwaysHighlightedCharacter) {
+  return focusableImpl(message => isNotFocus(message) && hasEnded(message),
+	               message => isNotFocus(message) && !hasEnded(message),
+	               alwaysHighlightedCharacter);
 }
 
 function highlightOneCharacter(text, character) {
@@ -204,6 +216,8 @@ module.exports = {
   displayedScriptSource,
   exploreSourceTree,
   focusable,
+  focusableByDefault,
+  highlightOneCharacter,
   isCtrlC,
   makeDisplayedContent,
   makePackagedContent,
