@@ -86,10 +86,11 @@ function breakpoints() {
 function environment() {
   return noParameters => predecessor => stream => {
     if (isEnvironment(message(stream))) {
-      return f => f(noParameters)(describeEnvironment(readEnvironment(message(stream))));
+      return f => f(noParameters)(makePackagedContent("environment", describeEnvironment(readEnvironment(message(stream)))));
     }
     else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)("Loading environment");
+      return predecessor ? f => f(noParameters)(predecessor)
+		         : f => f(noParameters)(makePackagedContent("environment", "Loading environment"));
     }
   }
 }
@@ -150,7 +151,7 @@ function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
     const environmentAndMessagesDisplay = (environment, messages, sourceTree) => {
       return cons(
-	       sizeHeight(50, atom(environment)),
+	       sizeHeight(50, label(atom(unpackedContent(environment)), tag(environment))),
 	       cons(
 	         vindent(50, sizeHeight(50, atom(scrollableContent(messages)))),
 		 indent(50, column(50))));
