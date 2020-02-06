@@ -1,7 +1,7 @@
 const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
-const { atom, column, cons, indent, label, sizeHeight, vindent } = require('terminal');
+const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
   return (displayChange, scriptId) => predecessor => stream => {
@@ -149,26 +149,22 @@ function sourceTree() {
 
 function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
-    const environmentAndMessagesDisplay = (environment, messages, sourceTree) => {
-      return cons(
-	       sizeHeight(50, label(atom(unpackedContent(environment)), tag(environment))),
-	       cons(
-	         vindent(50, sizeHeight(50, atom(scrollableContent(messages)))),
-		 indent(50, column(50))));
+    const environmentDisplay = (environment, sourceTree) => {
+      return sizeHeight(50, label(atom(unpackedContent(environment)), tag(environment)));
     };
 
-    const sourceTreeDisplay = (environment, messages, sourceTree) => {
-      return cons(label(atom(writeTree(unpackedContent(sourceTree))), tag(sourceTree)), indent(50, column(50)));
+    const sourceTreeDisplay = (environment, sourceTree) => {
+      return sizeHeight(50, label(atom(writeTree(unpackedContent(sourceTree))), tag(sourceTree)));
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
       return f => f(noParameters)(sourceTreeDisplay);
     }
     else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
-      return f => f(noParameters)(environmentAndMessagesDisplay);
+      return f => f(noParameters)(environmentDisplay);
     }
     else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(environmentAndMessagesDisplay);
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(environmentDisplay);
     }
   };
 }

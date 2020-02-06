@@ -3,7 +3,7 @@ const { content, isCtrlC, makeDisplayedContent, scrollableContent, tag, topLine,
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
 const { continuation, forget, later, now } = require('streamer');
-const { atom, compose, cons, emptyList, label, row, show, sizeWidth, vindent } = require('terminal');
+const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render, terminate) {
   return async (stream) => {
@@ -58,7 +58,11 @@ function developerSession(source,
 		                                                             displayedScript)),
 	                         tag(source))),
 	     cons(
-	       topRightColumnDisplay(environment, messages, sourceTree),
+	       cons(
+	         topRightColumnDisplay(environment, sourceTree),
+	         cons(
+	           vindent(50, sizeHeight(50, atom(scrollableContent(messages)))),
+	  	   indent(50, column(50)))),
 	       row(90))),
 	   cons(
 	     cons(
