@@ -1,4 +1,4 @@
-const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
 const { atom, label, sizeHeight } = require('terminal');
@@ -150,11 +150,11 @@ function sourceTree() {
 function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
     const environmentDisplay = (environment, sourceTree) => {
-      return sizeHeight(50, label(atom(unpackedContent(environment)), tag(environment)));
+      return sizeHeight(50, label(atom(unpackedContent(environment)), tabs(0, environment, sourceTree)));
     };
 
     const sourceTreeDisplay = (environment, sourceTree) => {
-      return sizeHeight(50, label(atom(writeTree(unpackedContent(sourceTree))), tag(sourceTree)));
+      return sizeHeight(50, label(atom(writeTree(unpackedContent(sourceTree))), tabs(1, environment, sourceTree)));
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {

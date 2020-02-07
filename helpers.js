@@ -90,6 +90,8 @@ function styleText(text, style) {
     case 'cyan': return `\u001b[36m${text}\u001b[0m`;
     case 'white': return `\u001b[37m${text}\u001b[0m`;
     case 'bold': return `\u001b[1m${text}\u001b[0m`;
+    case 'reversed': return `\u001b[7m${text}\u001b[0m`;
+    case 'underline': return `\u001b[4m${text}\u001b[0m`;
   }
 }
 
@@ -210,6 +212,13 @@ function highlightOneCharacter(text, character) {
   }
 }
 
+function tabs(number, ...packagedContents) {
+  return packagedContents.map((packagedContent, index) => {
+    return (index === number ? label => `>${label}<` : label => label)(tag(packagedContent));
+  })
+	                 .join("-");
+}
+
 module.exports = {
   content,
   describeEnvironment,
@@ -225,6 +234,7 @@ module.exports = {
   scrollable,
   scrollableContent,
   styleText,
+  tabs,
   tag,
   topLine,
   unpackedContent,
