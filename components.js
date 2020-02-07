@@ -1,6 +1,6 @@
 const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, query, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
-const { branches, makeSelectionInSourceTree, makeSourceTree, root } = require('./sourcetree.js');
+const { makeSelectionInSourceTree, makeSourceTree } = require('./sourcetree.js');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -113,23 +113,21 @@ function commandLine() {
   };
 }
 
-function messages() {
+function messages(inspectedMessage, logger) {
   return noParameters => predecessor => stream => {
-    const displayedContent = predecessor ? predecessor : makeDisplayedContent("Waiting");
+    const label = predecessor ? tag(predecessor) : highlightOneCharacter("messages", "m");
 
-    if (isDebuggerPaused(message(stream))) {
-      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${scriptHandle(pauseLocation(message(stream)))}, lineNumber: ${lineNumber(pauseLocation(message(stream)))}`, topLine(displayedContent)));
-    }
-    else if (isScriptParsed(message(stream))) {
-      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}id: ${parsedScriptHandle(message(stream))}, url: ${parsedScriptUrl(message(stream))}`, topLine(displayedContent)));
-    }
-    else if (isSourceTree(message(stream))) {
-      const sourceTree = message(stream).sourceTree;
+    const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Waiting");
 
-      return f => f(noParameters)(makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}root: ${root(sourceTree)}, tree: ${JSON.stringify(branches(sourceTree))}`, topLine(displayedContent)));
+    if (inspectedMessage(message(stream))) {
+      return f => f(noParameters)
+	            (makePackagedContent(label,
+	                                 makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${logger(message(stream))}`, topLine(displayedContent))));
     }
     else {
-      return f => f(noParameters)(scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream));
+      return f => f(noParameters)
+	            (makePackagedContent(focusable(isMessagesFocus, "m")(label, stream),
+			                 scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream)));
     }
   };
 }

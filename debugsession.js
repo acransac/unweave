@@ -1,12 +1,15 @@
 const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { content, isCtrlC, makeDisplayedContent, scrollableContent, tag, topLine, unpackedContent } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { input, isInput, lineNumber, message, scriptHandle } = require('./protocol.js');
+const { input, isInput, isSourceTree, lineNumber, message, readSourceTree, scriptHandle } = require('./protocol.js');
+const { branches, root } = require('./sourcetree.js');
 const { continuation, forget, later, now } = require('streamer');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render, terminate) {
   return async (stream) => {
+    const debugLogger = message => `root: ${root(readSourceTree(message))}, tree: ${JSON.stringify(branches(readSourceTree(message)))}`;
+
     return loop(terminate)(await show(render)(compose(developerSession,
 			                              scriptSource(),
 			                              runLocation(),
@@ -14,7 +17,7 @@ function debugSession(send, render, terminate) {
 			                              displayedScript(),
 		                                      topRightColumnDisplay(),
 			                              environment(),
-			                              messages(),
+			                              messages(isSourceTree, debugLogger),
 		                                      sourceTree(),
 			                              commandLine()))(
 	                                        await step(send)(
@@ -61,7 +64,7 @@ function developerSession(source,
 	       cons(
 	         topRightColumnDisplay(environment, sourceTree),
 	         cons(
-	           vindent(50, sizeHeight(50, atom(scrollableContent(messages)))),
+	           vindent(50, sizeHeight(50, label(atom(scrollableContent(unpackedContent(messages))), tag(messages)))),
 	  	   indent(50, column(50)))),
 	       row(90))),
 	   cons(
