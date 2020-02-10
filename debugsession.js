@@ -19,7 +19,18 @@ function debugSession(send, render, terminate) {
 			                              environment(),
 			                              messages(isSourceTree, debugLogger),
 		                                      sourceTree(),
-			                              commandLine()))(
+			                              commandLine(),
+                                                      instructions(),
+                                                      focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
+						                          isQueryCapture,
+						                          "query Inspector",
+						                          "q")(),
+                                                      focusableCaptureLog(logCapture(isBreakpointsCapture,
+							                             breakpoints,
+						                                     "Add breakpoints at line"),
+							                  isBreakpointsCapture,
+							                  "add breakpoints",
+							                  "b")()))(
 	                                        await step(send)(
 	                                          await queryInspector(send)(
 		                                    await addBreakpoint(send)(

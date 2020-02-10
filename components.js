@@ -95,6 +95,56 @@ function environment() {
   }
 }
 
+function instructions() {
+  return noParameters => predecessor => stream => {
+    const defaultInstructions = "n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
+
+    const sourceTreeInstructions = "j: Select next entry  k: Select previous entry  l: Visit directory  h: Go to parent directory  Enter: Validate selection";
+
+    const messagesInstructions = "j: Scroll down  k: Scroll up  Enter: Leave";
+
+    if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(makePackagedContent(tag(predecessor), sourceTreeInstructions));
+    }
+    else if (isMessagesFocus(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(makePackagedContent(tag(predecessor), messagesInstructions));
+    }
+    else if ((isBreakpointCapture(message(stream)) || isQueryCapture(message(stream))
+              || isSourceTreeFocus(message(stream)) || isMessagesFocus(message(stream)))
+              && hasEnded(message(stream))) {
+      return f => f(noParameters)(makePackagedContent(tag(predecessor), defaultInstructions));
+    }
+    else {
+      return predecessor ? f => f(noParameters)(predecessor)
+	                 : f => f(noParameters)(makePackagedContent("instructions", defaultInstructions));
+    }
+  };
+}
+
+function logCapture(isCapture, readCapture, logPrefix) {
+  return noParameters => predecessor => stream => {
+    if (isCapture(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(`${logPrefix}: ${readCapture(message(stream))}`);
+    }
+    else if (isCapture(message(stream)) && hasEnded(message(stream))) {
+      return f => f(noParameters)(`${logPrefix}: `);
+    }
+    else {
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(`${logPrefix}: `);
+    }
+  };
+}
+
+function focusableCaptureLog(logger, isFocus, label, alwaysHighlightedCharacter) {
+  return noParameters => predecessor => stream => {
+    const title = predecessor ? tag(predecessor) : highlightOneCharacter(label, alwaysHighlightedCharacter);
+
+    return f => f(noParameters)
+	          (makePackagedContent(focusable(isFocus, alwaysHighlightedCharacter)(title, stream),
+			               (f => g => g)(logger()(unpackedContent(predecessor))(stream))));
+  };
+}
+
 function commandLine() {
   return noParameters => predecessor => stream => {
     const defaultMessage = "q: Query Inspector  b: Add breakpoint  n: Step over  s: Step into  f: Step out  c: Continue  j: Scroll down  k: Scroll up";
