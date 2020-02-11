@@ -1,7 +1,7 @@
-const { breakpoints, commandLine, displayedScript, environment, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
+const { breakpoints, commandLine, displayedScript, environment, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { content, isCtrlC, makeDisplayedContent, scrollableContent, tag, topLine, unpackedContent } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { input, isInput, isSourceTree, lineNumber, message, readSourceTree, scriptHandle } = require('./protocol.js');
+const { breakpointCapture, input, isBreakpointCapture, isInput, isQueryCapture, isSourceTree, lineNumber, message, query, readSourceTree, scriptHandle } = require('./protocol.js');
 const { branches, root } = require('./sourcetree.js');
 const { continuation, forget, later, now } = require('streamer');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
@@ -24,13 +24,13 @@ function debugSession(send, render, terminate) {
                                                       focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
 						                          isQueryCapture,
 						                          "query Inspector",
-						                          "q")(),
-                                                      focusableCaptureLog(logCapture(isBreakpointsCapture,
-							                             breakpoints,
-						                                     "Add breakpoints at line"),
-							                  isBreakpointsCapture,
-							                  "add breakpoints",
-							                  "b")()))(
+						                          "q"),
+                                                      focusableCaptureLog(logCapture(isBreakpointCapture,
+							                             breakpointCapture,
+						                                     "Add breakpoint at line"),
+							                  isBreakpointCapture,
+							                  "add breakpoint",
+							                  "b")))(
 	                                        await step(send)(
 	                                          await queryInspector(send)(
 		                                    await addBreakpoint(send)(
@@ -63,7 +63,10 @@ function developerSession(source,
 	                  environment,
 	                  messages,
 	                  sourceTree,
-	                  command) {
+	                  command,
+                          instructions,
+                          queryCapture,
+                          breakpointCapture) {
   return cons(
 	   cons(
 	     sizeWidth(50, label(atom(scriptSourceWithLocationAndBreakpoints(unpackedContent(source),
@@ -80,7 +83,7 @@ function developerSession(source,
 	       row(90))),
 	   cons(
 	     cons(
-	       atom(command),
+	       command(instructions, queryCapture, breakpointCapture),
  	       vindent(90, row(10))),
 	     emptyList()));
 }
