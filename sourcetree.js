@@ -75,32 +75,41 @@ function branches(sourceTree) {
 }
 
 function insertInSourceTree(sourceTree, path, file) {
-  const insertInSourceTreeImpl = (entries, branch, path, file) => {
+  const insertInSourceTreeImpl = (entries, branch, path, ...insertedSourceTree) => {
     if (path.length === 0) {
-      return [...entries, ...branch, file];
+      return [...entries, ...branch, ...insertedSourceTree];
     }
     else if (branch.length === 0) {
-      return [...entries, makeDirectoryEntry(path[0], insertInSourceTreeImpl([], [], path.slice(1), file))];
+      return [...entries, makeDirectoryEntry(path[0], insertInSourceTreeImpl([], [], path.slice(1), ...insertedSourceTree))];
     }
     else if (isDirectoryEntry(branch[0]) && directoryName(branch[0]) === path[0]) {
       return [...entries,
-	      makeDirectoryEntry(path[0], insertInSourceTreeImpl([], directoryContent(branch[0]), path.slice(1), file)),
+	      makeDirectoryEntry(path[0], insertInSourceTreeImpl([],
+		                                                 directoryContent(branch[0]),
+		                                                 path.slice(1),
+		                                                 ...insertedSourceTree)),
 	      ...branch.slice(1)];
     }
     else {
-      return insertInSourceTreeImpl([...entries, branch[0]], branch.slice(1), path, file);
+      return insertInSourceTreeImpl([...entries, branch[0]], branch.slice(1), path, ...insertedSourceTree);
     }
   };
 
   if (root(sourceTree) === undefined) {
     return makeSourceTree(path, [file]);
   }
-  else {
+  else if (path.startsWith(root(sourceTree))) {
     return makeSourceTree(root(sourceTree),
 	                  insertInSourceTreeImpl([],
 				                 branches(sourceTree),
 				                 path.slice(root(sourceTree).length).split("/").slice(1),
 				                 file));
+  }
+  else {
+    return makeSourceTree(path, insertInSourceTreeImpl([],
+	                                               [file],
+	                                               root(sourceTree).slice(path.length).split("/").slice(1),
+	                                               ...branches(sourceTree)));
   }
 }
 
@@ -185,9 +194,17 @@ function selectedEntry(selectionInSourceTree) {
 }
 
 function refreshSelectedSourceTree(selectionInSourceTree, newSourceTree) {
+  const newSelectionBranchName = root(selectedSourceTree(selectionInSourceTree))
+    ? root(selectedSourceTree(selectionInSourceTree)).slice(root(newSourceTree).length)
+    : "";
+
+  const entry = selectedEntry(selectionInSourceTree);
+
   return makeSelectionInSourceTree(newSourceTree, 
-                                   lookupBranch(newSourceTree, selectedEntryBranchName(selectedEntry(selectionInSourceTree))),
-	                           selectedEntry(selectionInSourceTree));
+                                   lookupBranch(newSourceTree, `${newSelectionBranchName}${selectedEntryBranchName(entry)}`),
+	                           makeSelectedEntry(`${newSelectionBranchName}${selectedEntryName(entry)}`,
+					             selectedEntryHandle(entry),
+				                     selectedEntryType(entry)));
 }
 
 function selectAnotherEntryInBranch(selectionInSourceTree, selector) {
@@ -255,7 +272,7 @@ function selectedEntryBranchName(selectedEntry) {
     return "";
   }
   else {
-    return selectedEntryName(selectedEntry).split("/").slice(0, -1).join("");
+    return selectedEntryName(selectedEntry).split("/").slice(0, -1).join("/");
   }
 }
 
