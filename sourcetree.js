@@ -232,7 +232,7 @@ function selectAnotherBranch(selectionInSourceTree, branchName) {
 
   return makeSelectionInSourceTree(selectedSourceTree(selectionInSourceTree),
                                    newBranch,
-	                           makeSelectedEntry(selectedEntryBranchName(selectedEntry(selectionInSourceTree)) + `/${entryName(newBranch[0])}`,
+	                           makeSelectedEntry(`${branchName}/${entryName(newBranch[0])}`,
                                                      isDirectoryEntry(newBranch[0]) ? undefined : fileId(newBranch[0]),
                                                      isDirectoryEntry(newBranch[0]) ? "directory" : "file"));
 }
