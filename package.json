@@ -9,6 +9,7 @@
   "author": "Adrien Cransac",
   "license": "ISC",
   "dependencies": {
+    "filetree": "file:../filetree",
     "streamer": "file:../streamer",
     "terminal": "file:../terminal",
     "ws": "^7.1.1"

@@ -2,7 +2,7 @@ const { breakpoints, commandLine, displayedScript, environment, focusableCapture
 const { content, isCtrlC, makeDisplayedContent, scrollableContent, tag, topLine, unpackedContent } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { breakpointCapture, input, isBreakpointCapture, isInput, isQueryCapture, isSourceTree, lineNumber, message, query, readSourceTree, scriptHandle } = require('./protocol.js');
-const { branches, root } = require('./sourcetree.js');
+const { branches, root } = require('filetree');
 const { continuation, forget, later, now } = require('streamer');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 

@@ -1,6 +1,6 @@
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
-const { branches, insertInSourceTree, makeFileEntry, makeSourceTree, parseFilePath } = require('./sourcetree.js');
+const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
@@ -76,9 +76,9 @@ function parseSourceTree() {
     if (isUserScriptParsed(message(stream))) {
       const [path, fileName] = parseFilePath(parsedUserScriptPath(message(stream)));
 
-      const newSourceTree = insertInSourceTree(sourceTree,
-	                                       path,
-	                                       makeFileEntry(fileName, parsedScriptHandle(message(stream))));
+      const newSourceTree = insertInFileTree(sourceTree,
+	                                     path,
+	                                     makeFileEntry(fileName, parsedScriptHandle(message(stream))));
 
       return floatOn(commit(stream, builder(newSourceTree)), makeSourceTreeMessage(newSourceTree));
     }
@@ -87,7 +87,7 @@ function parseSourceTree() {
     }
   };
 
-  return builder(makeSourceTree());
+  return builder(makeFileTree());
 }
 
 function pullScriptSource(send) {

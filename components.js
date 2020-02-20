@@ -1,6 +1,6 @@
 const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
 const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
-const { makeSelectionInSourceTree, makeSourceTree } = require('./sourcetree.js');
+const { makeSelectionInFileTree, makeFileTree } = require('filetree');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -188,7 +188,7 @@ function sourceTree() {
   return noParameters => predecessor => stream => {
     const label = predecessor ? tag(predecessor) : highlightOneCharacter("workspace", "w");
 
-    const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInSourceTree(makeSourceTree());
+    const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInFileTree(makeFileTree());
 
     const identity = selection => selection;
 

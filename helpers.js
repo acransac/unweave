@@ -1,5 +1,5 @@
 const { entryValue, hasEnded, isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
-const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInSourceTree, makeSourceTree, refreshSelectedSourceTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('./sourcetree.js');
+const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
 
 function parseUserInput(parsed, currentInput) {
   if (isBackspace(currentInput)) {
@@ -97,7 +97,7 @@ function styleText(text, style) {
 
 function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePicked) {
   if (isSourceTree(message(stream))) {
-    return continuation(refreshSelectedSourceTree(selectionInSourceTree, readSourceTree(message(stream))));
+    return continuation(refreshSelectedFileTree(selectionInSourceTree, readSourceTree(message(stream))));
   }
   else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "j") {
     return continuation(selectNext(selectionInSourceTree));
@@ -148,7 +148,7 @@ function displayedScriptSource() {
     }
   };
 
-  return displayUpdater(makeSelectionInSourceTree(makeSourceTree()), undefined);
+  return displayUpdater(makeSelectionInFileTree(makeFileTree()), undefined);
 }
 
 function makePackagedContent(tag, content) {
