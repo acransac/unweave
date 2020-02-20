@@ -102,11 +102,19 @@ function scriptSourceWithLocationAndBreakpoints(scriptSource,
       const isCurrentExecutionLocation = scriptHandle(runLocation) === displayedScript
 		                           && lineNumber(runLocation) === originalLineNumber;
 
-      return formatScriptSource(
-        [...formattedLines, `${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
-        hasBreakpoint ? breakpoints.slice(1) : breakpoints,
-        originalLines.slice(1),
-        originalLineNumber + 1);
+      const lineNumberPrefix = lineNumber => {
+        if (lineNumber.toString().length < 4) {
+	  return `${lineNumber.toString().padEnd(3, ' ')}|`;
+	}
+	else {
+          return `${lineNumber.toString()}|`;
+	}
+      };
+
+      return formatScriptSource([...formattedLines,`${lineNumberPrefix(originalLineNumber)}${hasBreakpoint ? "*" : " "}${isCurrentExecutionLocation ? "> " : "  "}${originalLines[0]}`],
+                                hasBreakpoint ? breakpoints.slice(1) : breakpoints,
+                                originalLines.slice(1),
+                                originalLineNumber + 1);
     }
   };
 
