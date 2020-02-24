@@ -18,12 +18,12 @@ function isResult(message, resultName) {
 
 // Types --
 // Location
-function makeLocation(scriptHandle, lineNumber) {
-  return [scriptHandle, lineNumber];
+function makeLocation(scriptHandle, lineNumber, columnNumber) {
+  return [scriptHandle, lineNumber, columnNumber];
 }
 
 function makeLocationFromInspectorLocation(inspectorLocation) {
-  return [inspectorLocation.scriptId, inspectorLocation.lineNumber];
+  return [inspectorLocation.scriptId, inspectorLocation.lineNumber, inspectorLocation.columnNumber];
 }
 
 function scriptHandle(location) {
@@ -32,6 +32,10 @@ function scriptHandle(location) {
 
 function lineNumber(location) {
   return location[1];
+}
+
+function columnNumber(location) {
+  return location[2];
 }
 
 // Inspector query
@@ -272,6 +276,7 @@ function sourceTreeFocusInput(message) {
 module.exports = {
   breakpointCapture,
   breakpointLine,
+  columnNumber,
   endCapture,
   entryValue,
   hasEnded,
