@@ -12,6 +12,7 @@
     "filetree": "file:../filetree",
     "streamer": "file:../streamer",
     "terminal": "file:../terminal",
+    "tester": "file:../tester",
     "ws": "^7.1.1"
   }
 }
