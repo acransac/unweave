@@ -1,4 +1,4 @@
-const { makeFileTree } = require('filetree');
+const { isFileSelected, makeFileTree, makeSelectionInFileTree } = require('filetree');
 const {} = require('./protocol.js');
 
 // Helpers --
@@ -39,6 +39,18 @@ function makeEnvironmentTree(branches) {
 //  };
 //}
 
+// Selection in environment tree
+function makeSelectionInEnvironmentTree(environmentTree, selectedBranch, selectedEntry) {
+  return makeSelectionInFileTree(environmentTree, selectedBranch, selectedEntry);
+}
+
+// Selected entry
+function isAtomicEntrySelected(selectedEntry) {
+  return isFileSelected(selectedEntry);
+}
+
 module.exports = {
-  makeEnvironmentTree
+  isAtomicEntrySelected,
+  makeEnvironmentTree,
+  makeSelectionInEnvironmentTree
 };
