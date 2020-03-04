@@ -1,6 +1,7 @@
 const { isAtomicEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const Test = require('tester');
+const util = require('util');
 
 function fakeEnvironmentEntriesFromInspector(values) {
   const entryValueFromInspector = (value, id) => {
@@ -8,13 +9,13 @@ function fakeEnvironmentEntriesFromInspector(values) {
 
     const instanceOf = (prototypes, value) => prototypes.filter(prototype => value instanceof prototype);
 
-    const enumerableValueFromInspector = typeName => {
+    const enumerableValueFromInspector = (typeCategory, lengthFunction) => {
       return (valueTypeName, value) => {
         return {
           type: "object",
-          subtype: typeName,
+          subtype: typeCategory,
           className: valueTypeName,
-	  description: `${valueTypeName}(${value.length})`,
+	  description: `${valueTypeName}(${lengthFunction(value)})`,
 	  objectId: makeFakeRemoteHandle(id)
 	};
       };
@@ -38,9 +39,8 @@ function fakeEnvironmentEntriesFromInspector(values) {
       return {type: "string", value: value};
     }
     else if (typeof value === "symbol") {
-      return {type: "symbol", description: value, objectId: makeFakeRemoteHandle(id)};
+      return {type: "symbol", description: value.toString(), objectId: makeFakeRemoteHandle(id)};
     }
-    // Async and sync treated the same way in tests
     else if (typeof value === "function") {
       return {
         type: "function",
@@ -53,15 +53,28 @@ function fakeEnvironmentEntriesFromInspector(values) {
     else if (value instanceof Date) {
       return {type: "object", subtype: "date", className: "Date", description: value, objectId: makeFakeRemoteHandle(id)};
     }
-    else if (instanceOf([Array, Map, Set, DataView], value).length > 0) {
-      return (prototypeName => enumerableValueFromInspector(prototypeName.toLowerCase())(prototypeName, value))
-        (instanceOf([Array, Map, Set, DataView], value)[0].name);
+    else if (instanceOf([Array], value).length > 0) {
+      return (prototypeName => enumerableValueFromInspector("array", value => value.length)
+	                         (prototypeName, value))
+        (instanceOf([Array], value)[0].name);
+    }
+    else if (instanceOf([DataView], value).length > 0) {
+      return (prototypeName => enumerableValueFromInspector("dataview", value => value.byteLength)
+	                         (prototypeName, value))
+        (instanceOf([DataView], value)[0].name);
+    }
+    else if (instanceOf([Map, Set], value).length > 0) {
+      return (prototypeName => enumerableValueFromInspector(prototypeName.toLowerCase(), value => value.size)
+	                         (prototypeName, value))
+        (instanceOf([Map, Set], value)[0].name);
     }
     else if (instanceOf(typedArrayPrototypes, value).length > 0) {
-      return enumerableValueFromInspector("typedarray")(instanceOf(typedArrayPrototypes, value)[0].name, value);
+      return enumerableValueFromInspector("typedarray", value => value.length)
+	       (instanceOf(typedArrayPrototypes, value)[0].name, value);
     }
     else if (instanceOf([ArrayBuffer, SharedArrayBuffer], value).length > 0) {
-      return enumerableValueFromInspector("arraybuffer")(instanceOf([ArrayBuffer, SharedArrayBuffer], value)[0].name, value);
+      return enumerableValueFromInspector("arraybuffer", value => value.byteLength)
+	       (instanceOf([ArrayBuffer, SharedArrayBuffer], value)[0].name, value);
     }
     else if (value instanceof Promise) {
       return {
@@ -72,7 +85,7 @@ function fakeEnvironmentEntriesFromInspector(values) {
 	objectId: makeFakeRemoteHandle(id)
       };
     }
-    else if (value instanceof Proxy) {
+    else if (util.types.isProxy(value)) {
       return {
         type: "object",
 	subtype: "proxy",
@@ -88,8 +101,7 @@ function fakeEnvironmentEntriesFromInspector(values) {
   };
 
   return values.map((value, id) => {
-    name: `entry${id + 1}`,
-    value: entryValueFromInspector(value, id),
+    return {name: `entry${id}`, value: entryValueFromInspector(value, id)};
   });
 }
 
