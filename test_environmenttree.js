@@ -1,9 +1,9 @@
-const { isAtomicEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const Test = require('tester');
 const util = require('util');
 
-function fakeEnvironmentEntriesFromInspector(values) {
+function makeFakeEnvironmentEntriesFromInspector(values) {
   const entryValueFromInspector = (value, id) => {
     const makeFakeRemoteHandle = id => JSON.stringify({injectedScriptId: 1, id: id});
 
@@ -105,6 +105,15 @@ function fakeEnvironmentEntriesFromInspector(values) {
   });
 }
 
+function makeEnvironment(values) {
+  return (environmentTree => {
+    return [
+      environmentTree,
+      refreshSelectedEnvironmentTree(makeSelectionInEnvironmentTree(makeEnvironmentTree()), environmentTree)
+    ];
+  })(insertInEnvironmentTree(makeEnvironmentTree(), "/env", makeFakeEnvironmentEntriesFromInspector(values), () => {}));
+}
+
 function test_emptyEnvironmentTree(finish, check) {
   const emptyEnvironmentTree = makeEnvironmentTree();
 
@@ -119,11 +128,22 @@ function test_selectionInEmptyEnvironmentTree(finish, check) {
 	                && selectedEntryName(selectedEntry(emptySelection)) === ""
 	                && selectedEntryLeafName(selectedEntry(emptySelection)) === ""
 	                && selectedEntryBranchName(selectedEntry(emptySelection)) === ""
-	                && selectedEntryHandle(selectedEntry(emptySelection)) === undefined
-	                && isAtomicEntrySelected(selectedEntry(emptySelection))));
+	                && selectedEntryHandle(selectedEntry(emptySelection)) === undefined));
+}
+
+function test_environmentTreeWithOneImmediateEntry(finish, check) {
+  const [environmentTree, selection] = makeEnvironment(["abc"]);
+
+  return finish(check(selectedBranch(selection).length === 1
+	                && selectedEntryName(selectedEntry(selection)) === "/String entry0: \"abc\""
+	                && selectedEntryLeafName(selectedEntry(selection)) === "String entry0: \"abc\""
+	                && selectedEntryBranchName(selectedEntry(selection)) === ""
+	                && !isVisitableEntrySelected(selectedEntry(selection))
+	                && !isDeferredEntrySelected(selectedEntry(selection))));
 }
 
 Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
-  Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree")
+  Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
+  Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry")
 ]);

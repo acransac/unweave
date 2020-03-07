@@ -1,56 +1,61 @@
-const { isFileSelected, makeFileTree, makeSelectionInFileTree } = require('filetree');
-const {} = require('./protocol.js');
+const { insertInFileTree, isFileSelected, makeDirectoryEntry, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntryLeafName } = require('filetree');
+const { entryValue, name, type } = require('./protocol.js');
 
 // Helpers --
-//function nameEntry(entry) {
-//  return `${type(entry)} ${name(entry)}${entryValue(entry) ? ": " + entryValue(entry) : ""}`;
-//}
-//
-//function isAtomicType(entry) {
-//  return type(entry) !== "Array" && type(entry) !== "Object";
-//}
+function description(entry) {
+  return `${type(entry)} ${name(entry)}${entryValue(entry) ? ": " + entryValue(entry) : ""}`;
+}
 
 // Types --
-// Atomic entry
-//function makeAtomicEntry(entry) {
-//  return makeFileEntry(nameEntry(entry), () => {});
-//}
+// Immediate entry
+function makeImmediateEntry(entry) {
+  return makeFileEntry(description(entry), () => {});
+}
 
-// Deferred collection entry
-//function makeDeferredCollectionEntry(send, entry) {
-//  return makeDirectoryEntry(nameEntry(entry), [makeFileEntry("Loading...", f => f(send, entry))]);
-//}
+// Deferred entry
+function makeDeferredEntry(send, entry) {
+  return makeDirectoryEntry(description(entry), [makeFileEntry("deferred", f => f(send, entry))]);
+}
 
 // Environment tree
 function makeEnvironmentTree(branches) {
   return makeFileTree("/env", branches);
 }
 
-//function environmentTreeInserter(send, findUniqueId) {
-//  return (environmentTree, path, entries) => {
-//    return insertInFileTree(environmentTree, path, entries.map(entry => {
-//      if (isAtomicEntry(entry)) {
-//        return makeAtomicEntry(entry);
-//      }
-//      else {
-//        return makeDeferredCollectionEntry(send, findUniqueId, entry);
-//      }
-//    }));
-//  };
-//}
+function insertInEnvironmentTree(environmentTree, path, entries, send) {
+  return insertInFileTree(environmentTree, path, ...entries.map(entry => {
+    if (type(entry) === "Object" || type(entry) === "Array") {
+      return makeDeferredEntry(send, entry);
+    }
+    else {
+      return makeImmediateEntry(entry);
+    }
+  }));
+}
 
 // Selection in environment tree
 function makeSelectionInEnvironmentTree(environmentTree, selectedBranch, selectedEntry) {
   return makeSelectionInFileTree(environmentTree, selectedBranch, selectedEntry);
 }
 
+function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironmentTree) {
+  return refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree);
+}
+
 // Selected entry
-function isAtomicEntrySelected(selectedEntry) {
-  return isFileSelected(selectedEntry);
+function isVisitableEntrySelected(selectedEntry) {
+  return !isFileSelected(selectedEntry);
+}
+
+function isDeferredEntrySelected(selectedEntry) {
+  return isFileSelected(selectedEntry) && selectedEntryLeafName(selectedEntry) === "deferred";
 }
 
 module.exports = {
-  isAtomicEntrySelected,
+  insertInEnvironmentTree,
+  isDeferredEntrySelected,
+  isVisitableEntrySelected,
   makeEnvironmentTree,
-  makeSelectionInEnvironmentTree
+  makeSelectionInEnvironmentTree,
+  refreshSelectedEnvironmentTree
 };
