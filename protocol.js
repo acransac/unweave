@@ -179,6 +179,14 @@ function entryValue(entry) {
   return (entry.value.type === "string" ? value => `\"${value}\"` :  value => value)(entry.value.value)
 }
 
+function remoteHandle(entry) {
+  return entry.value.objectId;
+}
+
+function sendRequestForEntryDescription(send, entry) {
+  send("Runtime.getProperties", {objectId: remoteHandle(entry)});
+}
+
 function sendRequestForEnvironmentDescription(send, message) {
   send("Runtime.getProperties", {objectId: message.params.callFrames[0].scopeChain[0].object.objectId});
 }
@@ -319,6 +327,7 @@ module.exports = {
   sendEnableDebugger,
   sendEnableRuntime,
   sendQuery,
+  sendRequestForEntryDescription,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
   sendSetBreakpoint,

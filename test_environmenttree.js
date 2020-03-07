@@ -1,4 +1,4 @@
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitEnvironmentEntry } = require('./environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const Test = require('tester');
 const util = require('util');
@@ -142,8 +142,20 @@ function test_environmentTreeWithOneImmediateEntry(finish, check) {
 	                && !isDeferredEntrySelected(selectedEntry(selection))));
 }
 
+function test_environmentTreeWithOneDeferredEntry(finish, check) {
+  const [environmentTree, selection] = makeEnvironment([{}]);
+
+  return finish(check(selectedBranch(selection).length === 1
+	                && selectedEntryName(selectedEntry(selection)) === "/Object entry0"
+	                && selectedEntryLeafName(selectedEntry(selection)) === "Object entry0"
+	                && selectedEntryBranchName(selectedEntry(selection)) === ""
+	                && isVisitableEntrySelected(selectedEntry(selection))
+	                && isDeferredEntrySelected(selectedEntry(visitEnvironmentEntry(selection)))));
+}
+
 Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
-  Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry")
+  Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
+  Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry")
 ]);
