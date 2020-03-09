@@ -1,5 +1,5 @@
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitEnvironmentEntry } = require('./environmenttree.js');
-const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName } = require('filetree');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
+const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
 const Test = require('tester');
 const util = require('util');
 
@@ -127,8 +127,7 @@ function test_selectionInEmptyEnvironmentTree(finish, check) {
   return finish(check(selectedBranch(emptySelection).length === 0
 	                && selectedEntryName(selectedEntry(emptySelection)) === ""
 	                && selectedEntryLeafName(selectedEntry(emptySelection)) === ""
-	                && selectedEntryBranchName(selectedEntry(emptySelection)) === ""
-	                && selectedEntryHandle(selectedEntry(emptySelection)) === undefined));
+	                && selectedEntryBranchName(selectedEntry(emptySelection)) === ""));
 }
 
 function test_environmentTreeWithOneImmediateEntry(finish, check) {
@@ -150,12 +149,45 @@ function test_environmentTreeWithOneDeferredEntry(finish, check) {
 	                && selectedEntryLeafName(selectedEntry(selection)) === "Object entry0"
 	                && selectedEntryBranchName(selectedEntry(selection)) === ""
 	                && isVisitableEntrySelected(selectedEntry(selection))
-	                && isDeferredEntrySelected(selectedEntry(visitEnvironmentEntry(selection)))));
+	                && !isDeferredEntrySelected(selectedEntry(selection))
+	                && (deferredEntry => selectedEntryName(deferredEntry) === "/Object entry0/deferred"
+			                       && selectedEntryLeafName(deferredEntry) === "deferred"
+			                       && selectedEntryBranchName(deferredEntry) === "/Object entry0"
+	                                       && !isVisitableEntrySelected(deferredEntry)
+	                                       && isDeferredEntrySelected(deferredEntry))
+			     (selectedEntry(visitChildEntry(selection)))));
+}
+
+function test_environmentTreeExploration(finish, check) {
+  const [environmentTree, selection] = makeEnvironment([{}, "abc"]);
+
+  const isEmptyObject = entry => selectedEntryName(entry) === "/Object entry0"
+	                           && selectedEntryLeafName(entry) === "Object entry0"
+	                           && selectedEntryBranchName(entry) === ""
+	                           && isVisitableEntrySelected(entry)
+	                           && !isDeferredEntrySelected(entry);
+
+  return finish(check(isEmptyObject(selectedEntry(selection))
+	                && (stringEntry => selectedEntryName(stringEntry) === "/String entry1: \"abc\""
+			                     && selectedEntryLeafName(stringEntry) === "String entry1: \"abc\""
+			                     && selectedEntryBranchName(stringEntry) === ""
+	                                     && !isVisitableEntrySelected(stringEntry)
+	                                     && !isDeferredEntrySelected(stringEntry))
+	                     (selectedEntry(selectNext(selection)))
+	                && isEmptyObject(selectedEntry(selectPrevious(selectNext(selection))))
+	                && (deferredEntry => selectedEntryName(deferredEntry) === "/Object entry0/deferred"
+			                       && selectedEntryLeafName(deferredEntry) === "deferred"
+			                       && selectedEntryBranchName(deferredEntry) === "/Object entry0"
+	                                       && !isVisitableEntrySelected(deferredEntry)
+	                                       && isDeferredEntrySelected(deferredEntry))
+			     (selectedEntry(visitChildEntry(selection)))
+	                && isEmptyObject(selectedEntry(visitParentEntry(visitChildEntry(selection))))));
 }
 
 Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
   Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
-  Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry")
+  Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
+  Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration")
 ]);

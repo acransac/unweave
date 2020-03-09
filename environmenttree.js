@@ -1,4 +1,4 @@
-const { insertInFileTree, isFileSelected, makeDirectoryEntry, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch } = require('filetree');
+const { insertInFileTree, isFileSelected, makeDirectoryEntry, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryValue, name, sendRequestForEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
@@ -42,7 +42,7 @@ function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironme
   return refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree);
 }
 
-function visitEnvironmentEntry(selectionInEnvironmentTree) {
+function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEntryDescription);
@@ -50,6 +50,10 @@ function visitEnvironmentEntry(selectionInEnvironmentTree) {
 
     return newSelection;
   })(visitChildBranch(selectionInEnvironmentTree));
+}
+
+function visitParentEntry(selectionInEnvironmentTree) {
+  return visitParentBranch(selectionInEnvironmentTree);
 }
 
 // Selected entry
@@ -68,5 +72,6 @@ module.exports = {
   makeEnvironmentTree,
   makeSelectionInEnvironmentTree,
   refreshSelectedEnvironmentTree,
-  visitEnvironmentEntry
+  visitChildEntry,
+  visitParentEntry
 };
