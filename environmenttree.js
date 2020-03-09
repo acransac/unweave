@@ -1,4 +1,4 @@
-const { insertInFileTree, isFileSelected, makeDirectoryEntry, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch, visitParentBranch } = require('filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryValue, name, sendRequestForEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
@@ -14,7 +14,7 @@ function makeImmediateEntry(entry) {
 
 // Deferred entry
 function makeDeferredEntry(send, entry) {
-  return makeDirectoryEntry(description(entry), [makeFileEntry("deferred", f => f(send, entry))]);
+  return makeFileEntry("deferred", f => f(send, entry));
 }
 
 // Environment tree
@@ -23,14 +23,14 @@ function makeEnvironmentTree(branches) {
 }
 
 function insertInEnvironmentTree(environmentTree, path, entries, send) {
-  return insertInFileTree(environmentTree, path, ...entries.map(entry => {
+  return entries.reduce((newEnvironmentTree, entry) => {
     if (type(entry) === "Object" || type(entry) === "Array") {
-      return makeDeferredEntry(send, entry);
+      return insertInFileTree(newEnvironmentTree, `${path}/${description(entry)}`, makeDeferredEntry(send, entry));
     }
     else {
-      return makeImmediateEntry(entry);
+      return insertInFileTree(newEnvironmentTree, path, makeImmediateEntry(entry));
     }
-  }));
+  }, environmentTree);
 }
 
 // Selection in environment tree
