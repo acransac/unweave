@@ -1,5 +1,4 @@
 const { fork } = require('child_process');
-const { debugSession } = require('./debugsession.js');
 const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message, sendEnableDebugger, sendEnableRuntime, sendStartRun } = require('./protocol.js');
 const Readline = require('readline');
 const { makeEmitter, mergeEvents, later, Source } = require('streamer');
@@ -24,7 +23,9 @@ function sessionHash(inspectorUri) {
 }
 
 // Debug session initializer --
-(async () => connectToInspector(await parseCliArguments(process.argv)))();
+async function init(cliArguments, session)  {
+  connectToInspector(await parseCliArguments(cliArguments), session);
+}
 
 async function parseCliArguments(cliArguments) {
   const parseUriOptions = (inspectorUri, uriOptions) => {
@@ -89,13 +90,13 @@ function startInspectedProcess(scriptPath) {
   });
 }
 
-function connectToInspector(inspectorUri) {
+function connectToInspector(inspectorUri, session) {
   const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
 
   webSocket.onopen = () => {
     console.log("Connection opened");
  
-    startDebugSession(webSocket);
+    startDebugSession(webSocket, session);
   };
 
   webSocket.onerror = error => console.log(error);
@@ -117,7 +118,7 @@ function inputCapture() {
   return process.stdin;
 }
 
-function startDebugSession(webSocket) {
+function startDebugSession(webSocket, session) {
   const send = (methodName, parameters) => webSocket.send(makeInspectorQuery(methodName, parameters));
 
   const [render, closeDisplay] = renderer();
@@ -130,7 +131,7 @@ function startDebugSession(webSocket) {
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
 	.withDownstream(async (stream) => 
-	  debugSession(send, render, terminate)(
+	  session(send, render, terminate)(
 	    await runProgram(send)(
 	      await enableDebugger(send)(
 	        await runtimeEnabled(stream)))));
@@ -171,3 +172,5 @@ function runProgram(send) {
     return stream;
   };
 }
+
+module.exports = { init };
