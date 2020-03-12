@@ -183,6 +183,10 @@ function remoteHandle(entry) {
   return entry.value.objectId;
 }
 
+function readUniqueId(entry) {
+  return ({injectedScriptId, id} => Number(`${injectedScriptId}0${id}`))(remoteHandle(entry));
+}
+
 function sendRequestForEntryDescription(send, entry) {
   send("Runtime.getProperties", {objectId: remoteHandle(entry)});
 }
@@ -322,6 +326,7 @@ module.exports = {
   readEnvironment,
   readScriptSource,
   readSourceTree,
+  readUniqueId,
   scriptHandle,
   sendContinue,
   sendEnableDebugger,

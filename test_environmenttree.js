@@ -184,6 +184,20 @@ function test_environmentTreeExploration(finish, check) {
 	                && isEmptyObject(selectedEntry(visitParentEntry(visitChildEntry(selection))))));
 }
 
+function test_pendingEntries(finish, check) {
+  const [environmentTree, selection] = makeEnvironment([{}, []]);
+
+  const pendingEntriesRegister = (oneEntryRegister => registerPendingEntry(oneEntryRegister,
+	                                                                   visitChildEntry(visitNext(selection))))
+	                           (registerPendingEntry(makePendingEntriesRegister(), visitChildEntry(selection))):
+
+  if (isEnvironment(message)) {
+    resolvePendingEntry(environmentTree, pendingEntriesRegister, message);
+  }
+
+  return finish(check(environmentTree has entry filled in));
+}
+
 Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),

@@ -1,5 +1,5 @@
 const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch, visitParentBranch } = require('filetree');
-const { entryValue, name, sendRequestForEntryDescription, type } = require('./protocol.js');
+const { entryValue, name, readUniqueId, sendRequestForEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
 function description(entry) {
@@ -15,6 +15,35 @@ function makeImmediateEntry(entry) {
 // Deferred entry
 function makeDeferredEntry(send, entry) {
   return makeFileEntry("deferred", f => f(send, entry));
+}
+
+// Pending entry
+function makePendingEntry(selection) {
+  return (selectedEntry => [
+    readUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
+    `/env/${selectedEntryName(selectedEntry(selection))}`
+  ])(selectedEntry(selection));
+}
+
+function pendingEntryUniqueId(pendingEntry) {
+  return pendingEntry[0];
+}
+
+function pendingEntryPath(pendingEntry) {
+  return pendingEntry[1];
+}
+
+function makePendingEntriesRegister(pendingEntries) {
+  return pendingEntries ? pendingEntries : [];
+}
+
+function registerPendingEntry(pendingEntriesRegister, selection) {
+  if (isDeferredEntrySelected(selectedEntry(selection))) {
+    return [...pendingEntriesRegister, makePendingEntry(selection)];
+  }
+  else {
+    return pendingEntriesRegister;
+  }
 }
 
 // Environment tree
