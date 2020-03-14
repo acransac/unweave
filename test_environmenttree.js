@@ -1,8 +1,9 @@
 const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
 const { init } = require('./init.js');
-const { isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('./protocol.js');
-const { later, now, value } = require('streamer');
+const { pullEnvironment } = require('./processes.js');
+const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('./protocol.js');
+const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
 const util = require('util');
 
@@ -191,12 +192,16 @@ function test_pendingEntries(finish, check) {
   const testSession = (send, render, terminate) => {
     const placeholder = () => {
       const placeholderAction = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
+	if (isDebuggerPaused(message(stream))) {
+	  return placeholderAction(environmentTree, selection, pendingEntriesRegister)
+		   (await later(await pullEnvironment(send)(stream)));
+        }
         if (isEnvironment(message(stream))) {
           const [newEnvironmentTree, newSelection] = makeEnvironment(readEnvironment(message(stream)), send);
- 
-	  const newPendingEntryRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(selection));
 
-	  return placeholderAction(newEnvironmentTree, newSelection, newPendingEntryRegister)(await later(stream));
+	  const newPendingEntriesRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(selection));
+
+	  return placeholderAction(newEnvironmentTree, newSelection, newPendingEntriesRegister)(await later(stream));
         }
 	else if (isEnvironmentEntry(message(stream))) {
 	  const finishTest = (environmentTree, selection, pendingEntriesRegister) => {
@@ -206,15 +211,17 @@ function test_pendingEntries(finish, check) {
           return resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, finishTest);
         }
 	else {
-	  return floatOn(stream, false);
+	  return placeholderAction(environmentTree, selection, pendingEntriesRegister)(await later(stream));
         }
       };
 
-      return placeholderAction(makeEnvironmentTree(), makeSelectionInEnvironmentTree(), makePendingEntriesRegister());
+      return placeholderAction(makeEnvironmentTree(),
+	                       makeSelectionInEnvironmentTree(makeEnvironmentTree()),
+	                       makePendingEntriesRegister());
     };
 
     return async (stream) => {
-      return finish(terminate(check(value(now(await placeholder()(await pullEnvironment(send)(stream)))))));
+      return finish(terminate(check(value(now(await placeholder()(stream))))));
     };
   }
 
@@ -222,10 +229,10 @@ function test_pendingEntries(finish, check) {
 }
 
 Test.run([
-  Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
-  Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
-  Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
-  Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
-  Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
+  //Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
+  //Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
+  //Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
+  //Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
+  //Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
   Test.makeTest(test_pendingEntries, "Pending Entries")
 ]);

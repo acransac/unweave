@@ -306,6 +306,7 @@ module.exports = {
   isDebuggerEnabled,
   isDebuggerPaused,
   isEnvironment,
+  isEnvironmentEntry,
   isExecutionContextCreated,
   isInput,
   isMessagesFocus,
