@@ -1,5 +1,8 @@
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
-const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
+const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
+const { init } = require('./init.js');
+const { isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('./protocol.js');
+const { later, now, value } = require('streamer');
 const Test = require('tester');
 const util = require('util');
 
@@ -105,13 +108,13 @@ function makeFakeEnvironmentEntriesFromInspector(values) {
   });
 }
 
-function makeEnvironment(values) {
+function makeEnvironment(values, send) {
   return (environmentTree => {
     return [
       environmentTree,
       refreshSelectedEnvironmentTree(makeSelectionInEnvironmentTree(makeEnvironmentTree()), environmentTree)
     ];
-  })(insertInEnvironmentTree(makeEnvironmentTree(), "/env", makeFakeEnvironmentEntriesFromInspector(values), () => {}));
+  })(insertInEnvironmentTree(makeEnvironmentTree(), "/env", values, send ? send : () => {}));
 }
 
 function test_emptyEnvironmentTree(finish, check) {
@@ -131,7 +134,7 @@ function test_selectionInEmptyEnvironmentTree(finish, check) {
 }
 
 function test_environmentTreeWithOneImmediateEntry(finish, check) {
-  const [environmentTree, selection] = makeEnvironment(["abc"]);
+  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector(["abc"]));
 
   return finish(check(selectedBranch(selection).length === 1
 	                && selectedEntryName(selectedEntry(selection)) === "/String entry0: \"abc\""
@@ -142,7 +145,7 @@ function test_environmentTreeWithOneImmediateEntry(finish, check) {
 }
 
 function test_environmentTreeWithOneDeferredEntry(finish, check) {
-  const [environmentTree, selection] = makeEnvironment([{}]);
+  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector([{}]));
 
   return finish(check(selectedBranch(selection).length === 1
 	                && selectedEntryName(selectedEntry(selection)) === "/Object entry0"
@@ -159,7 +162,7 @@ function test_environmentTreeWithOneDeferredEntry(finish, check) {
 }
 
 function test_environmentTreeExploration(finish, check) {
-  const [environmentTree, selection] = makeEnvironment([{}, "abc"]);
+  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector([{}, "abc"]));
 
   const isEmptyObject = entry => selectedEntryName(entry) === "/Object entry0"
 	                           && selectedEntryLeafName(entry) === "Object entry0"
@@ -185,17 +188,37 @@ function test_environmentTreeExploration(finish, check) {
 }
 
 function test_pendingEntries(finish, check) {
-  const [environmentTree, selection] = makeEnvironment([{}, []]);
+  const testSession = (send, render, terminate) => {
+    const placeholder = () => {
+      const placeholderAction = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
+        if (isEnvironment(message(stream))) {
+          const [newEnvironmentTree, newSelection] = makeEnvironment(readEnvironment(message(stream)), send);
+ 
+	  const newPendingEntryRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(selection));
 
-  const pendingEntriesRegister = (oneEntryRegister => registerPendingEntry(oneEntryRegister,
-	                                                                   visitChildEntry(visitNext(selection))))
-	                           (registerPendingEntry(makePendingEntriesRegister(), visitChildEntry(selection))):
+	  return placeholderAction(newEnvironmentTree, newSelection, newPendingEntryRegister)(await later(stream));
+        }
+	else if (isEnvironmentEntry(message(stream))) {
+	  const finishTest = (environmentTree, selection, pendingEntriesRegister) => {
+	    return floatOn(stream, isImmediateEntrySelected(selectedEntry(selection)));
+	  };
 
-  if (isEnvironment(message)) {
-    resolvePendingEntry(environmentTree, pendingEntriesRegister, message);
+          return resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, finishTest);
+        }
+	else {
+	  return floatOn(stream, false);
+        }
+      };
+
+      return placeholderAction(makeEnvironmentTree(), makeSelectionInEnvironmentTree(), makePendingEntriesRegister());
+    };
+
+    return async (stream) => {
+      return finish(terminate(check(value(now(await placeholder()(await pullEnvironment(send)(stream)))))));
+    };
   }
 
-  return finish(check(environmentTree has entry filled in));
+  init(["node", "app.js", "test_target.js"], testSession);
 }
 
 Test.run([
@@ -203,5 +226,6 @@ Test.run([
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
   Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
   Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
-  Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration")
+  Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
+  Test.makeTest(test_pendingEntries, "Pending Entries")
 ]);

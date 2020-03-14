@@ -1,4 +1,4 @@
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, visitChildBranch, visitParentBranch } = require('filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryValue, name, readUniqueId, sendRequestForEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
@@ -46,6 +46,38 @@ function registerPendingEntry(pendingEntriesRegister, selection) {
   }
 }
 
+function lookupPendingEntryInRegister(pendingEntriesRegister, lookedupEntryUniqueId, onEntryFound, onEntryNotFound) {
+  const lookupImpl = (newRegister, entries) => {
+    if (entries.length === 0) {
+      return onEntryNotFound(newRegister);
+    }
+    else if (pendingEntryUniqueId(entries[0]) === lookedupEntryUniqueId) {
+      return onEntryFound(makePendingEntriesRegister([...newRegister, ...entries.slice(1)]), entries[0]);
+    }
+    else {
+      return lookupImpl(makePendingEntriesRegister([...newRegister, entries[0]]), entries.slice(1));
+    }
+  };
+
+  return lookupImpl(makePendingEntriesRegister(), pendingEntriesRegister);
+}
+
+function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, send, continuation) {
+  const onEntryFound = (newRegister, entryToResolve) => {
+    return (newEnvironmentTree => continuation(newEnvironmentTree,
+	                                       refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
+	                                       newRegister))
+             (insertInEnvironmentTree(environmentTree, pendingEntryPath(entryToResolve), readEnvironment(message), send));
+  };
+
+  const onEntryNotFound = register => continuation(environmentTree, selection, register);
+
+  return lookupPendingEntryInRegister(pendingEntriesRegister,
+	                              readEnvironmentEntryUniqueId(message),
+	                              onEntryFound,
+	                              onEntryNotFound);
+}
+
 // Environment tree
 function makeEnvironmentTree(branches) {
   return makeFileTree("/env", branches);
@@ -73,11 +105,18 @@ function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironme
 
 function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
-    if (isDeferredEntrySelected(selectedEntry(newSelection))) {
+    if (isDeferredEntrySelected(selectedEntry(newSelection))
+	  && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEntryDescription);
-    }
 
-    return newSelection;
+      return newSelection;
+    }
+    else if (isDeferredEntrySelected(selectedEntry(newSelection))) {
+      return selectNext(newSelection);
+    }
+    else {
+      return newSelection;
+    }
   })(visitChildBranch(selectionInEnvironmentTree));
 }
 
@@ -99,8 +138,10 @@ module.exports = {
   isDeferredEntrySelected,
   isVisitableEntrySelected,
   makeEnvironmentTree,
+  makePendingEntriesRegister,
   makeSelectionInEnvironmentTree,
   refreshSelectedEnvironmentTree,
+  registerPendingEntry,
   visitChildEntry,
   visitParentEntry
 };

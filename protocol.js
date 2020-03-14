@@ -148,11 +148,19 @@ function sendRequestForScriptSource(send, scriptHandle) {
 
 // Environment message
 function isEnvironment(message) {
-  return isResult(message, "result");
+  return isResult(message, "result") && message.id === 0;
+}
+
+function isEnvironmentEntry(message) {
+  return isResult(message, "result") && message.id !== 0;
 }
 
 function readEnvironment(message) {
   return message.result.result;
+}
+
+function readEnvironmentEntryUniqueId(message) {
+  return message.id;
 }
 
 function name(entry) {
@@ -183,8 +191,8 @@ function remoteHandle(entry) {
   return entry.value.objectId;
 }
 
-function readUniqueId(entry) {
-  return ({injectedScriptId, id} => Number(`${injectedScriptId}0${id}`))(remoteHandle(entry));
+function entryUniqueId(entry) {
+  return (({injectedScriptId, id}) => Number(`${injectedScriptId}0${id}`))(remoteHandle(entry));
 }
 
 function sendRequestForEntryDescription(send, entry) {
@@ -290,6 +298,7 @@ module.exports = {
   breakpointLine,
   columnNumber,
   endCapture,
+  entryUniqueId,
   entryValue,
   hasEnded,
   input,
@@ -326,7 +335,6 @@ module.exports = {
   readEnvironment,
   readScriptSource,
   readSourceTree,
-  readUniqueId,
   scriptHandle,
   sendContinue,
   sendEnableDebugger,
