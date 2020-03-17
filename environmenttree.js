@@ -1,5 +1,5 @@
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
-const { entryValue, name, readUniqueId, sendRequestForEntryDescription, type } = require('./protocol.js');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, selectedEntryName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
+const { entryUniqueId, entryValue, name, readEnvironmentEntry, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
 function description(entry) {
@@ -20,8 +20,8 @@ function makeDeferredEntry(send, entry) {
 // Pending entry
 function makePendingEntry(selection) {
   return (selectedEntry => [
-    readUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
-    `/env/${selectedEntryName(selectedEntry(selection))}`
+    entryUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
+    `/env/${selectedEntryName(selectedEntry)}`
   ])(selectedEntry(selection));
 }
 
@@ -67,7 +67,7 @@ function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister,
     return (newEnvironmentTree => continuation(newEnvironmentTree,
 	                                       refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
 	                                       newRegister))
-             (insertInEnvironmentTree(environmentTree, pendingEntryPath(entryToResolve), readEnvironment(message), send));
+             (insertInEnvironmentTree(environmentTree, pendingEntryPath(entryToResolve), readEnvironmentEntry(message), send));
   };
 
   const onEntryNotFound = register => continuation(environmentTree, selection, register);
@@ -107,7 +107,7 @@ function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))
 	  && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
-      selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEntryDescription);
+      selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEnvironmentEntryDescription);
 
       return newSelection;
     }
@@ -141,6 +141,7 @@ module.exports = {
   makePendingEntriesRegister,
   makeSelectionInEnvironmentTree,
   refreshSelectedEnvironmentTree,
+  resolvePendingEntry,
   registerPendingEntry,
   visitChildEntry,
   visitParentEntry

@@ -2,7 +2,7 @@ const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelect
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
 const { init } = require('./init.js');
 const { pullEnvironment } = require('./processes.js');
-const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('./protocol.js');
+const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('./protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
 const util = require('util');
@@ -190,38 +190,55 @@ function test_environmentTreeExploration(finish, check) {
 
 function test_pendingEntries(finish, check) {
   const testSession = (send, render, terminate) => {
-    const placeholder = () => {
-      const placeholderAction = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
+    const queryDeferredEntry = () => {
+      const requester = (sessionIsSetUp, environmentTree, selection, pendingEntriesRegister) => async (stream) => {
 	if (isDebuggerPaused(message(stream))) {
-	  return placeholderAction(environmentTree, selection, pendingEntriesRegister)
-		   (await later(await pullEnvironment(send)(stream)));
+	  if (sessionIsSetUp) {
+	    return requester(true, environmentTree, selection, pendingEntriesRegister)
+		     (await later(await pullEnvironment(send)(stream)));
+	  }
+	  else {
+	    sendStepOver(send);
+
+	    return requester(true, environmentTree, selection, pendingEntriesRegister)(await later(stream));
+	  }
         }
-        if (isEnvironment(message(stream))) {
-          const [newEnvironmentTree, newSelection] = makeEnvironment(readEnvironment(message(stream)), send);
+	else if (isEnvironment(message(stream))) {
+          const [newEnvironmentTree, newSelection] = makeEnvironment(readEnvironment(message(stream)).filter(entry => {
+            return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
+		     || name(entry) === "__filename" || name(entry) === "__dirname");
+	  }), send);
 
-	  const newPendingEntriesRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(selection));
+	  const newPendingEntriesRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(newSelection));
 
-	  return placeholderAction(newEnvironmentTree, newSelection, newPendingEntriesRegister)(await later(stream));
+	  return requester(true, newEnvironmentTree, newSelection, newPendingEntriesRegister)(await later(stream));
         }
 	else if (isEnvironmentEntry(message(stream))) {
 	  const finishTest = (environmentTree, selection, pendingEntriesRegister) => {
-	    return floatOn(stream, isImmediateEntrySelected(selectedEntry(selection)));
+	    console.log(selectedEntry(selection));
+
+	    return floatOn(stream, selectedEntryName(selectedEntry(selection)) === "/Object test/String a: \"abc\""
+	                             && selectedEntryLeafName(selectedEntry(selection)) === "String a: \"abc\""
+	                             && selectedEntryBranchName(selectedEntry(selection)) === "/Object test"
+	                             && !isVisitableEntrySelected(selectedEntry(selection))
+	                             && !isDeferredEntrySelected(selectedEntry(selection)));
 	  };
 
-          return resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, finishTest);
+          return resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message(stream), send, finishTest);
         }
 	else {
-	  return placeholderAction(environmentTree, selection, pendingEntriesRegister)(await later(stream));
+	  return requester(sessionIsSetUp, environmentTree, selection, pendingEntriesRegister)(await later(stream));
         }
       };
 
-      return placeholderAction(makeEnvironmentTree(),
-	                       makeSelectionInEnvironmentTree(makeEnvironmentTree()),
-	                       makePendingEntriesRegister());
+      return requester(false,
+	               makeEnvironmentTree(),
+	               makeSelectionInEnvironmentTree(makeEnvironmentTree()),
+	               makePendingEntriesRegister());
     };
 
     return async (stream) => {
-      return finish(terminate(check(value(now(await placeholder()(stream))))));
+      return finish(terminate(check(value(now(await queryDeferredEntry()(stream))))));
     };
   }
 

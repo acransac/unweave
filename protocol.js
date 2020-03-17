@@ -39,8 +39,8 @@ function columnNumber(location) {
 }
 
 // Inspector query
-function makeInspectorQuery(method, parameters) {
-  return JSON.stringify({method: method, params: parameters, id: 0})
+function makeInspectorQuery(method, parameters, requestId) {
+  return JSON.stringify({method: method, params: parameters, id: requestId ? requestId : 0})
 }
 
 function parseInspectorQuery(line) {
@@ -159,6 +159,10 @@ function readEnvironment(message) {
   return message.result.result;
 }
 
+function readEnvironmentEntry(message) {
+  return message.result.result.filter(property => property.isOwn);
+}
+
 function readEnvironmentEntryUniqueId(message) {
   return message.id;
 }
@@ -188,19 +192,19 @@ function entryValue(entry) {
 }
 
 function remoteHandle(entry) {
-  return entry.value.objectId;
+  return JSON.parse(entry.value.objectId);
 }
 
 function entryUniqueId(entry) {
   return (({injectedScriptId, id}) => Number(`${injectedScriptId}0${id}`))(remoteHandle(entry));
 }
 
-function sendRequestForEntryDescription(send, entry) {
-  send("Runtime.getProperties", {objectId: remoteHandle(entry)});
-}
-
 function sendRequestForEnvironmentDescription(send, message) {
   send("Runtime.getProperties", {objectId: message.params.callFrames[0].scopeChain[0].object.objectId});
+}
+
+function sendRequestForEnvironmentEntryDescription(send, entry) {
+  send("Runtime.getProperties", {objectId: JSON.stringify(remoteHandle(entry))}, entryUniqueId(entry));
 }
 
 // Source tree message
@@ -334,6 +338,8 @@ module.exports = {
   pauseLocation,
   query,
   readEnvironment,
+  readEnvironmentEntry,
+  readEnvironmentEntryUniqueId,
   readScriptSource,
   readSourceTree,
   scriptHandle,
@@ -341,7 +347,7 @@ module.exports = {
   sendEnableDebugger,
   sendEnableRuntime,
   sendQuery,
-  sendRequestForEntryDescription,
+  sendRequestForEnvironmentEntryDescription,
   sendRequestForEnvironmentDescription,
   sendRequestForScriptSource,
   sendSetBreakpoint,

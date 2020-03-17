@@ -1,1 +1,1 @@
-const test = "break here";
+const test = {a: "abc"};

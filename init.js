@@ -119,7 +119,7 @@ function inputCapture() {
 }
 
 function startDebugSession(webSocket, session) {
-  const send = (methodName, parameters) => webSocket.send(makeInspectorQuery(methodName, parameters));
+  const send = (methodName, parameters, requestId) => webSocket.send(makeInspectorQuery(methodName, parameters, requestId));
 
   const [render, closeDisplay] = renderer();
 
