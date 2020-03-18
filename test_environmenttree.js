@@ -209,14 +209,16 @@ function test_pendingEntries(finish, check) {
 		     || name(entry) === "__filename" || name(entry) === "__dirname");
 	  }), send);
 
-	  const newPendingEntriesRegister = registerPendingEntry(pendingEntriesRegister, visitChildEntry(newSelection));
+	  const deferredSelection = visitChildEntry(newSelection);
 
-	  return requester(true, newEnvironmentTree, newSelection, newPendingEntriesRegister)(await later(stream));
+	  return requester(true,
+		           newEnvironmentTree,
+		           deferredSelection,
+		           registerPendingEntry(pendingEntriesRegister, deferredSelection))
+		   (await later(stream));
         }
 	else if (isEnvironmentEntry(message(stream))) {
 	  const finishTest = (environmentTree, selection, pendingEntriesRegister) => {
-	    console.log(selectedEntry(selection));
-
 	    return floatOn(stream, selectedEntryName(selectedEntry(selection)) === "/Object test/String a: \"abc\""
 	                             && selectedEntryLeafName(selectedEntry(selection)) === "String a: \"abc\""
 	                             && selectedEntryBranchName(selectedEntry(selection)) === "/Object test"
@@ -246,10 +248,10 @@ function test_pendingEntries(finish, check) {
 }
 
 Test.run([
-  //Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
-  //Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
-  //Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
-  //Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
-  //Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
+  Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
+  Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
+  Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
+  Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
+  Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
   Test.makeTest(test_pendingEntries, "Pending Entries")
 ]);

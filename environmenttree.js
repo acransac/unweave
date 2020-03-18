@@ -1,4 +1,4 @@
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryLeafName, selectedEntryName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryUniqueId, entryValue, name, readEnvironmentEntry, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
@@ -21,7 +21,7 @@ function makeDeferredEntry(send, entry) {
 function makePendingEntry(selection) {
   return (selectedEntry => [
     entryUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
-    `/env/${selectedEntryName(selectedEntry)}`
+    `/env${selectedEntryBranchName(selectedEntry)}`
   ])(selectedEntry(selection));
 }
 
@@ -64,8 +64,14 @@ function lookupPendingEntryInRegister(pendingEntriesRegister, lookedupEntryUniqu
 
 function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, send, continuation) {
   const onEntryFound = (newRegister, entryToResolve) => {
+    const resolveSelection = selection => {
+      return `/env${selectedEntryBranchName(selectedEntry(selection))}` === pendingEntryPath(entryToResolve)
+	       ? selectNext(selection)
+	       : selection;
+    };
+
     return (newEnvironmentTree => continuation(newEnvironmentTree,
-	                                       refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
+	                                       resolveSelection(refreshSelectedEnvironmentTree(selection, newEnvironmentTree)),
 	                                       newRegister))
              (insertInEnvironmentTree(environmentTree, pendingEntryPath(entryToResolve), readEnvironmentEntry(message), send));
   };
