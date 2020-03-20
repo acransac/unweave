@@ -1,5 +1,5 @@
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
-const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName, selectNext, selectPrevious } = require('filetree');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
+const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
 const { pullEnvironment } = require('./processes.js');
 const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('./protocol.js');
@@ -177,8 +177,8 @@ function test_environmentTreeExploration(finish, check) {
 			                     && selectedEntryBranchName(stringEntry) === ""
 	                                     && !isVisitableEntrySelected(stringEntry)
 	                                     && !isDeferredEntrySelected(stringEntry))
-	                     (selectedEntry(selectNext(selection)))
-	                && isEmptyObject(selectedEntry(selectPrevious(selectNext(selection))))
+	                     (selectedEntry(selectNextEntry(selection)))
+	                && isEmptyObject(selectedEntry(selectPreviousEntry(selectNextEntry(selection))))
 	                && (deferredEntry => selectedEntryName(deferredEntry) === "/Object entry0/deferred"
 			                       && selectedEntryLeafName(deferredEntry) === "deferred"
 			                       && selectedEntryBranchName(deferredEntry) === "/Object entry0"

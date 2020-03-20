@@ -1,4 +1,4 @@
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, visitChildBranch, visitParentBranch } = require('filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryUniqueId, entryValue, name, readEnvironmentEntry, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
@@ -109,25 +109,36 @@ function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironme
   return refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree);
 }
 
+function skipDeferredEntry(selectionInEnvironmentTree) {
+  if (isDeferredEntrySelected(selectedEntry(selectionInEnvironmentTree))) {
+    return selectNext(selectionInEnvironmentTree);
+  }
+  else {
+    return selectionInEnvironmentTree;
+  }
+}
+
+function selectNextEntry(selectionInEnvironmentTree) {
+  return selectNext(selectionInEnvironmentTree);
+}
+
+function selectPreviousEntry(selectionInEnvironmentTree) {
+  return skipDeferredEntry(selectPrevious(selectionInEnvironmentTree));
+}
+
 function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))
 	  && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEnvironmentEntryDescription);
+    }
 
-      return newSelection;
-    }
-    else if (isDeferredEntrySelected(selectedEntry(newSelection))) {
-      return selectNext(newSelection);
-    }
-    else {
-      return newSelection;
-    }
+    return skipDeferredEntry(newSelection);
   })(visitChildBranch(selectionInEnvironmentTree));
 }
 
 function visitParentEntry(selectionInEnvironmentTree) {
-  return visitParentBranch(selectionInEnvironmentTree);
+  return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree));
 }
 
 // Selected entry
@@ -149,6 +160,8 @@ module.exports = {
   refreshSelectedEnvironmentTree,
   resolvePendingEntry,
   registerPendingEntry,
+  selectNextEntry,
+  selectPreviousEntry,
   visitChildEntry,
   visitParentEntry
 };
