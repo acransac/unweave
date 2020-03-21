@@ -249,11 +249,30 @@ function test_resolveDeferredEntry(finish, check) {
   init(["node", "app.js", "test_target.js"], testSession);
 }
 
+function test_explorationSkipsDeferredEntries(finish, check) {
+  const [environmentTree, selection] = makeEnvironment([
+    ["/env", makeFakeEnvironmentEntriesFromInspector([{a: {b: "b"}}])],
+    ["/env/Object entry0", makeFakeEnvironmentEntriesFromInspector([{b: "b"}])],
+    ["/env/Object entry0/Object entry0", makeFakeEnvironmentEntriesFromInspector(["b"])]
+  ]);
+
+  const isExpectedObject = entry => selectedEntryName(entry) === "/Object entry0/Object entry0"
+	                              && selectedEntryLeafName(entry) === "Object entry0"
+	                              && selectedEntryBranchName(entry) === "/Object entry0"
+	                              && isVisitableEntrySelected(entry)
+	                              && !isDeferredEntrySelected(entry);
+
+  return finish(check(isExpectedObject(selectedEntry(visitChildEntry(selection)))
+	                && isExpectedObject(selectedEntry(selectPreviousEntry(visitChildEntry(selection))))
+	                && isExpectedObject(selectedEntry(visitParentEntry(visitChildEntry(visitChildEntry(selection)))))));
+}
+
 Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
   Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
   Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
   Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
-  Test.makeTest(test_resolveDeferredEntry, "Resolve Deferred Entry")
+  Test.makeTest(test_resolveDeferredEntry, "Resolve Deferred Entry"),
+  Test.makeTest(test_explorationSkipsDeferredEntries, "Exploration Skips Deferred Entries")
 ]);
