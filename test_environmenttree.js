@@ -109,13 +109,15 @@ function makeFakeEnvironmentEntriesFromInspector(values) {
   });
 }
 
-function makeEnvironment(values, send) {
-  return (environmentTree => {
-    return [
-      environmentTree,
-      refreshSelectedEnvironmentTree(makeSelectionInEnvironmentTree(makeEnvironmentTree()), environmentTree)
-    ];
-  })(insertInEnvironmentTree(makeEnvironmentTree(), "/env", values, send ? send : () => {}));
+function makeEnvironment(pathsAndValues, send) {
+  return pathsAndValues.reduce(([environmentTree, selection], [path, values]) => {
+    return (environmentTree => {
+      return [
+        environmentTree,
+        refreshSelectedEnvironmentTree(selection, environmentTree)
+      ];
+    })(insertInEnvironmentTree(environmentTree, path, values, send ? send : () => {}));
+  }, [makeEnvironmentTree(), makeSelectionInEnvironmentTree(makeEnvironmentTree())]);
 }
 
 function test_emptyEnvironmentTree(finish, check) {
@@ -135,7 +137,7 @@ function test_selectionInEmptyEnvironmentTree(finish, check) {
 }
 
 function test_environmentTreeWithOneImmediateEntry(finish, check) {
-  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector(["abc"]));
+  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector(["abc"])]]);
 
   return finish(check(selectedBranch(selection).length === 1
 	                && selectedEntryName(selectedEntry(selection)) === "/String entry0: \"abc\""
@@ -146,7 +148,7 @@ function test_environmentTreeWithOneImmediateEntry(finish, check) {
 }
 
 function test_environmentTreeWithOneDeferredEntry(finish, check) {
-  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector([{}]));
+  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector([{}])]]);
 
   return finish(check(selectedBranch(selection).length === 1
 	                && selectedEntryName(selectedEntry(selection)) === "/Object entry0"
@@ -163,7 +165,7 @@ function test_environmentTreeWithOneDeferredEntry(finish, check) {
 }
 
 function test_environmentTreeExploration(finish, check) {
-  const [environmentTree, selection] = makeEnvironment(makeFakeEnvironmentEntriesFromInspector([{}, "abc"]));
+  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector([{}, "abc"])]]);
 
   const isEmptyObject = entry => selectedEntryName(entry) === "/Object entry0"
 	                           && selectedEntryLeafName(entry) === "Object entry0"
@@ -188,7 +190,7 @@ function test_environmentTreeExploration(finish, check) {
 	                && isEmptyObject(selectedEntry(visitParentEntry(visitChildEntry(selection))))));
 }
 
-function test_pendingEntries(finish, check) {
+function test_resolveDeferredEntry(finish, check) {
   const testSession = (send, render, terminate) => {
     const queryDeferredEntry = () => {
       const requester = (sessionIsSetUp, environmentTree, selection, pendingEntriesRegister) => async (stream) => {
@@ -204,10 +206,10 @@ function test_pendingEntries(finish, check) {
 	  }
         }
 	else if (isEnvironment(message(stream))) {
-          const [newEnvironmentTree, newSelection] = makeEnvironment(readEnvironment(message(stream)).filter(entry => {
+          const [newEnvironmentTree, newSelection] = makeEnvironment([["/env", readEnvironment(message(stream)).filter(entry => {
             return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
 		     || name(entry) === "__filename" || name(entry) === "__dirname");
-	  }), send);
+	  })]], send);
 
 	  const deferredSelection = visitChildEntry(newSelection);
 
@@ -253,5 +255,5 @@ Test.run([
   Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
   Test.makeTest(test_environmentTreeWithOneDeferredEntry, "Environment Tree With One Deferred Entry"),
   Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
-  Test.makeTest(test_pendingEntries, "Pending Entries")
+  Test.makeTest(test_resolveDeferredEntry, "Resolve Deferred Entry")
 ]);
