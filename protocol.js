@@ -159,10 +159,6 @@ function readEnvironment(message) {
   return message.result.result;
 }
 
-function readEnvironmentEntry(message) {
-  return message.result.result.filter(property => property.isOwn);
-}
-
 function readEnvironmentEntryUniqueId(message) {
   return message.id;
 }
@@ -338,7 +334,6 @@ module.exports = {
   pauseLocation,
   query,
   readEnvironment,
-  readEnvironmentEntry,
   readEnvironmentEntryUniqueId,
   readScriptSource,
   readSourceTree,

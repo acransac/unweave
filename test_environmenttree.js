@@ -228,7 +228,13 @@ function test_resolveDeferredEntry(finish, check) {
 	                             && !isDeferredEntrySelected(selectedEntry(selection)));
 	  };
 
-          return resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message(stream), send, finishTest);
+          return resolvePendingEntry(environmentTree,
+		                     selection,
+		                     pendingEntriesRegister,
+		                     message(stream),
+		                     entries => entries.filter(entry => entry.isOwn),
+		                     send,
+		                     finishTest);
         }
 	else {
 	  return requester(sessionIsSetUp, environmentTree, selection, pendingEntriesRegister)(await later(stream));

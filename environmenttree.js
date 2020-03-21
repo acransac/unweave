@@ -1,5 +1,5 @@
 const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
-const { entryUniqueId, entryValue, name, readEnvironmentEntry, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
+const { entryUniqueId, entryValue, name, readEnvironment, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // Helpers --
 function description(entry) {
@@ -62,7 +62,7 @@ function lookupPendingEntryInRegister(pendingEntriesRegister, lookedupEntryUniqu
   return lookupImpl(makePendingEntriesRegister(), pendingEntriesRegister);
 }
 
-function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, send, continuation) {
+function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, environmentReader, send, continuation) {
   const onEntryFound = (newRegister, entryToResolve) => {
     const resolveSelection = selection => {
       return `/env${selectedEntryBranchName(selectedEntry(selection))}` === pendingEntryPath(entryToResolve)
@@ -73,7 +73,10 @@ function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister,
     return (newEnvironmentTree => continuation(newEnvironmentTree,
 	                                       resolveSelection(refreshSelectedEnvironmentTree(selection, newEnvironmentTree)),
 	                                       newRegister))
-             (insertInEnvironmentTree(environmentTree, pendingEntryPath(entryToResolve), readEnvironmentEntry(message), send));
+             (insertInEnvironmentTree(environmentTree,
+		                      pendingEntryPath(entryToResolve),
+		                      environmentReader(readEnvironment(message)),
+		                      send));
   };
 
   const onEntryNotFound = register => continuation(environmentTree, selection, register);
