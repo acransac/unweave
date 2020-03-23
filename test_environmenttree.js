@@ -5,6 +5,7 @@ const { pullEnvironment } = require('./processes.js');
 const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('./protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
+const { skipToDebuggerPausedAfterStepping } = require('./testutils.js');
 const util = require('util');
 
 function makeFakeEnvironmentEntriesFromInspector(values) {
@@ -193,17 +194,10 @@ function test_environmentTreeExploration(finish, check) {
 function test_resolveDeferredEntry(finish, check) {
   const testSession = (send, render, terminate) => {
     const queryDeferredEntry = () => {
-      const requester = (sessionIsSetUp, environmentTree, selection, pendingEntriesRegister) => async (stream) => {
+      const requester = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
 	if (isDebuggerPaused(message(stream))) {
-	  if (sessionIsSetUp) {
-	    return requester(true, environmentTree, selection, pendingEntriesRegister)
-		     (await later(await pullEnvironment(send)(stream)));
-	  }
-	  else {
-	    sendStepOver(send);
-
-	    return requester(true, environmentTree, selection, pendingEntriesRegister)(await later(stream));
-	  }
+	  return requester(environmentTree, selection, pendingEntriesRegister)
+		   (await later(await pullEnvironment(send)(stream)));
         }
 	else if (isEnvironment(message(stream))) {
           const [newEnvironmentTree, newSelection] = makeEnvironment([["/env", readEnvironment(message(stream)).filter(entry => {
@@ -213,8 +207,7 @@ function test_resolveDeferredEntry(finish, check) {
 
 	  const deferredSelection = visitChildEntry(newSelection);
 
-	  return requester(true,
-		           newEnvironmentTree,
+	  return requester(newEnvironmentTree,
 		           deferredSelection,
 		           registerPendingEntry(pendingEntriesRegister, deferredSelection))
 		   (await later(stream));
@@ -237,18 +230,18 @@ function test_resolveDeferredEntry(finish, check) {
 		                     finishTest);
         }
 	else {
-	  return requester(sessionIsSetUp, environmentTree, selection, pendingEntriesRegister)(await later(stream));
+	  return floatOn(stream, false);
         }
       };
 
-      return requester(false,
-	               makeEnvironmentTree(),
+      return requester(makeEnvironmentTree(),
 	               makeSelectionInEnvironmentTree(makeEnvironmentTree()),
 	               makePendingEntriesRegister());
     };
 
     return async (stream) => {
-      return finish(terminate(check(value(now(await queryDeferredEntry()(stream))))));
+      return finish(terminate(check(value(now(await queryDeferredEntry()
+	                                       (await skipToDebuggerPausedAfterStepping(send, 1)(stream)))))));
     };
   }
 
