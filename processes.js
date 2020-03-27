@@ -1,6 +1,7 @@
+const { makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
+const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
 const { displayedScriptSource, parseUserInput } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
-const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
@@ -88,6 +89,14 @@ function parseSourceTree() {
   };
 
   return builder(makeFileTree());
+}
+
+function parseEnvironmentTree() {
+  const builder = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
+    return commit(stream, builder(environmentTree, selection, pendingEntriesRegister));
+  };
+
+  return builder(makeEnvironmentTree(), makeSelectionInEnvironmentTree(makeEnvironmentTree()), makePendingEntriesRegister());
 }
 
 function pullScriptSource(send) {
@@ -182,4 +191,14 @@ function addBreakpoint(send) {
   return breakpointAdder(breakpointSetter(undefined), displayedScriptSource());
 }
 
-module.exports = { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step };
+module.exports = {
+  addBreakpoint,
+  changeMode,
+  parseCaptures,
+  parseEnvironmentTree,
+  parseSourceTree,
+  pullEnvironment,
+  pullScriptSource,
+  queryInspector,
+  step
+};

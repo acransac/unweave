@@ -293,6 +293,19 @@ function sourceTreeFocusInput(message) {
   return message.focusSourceTree;
 }
 
+// Environment tree focus message
+function makeEnvironmentTreeFocus(capture) {
+  return makeCapture("focusEnvironmentTree", capture ? capture : "");
+}
+
+function isEnvironmentTreeFocus(message) {
+  return message.hasOwnProperty("focusEnvironmentTree");
+}
+
+function environmentTreeFocusInput(message) {
+  return message.focusEnvironmentTree;
+}
+
 module.exports = {
   breakpointCapture,
   breakpointLine,
@@ -318,6 +331,7 @@ module.exports = {
   isUserScriptParsed,
   lineNumber,
   makeBreakpointCapture,
+  makeEnvironmentTreeFocus,
   makeInput,
   makeInspectorQuery,
   makeLocation,
