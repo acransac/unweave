@@ -1,7 +1,7 @@
-const { makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
+const { insertInEnvironmentTree, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, resolvePendingEntry } = require('./environmenttree.js');
 const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
-const { displayedScriptSource, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
+const { displayedScriptSource, exploreEnvironmentTree, parseUserInput } = require('./helpers.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeMessage, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
 const { commit, floatOn } = require('streamer');
 
 async function changeMode(stream) {
@@ -91,9 +91,40 @@ function parseSourceTree() {
   return builder(makeFileTree());
 }
 
-function parseEnvironmentTree() {
+function parseEnvironmentTree(send) {
   const builder = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
-    return commit(stream, builder(environmentTree, selection, pendingEntriesRegister));
+    if (isDebuggerPaused(message(stream))) {
+      sendRequestForEnvironmentDescription(send, message(stream));
+
+      return commit(stream, builder(makeEnvironmentTree(),
+	                            makeSelectionInEnvironmentTree(makeEnvironmentTree()),
+	                            makePendingEntriesRegister()));
+    }
+    else if (isEnvironment(message(stream))) {
+      const [newEnvironmentTree, newSelection] = (environmentTree => {
+        return [environmentTree, refreshSelectedEnvironmentTree(selection, environmentTree)];
+      })(insertInEnvironmentTree(environmentTree, "/env", readEnvironment(message(stream)), send));
+
+      return floatOn(commit(stream, builder(newEnvironmentTree, newSelection, pendingEntriesRegister)),
+	             makeEnvironmentTreeMessage(newEnvironmentTree));
+    }
+    else if (isEnvironmentEntry(message(stream))) {
+      return resolvePendingEntry(environmentTree,
+		                 selection,
+		                 pendingEntriesRegister,
+		                 message(stream),
+		                 entries => entries.filter(entry => entry.isOwn),
+		                 send,
+		                 (environmentTree, selection, pendingEntriesRegister) => {
+			           return floatOn(commit(stream, builder(environmentTree, selection, pendingEntriesRegister)),
+					          makeEnvironmentTreeMessage(environmentTree));
+                                 });
+    }
+    else {
+      return exploreEnvironmentTree(selection, pendingEntriesRegister, stream, (selection, pendingEntriesRegister) => {
+        return commit(stream, builder(environmentTree, selection, pendingEntriesRegister));
+      });
+    }
   };
 
   return builder(makeEnvironmentTree(), makeSelectionInEnvironmentTree(makeEnvironmentTree()), makePendingEntriesRegister());

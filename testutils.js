@@ -1,4 +1,4 @@
-const { isDebuggerPaused, isInput, message, sendStepOver } = require('./protocol.js');
+const { input, isDebuggerPaused, isInput, message, sendStepOver } = require('./protocol.js');
 const { commit, floatOn, later } = require('streamer');
 
 function skipToDebuggerPausedAfterStepping(send, stepsToMake) {

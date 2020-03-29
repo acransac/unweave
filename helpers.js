@@ -1,5 +1,6 @@
-const { entryValue, hasEnded, isDebuggerPaused, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
+const { registerPendingEntry, visitChildEntry } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
+const { entryValue, environmentTreeFocusInput, hasEnded, isDebuggerPaused, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 
 function parseUserInput(parsed, currentInput) {
   if (isBackspace(currentInput)) {
@@ -121,6 +122,25 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
   }
 }
 
+function exploreEnvironmentTree(selectionInEnvironmentTree, pendingEntriesRegister, stream, continuation) {
+  if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "j") {
+    return continuation(selectNextEntry(selectionInEnvironmentTree), pendingEntriesRegister);
+  }
+  else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "k") {
+    return continuation(selectPreviousEntry(selectionInEnvironmentTree), pendingEntriesRegister);
+  }
+  else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "l") {
+    return (newSelection => continuation(newSelection, registerPendingEntry(pendingEntriesRegister, newSelection)))
+	     (visitChildEntry(selectionInEnvironmentTree));
+  }
+  else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "h") {
+    return continuation(visitParentEntry(selectionInEnvironmentTree, pendingEntriesRegister));
+  }
+  else {
+    return continuation(selectionInEnvironmentTree, pendingEntriesRegister);
+  }
+}
+
 function displayedScriptSource() {
   const displayUpdater = (selectionInSourceTree, scriptId) => (continuation, onDisplayChange) => stream => {
     if (isDebuggerPaused(message(stream))) {
@@ -223,6 +243,7 @@ module.exports = {
   content,
   describeEnvironment,
   displayedScriptSource,
+  exploreEnvironmentTree,
   exploreSourceTree,
   focusable,
   focusableByDefault,

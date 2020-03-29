@@ -200,10 +200,7 @@ function test_resolveDeferredEntry(finish, check) {
 		   (await later(await pullEnvironment(send)(stream)));
         }
 	else if (isEnvironment(message(stream))) {
-          const [newEnvironmentTree, newSelection] = makeEnvironment([["/env", readEnvironment(message(stream)).filter(entry => {
-            return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
-		     || name(entry) === "__filename" || name(entry) === "__dirname");
-	  })]], send);
+          const [newEnvironmentTree, newSelection] = makeEnvironment([["/env", readEnvironment(message(stream))]], send);
 
 	  const deferredSelection = visitChildEntry(newSelection);
 

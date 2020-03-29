@@ -156,7 +156,10 @@ function isEnvironmentEntry(message) {
 }
 
 function readEnvironment(message) {
-  return message.result.result;
+  return message.result.result.filter(entry => {
+    return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
+	     || name(entry) === "__filename" || name(entry) === "__dirname");
+  });
 }
 
 function readEnvironmentEntryUniqueId(message) {
@@ -214,6 +217,19 @@ function isSourceTree(message) {
 
 function readSourceTree(message) {
   return message.sourceTree;
+}
+
+// Environment tree message
+function makeEnvironmentTreeMessage(environmentTree) {
+  return JSON.stringify({environmentTree: environmentTree});
+}
+
+function isEnvironmentTree(message) {
+  return message.hasOwnProperty("environmentTree");
+}
+
+function readEnvironmentTree(message) {
+  return message.environmentTree;
 }
 
 // Capture message
@@ -313,6 +329,7 @@ module.exports = {
   endCapture,
   entryUniqueId,
   entryValue,
+  environmentTreeFocusInput,
   hasEnded,
   input,
   isBreakpointCapture,
@@ -320,6 +337,8 @@ module.exports = {
   isDebuggerPaused,
   isEnvironment,
   isEnvironmentEntry,
+  isEnvironmentTree,
+  isEnvironmentTreeFocus,
   isExecutionContextCreated,
   isInput,
   isMessagesFocus,
@@ -332,6 +351,7 @@ module.exports = {
   lineNumber,
   makeBreakpointCapture,
   makeEnvironmentTreeFocus,
+  makeEnvironmentTreeMessage,
   makeInput,
   makeInspectorQuery,
   makeLocation,
@@ -349,6 +369,7 @@ module.exports = {
   query,
   readEnvironment,
   readEnvironmentEntryUniqueId,
+  readEnvironmentTree,
   readScriptSource,
   readSourceTree,
   scriptHandle,
