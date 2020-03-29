@@ -1,4 +1,4 @@
-const { input, isDebuggerPaused, isInput, message, sendStepOver } = require('./protocol.js');
+const { input, isDebuggerPaused, isInput, makeInput, message, sendStepOver } = require('./protocol.js');
 const { commit, floatOn, later } = require('streamer');
 
 function skipToDebuggerPausedAfterStepping(send, stepsToMake) {
@@ -21,6 +21,10 @@ function skipToDebuggerPausedAfterStepping(send, stepsToMake) {
   return skipper(stepsToMake);
 }
 
+function userInput(input) {
+  process.stdin.emit("input", makeInput(input));
+}
+
 function inputIsCapture(makeCapture) {
   const captureMaker = async (stream) => {
     if (isInput(message(stream))) {
@@ -36,5 +40,6 @@ function inputIsCapture(makeCapture) {
 
 module.exports = {
   inputIsCapture,
-  skipToDebuggerPausedAfterStepping
+  skipToDebuggerPausedAfterStepping,
+  userInput
 }

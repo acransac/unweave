@@ -2,10 +2,10 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { selectedEntry, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
 const { parseEnvironmentTree } = require('./processes.js');
-const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, makeEnvironmentTreeFocus, makeInput, message, readEnvironmentTree } = require('./protocol.js');
+const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, makeEnvironmentTreeFocus, message, readEnvironmentTree } = require('./protocol.js');
 const { continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
-const { inputIsCapture, skipToDebuggerPausedAfterStepping } = require('./testutils.js');
+const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
 
 function test_parseEnvironmentTree(finish, check) {
   const testSession = (send, render, terminate) => {
@@ -19,7 +19,7 @@ function test_parseEnvironmentTree(finish, check) {
       else if (isEnvironmentTree(message(stream))
 	         && (selection => selectedEntryName(selectedEntry(selection)) === "/Object test")
 	              (controlSelection(message(stream)))) {
-        process.stdin.emit("input", makeInput("l"));
+	userInput("l");
 
         return secondCheck(await continuation(now(stream))(forget(await later(stream))));
       }
