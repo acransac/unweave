@@ -21,8 +21,8 @@ function skipToDebuggerPausedAfterStepping(send, stepsToMake) {
   return skipper(stepsToMake);
 }
 
-function userInput(input) {
-  process.stdin.emit("input", makeInput(input));
+function userInput(input, delay) {
+  setTimeout(() => process.stdin.emit("input", makeInput(input)), delay ? delay : 0);
 }
 
 function inputIsCapture(makeCapture) {

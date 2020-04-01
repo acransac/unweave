@@ -23,8 +23,8 @@ function sessionHash(inspectorUri) {
 }
 
 // Debug session initializer --
-async function init(cliArguments, session)  {
-  connectToInspector(await parseCliArguments(cliArguments), session);
+async function init(cliArguments, session, displayTarget)  {
+  connectToInspector(await parseCliArguments(cliArguments), session, displayTarget);
 }
 
 async function parseCliArguments(cliArguments) {
@@ -90,13 +90,13 @@ function startInspectedProcess(scriptPath) {
   });
 }
 
-function connectToInspector(inspectorUri, session) {
+function connectToInspector(inspectorUri, session, displayTarget) {
   const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
 
   webSocket.onopen = () => {
     console.log("Connection opened");
  
-    startDebugSession(webSocket, session);
+    startDebugSession(webSocket, session, displayTarget);
   };
 
   webSocket.onerror = error => console.log(error);
@@ -118,10 +118,10 @@ function inputCapture() {
   return process.stdin;
 }
 
-function startDebugSession(webSocket, session) {
+function startDebugSession(webSocket, session, displayTarget) {
   const send = (methodName, parameters, requestId) => webSocket.send(makeInspectorQuery(methodName, parameters, requestId));
 
-  const [render, closeDisplay] = renderer();
+  const [render, closeDisplay] = renderer(displayTarget);
 
   const terminate = () => {
     closeDisplay();
