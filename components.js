@@ -1,6 +1,7 @@
-const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
-const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
+const { makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
+const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
+const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -93,6 +94,18 @@ function environment() {
 		         : f => f(noParameters)(makePackagedContent("environment", "Loading environment"));
     }
   }
+}
+
+function environmentTree() {
+  return noParameters => predecessor => stream => {
+    const label = predecessor ? tag(predecessor) : highlightOneCharacter("environment", "e");
+
+    const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInEnvironmentTree(makeEnvironmentTree());
+
+    return exploreEnvironmentTreeSilently(selection, stream, newSelection => {
+      return f => f(noParameters)(makePackagedContent(focusable(isEnvironmentTreeFocus, "e")(label, stream), newSelection));
+    });
+  };
 }
 
 function instructions() {
@@ -219,4 +232,18 @@ function topRightColumnDisplay() {
   };
 }
 
-module.exports = { breakpoints, commandLine, displayedScript, environment, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay };
+module.exports = {
+  breakpoints,
+  commandLine,
+  displayedScript,
+  environment,
+  environmentTree,
+  focusableCaptureLog,
+  instructions,
+  logCapture,
+  messages,
+  runLocation,
+  scriptSource,
+  sourceTree,
+  topRightColumnDisplay
+};

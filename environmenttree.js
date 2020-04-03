@@ -140,6 +140,10 @@ function visitChildEntry(selectionInEnvironmentTree) {
   })(visitChildBranch(selectionInEnvironmentTree));
 }
 
+function visitChildEntrySilently(selectionInEnvironmentTree) {
+  return skipDeferredEntry(visitChildBranch(selectionInEnvironmentTree));
+}
+
 function visitParentEntry(selectionInEnvironmentTree) {
   return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree));
 }
@@ -166,5 +170,6 @@ module.exports = {
   selectNextEntry,
   selectPreviousEntry,
   visitChildEntry,
+  visitChildEntrySilently,
   visitParentEntry
 };
