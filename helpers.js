@@ -1,4 +1,4 @@
-const { refreshSelectedEnvironmentTree, registerPendingEntry, visitChildEntry, visitChildEntrySilently } = require('./environmenttree.js');
+const { deferredEntryLeafName, refreshSelectedEnvironmentTree, registerPendingEntry, visitChildEntry, visitChildEntrySilently } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
 const { entryValue, environmentTreeFocusInput, hasEnded, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readEnvironmentTree, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 
@@ -64,9 +64,9 @@ function scrollableContent(displayedContent) {
   }, "");
 }
 
-function writeTree(visitedSourceTree) {
+function writeTreeImpl(visitedTree, filterBranch) {
   const formatEntry = entry => {
-    return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedSourceTree))
+    return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedTree))
       ? entryName => `\u001b[7m${entryName}\u001b[0m`
       : entryName => entryName)(
         (isDirectoryEntry(entry) ? entryName => styleText(entryName, "bold")
@@ -74,10 +74,19 @@ function writeTree(visitedSourceTree) {
           entryName(entry)));
   };
 
-  return (selectedEntryBranchName(selectedEntry(visitedSourceTree)) === "" 
+  return (selectedEntryBranchName(selectedEntry(visitedTree)) === "" 
     ? `${styleText("root", "bold")}\n`
-    : `${styleText(selectedEntryBranchName(selectedEntry(visitedSourceTree)), "bold")}\n`) 
-    + selectedBranch(visitedSourceTree).map(entry => `  ${formatEntry(entry)}\n`).join("");
+    : `${styleText(selectedEntryBranchName(selectedEntry(visitedTree)), "bold")}\n`) 
+    + selectedBranch(visitedTree).filter(entry => filterBranch ? filterBranch(entry) : true)
+		                 .map(entry => `  ${formatEntry(entry)}\n`).join("");
+}
+
+function writeSourceTree(visitedSourceTree) {
+  return writeTreeImpl(visitedSourceTree);
+}
+
+function writeEnvironmentTree(visitedEnvironmentTree) {
+  return writeTreeImpl(visitedEnvironmentTree, entry => entryName(entry) !== deferredEntryLeafName());
 }
 
 function styleText(text, style) {
@@ -273,5 +282,6 @@ module.exports = {
   tag,
   topLine,
   unpackedContent,
-  writeTree
+  writeEnvironmentTree,
+  writeSourceTree
 };

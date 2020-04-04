@@ -14,7 +14,11 @@ function makeImmediateEntry(entry) {
 
 // Deferred entry
 function makeDeferredEntry(send, entry) {
-  return makeFileEntry("deferred", f => f(send, entry));
+  return makeFileEntry(deferredEntryLeafName(), f => f(send, entry));
+}
+
+function deferredEntryLeafName() {
+  return "deferred";
 }
 
 // Pending entry
@@ -154,10 +158,11 @@ function isVisitableEntrySelected(selectedEntry) {
 }
 
 function isDeferredEntrySelected(selectedEntry) {
-  return isFileSelected(selectedEntry) && selectedEntryLeafName(selectedEntry) === "deferred";
+  return isFileSelected(selectedEntry) && selectedEntryLeafName(selectedEntry) === deferredEntryLeafName();
 }
 
 module.exports = {
+  deferredEntryLeafName,
   insertInEnvironmentTree,
   isDeferredEntrySelected,
   isVisitableEntrySelected,

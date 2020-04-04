@@ -1,6 +1,6 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
-const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeTree } = require('./helpers.js');
+const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeSourceTree } = require('./helpers.js');
 const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
@@ -217,7 +217,7 @@ function topRightColumnDisplay() {
     };
 
     const sourceTreeDisplay = (environment, sourceTree) => {
-      return sizeHeight(50, label(atom(writeTree(unpackedContent(sourceTree))), tabs(1, environment, sourceTree)));
+      return sizeHeight(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tabs(1, environment, sourceTree)));
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
