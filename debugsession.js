@@ -1,8 +1,7 @@
 const { breakpoints, commandLine, displayedScript, environment, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
-const { content, isCtrlC, makeDisplayedContent, scrollableContent, styleText, tag, topLine, unpackedContent } = require('./helpers.js');
+const { content, loop, makeDisplayedContent, scrollableContent, styleText, tag, topLine, unpackedContent } = require('./helpers.js');
 const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { breakpointCapture, columnNumber, input, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, lineNumber, message, pauseLocation, query, scriptHandle } = require('./protocol.js');
-const { continuation, forget, later, now } = require('streamer');
+const { breakpointCapture, columnNumber, isBreakpointCapture, isDebuggerPaused, isQueryCapture, lineNumber, message, pauseLocation, query, scriptHandle } = require('./protocol.js');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render, terminate) {
@@ -39,19 +38,6 @@ function debugSession(send, render, terminate) {
 			                                    await parseCaptures()(
 		  	                                      await changeMode(stream))))))))));
   };
-}
-
-function loop(terminate) {
-  const looper = async (stream) => {
-    if (isInput(message(stream)) && isCtrlC(input(message(stream)))) {
-      return terminate();
-    }
-    else {
-      return looper(await continuation(now(stream))(forget(await later(stream))));
-    }
-  };
-
-  return looper;
 }
 
 function developerSession(source,

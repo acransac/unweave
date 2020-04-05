@@ -68,14 +68,8 @@ function lookupPendingEntryInRegister(pendingEntriesRegister, lookedupEntryUniqu
 
 function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, environmentReader, send, continuation) {
   const onEntryFound = (newRegister, entryToResolve) => {
-    const resolveSelection = selection => {
-      return `/env${selectedEntryBranchName(selectedEntry(selection))}` === pendingEntryPath(entryToResolve)
-	       ? selectNext(selection)
-	       : selection;
-    };
-
     return (newEnvironmentTree => continuation(newEnvironmentTree,
-	                                       resolveSelection(refreshSelectedEnvironmentTree(selection, newEnvironmentTree)),
+	                                       refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
 	                                       newRegister))
              (insertInEnvironmentTree(environmentTree,
 		                      pendingEntryPath(entryToResolve),
@@ -113,7 +107,7 @@ function makeSelectionInEnvironmentTree(environmentTree, selectedBranch, selecte
 }
 
 function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironmentTree) {
-  return refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree);
+  return skipDeferredEntry(refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree));
 }
 
 function skipDeferredEntry(selectionInEnvironmentTree) {
