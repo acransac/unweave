@@ -1,7 +1,7 @@
-const { makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
+const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
 const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
-const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironmentTree, readScriptSource, scriptHandle } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -90,9 +90,19 @@ function environmentTree() {
 
     const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInEnvironmentTree(makeEnvironmentTree());
 
-    return exploreEnvironmentTreeSilently(selection, stream, newSelection => {
-      return f => f(noParameters)(makePackagedContent(focusable(isEnvironmentTreeFocus, "e")(label, stream), newSelection));
-    });
+    if (isDebuggerPaused(message(stream))) {
+      return f => f(noParameters)(makePackagedContent(label, makeSelectionInEnvironmentTree(makeEnvironmentTree())));
+    }
+    else if (isEnvironmentTree(message(stream))) {
+      return f => f(noParameters)
+	            (makePackagedContent(label, refreshSelectedEnvironmentTree(selection,
+			                                                       readEnvironmentTree(message(stream)))));
+    }
+    else {
+      return exploreEnvironmentTreeSilently(selection, stream, newSelection => {
+        return f => f(noParameters)(makePackagedContent(focusable(isEnvironmentTreeFocus, "e")(label, stream), newSelection));
+      });
+    }
   };
 }
 

@@ -1,19 +1,20 @@
 const { environmentTree } = require('./components.js');
 const { loop, tag, unpackedContent, writeEnvironmentTree } = require('./helpers.js');
 const { init } = require('./init.js');
-const { changeMode, parseEnvironmentTree } = require('./processes.js');
+const { changeMode, parseEnvironmentTree, step } = require('./processes.js');
 const { atom, compose, label, show, TerminalTest } = require('terminal');
 const { skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
 
 function test_environment(send, render, terminate) {
   const userInteraction = async (stream) => {
-    userInput("e", 1000);
-    userInput("l", 1500);
-    userInput("j", 2000);
-    userInput("k", 2500);
-    userInput("h", 3000);
-    userInput("\r", 3500);
-    userInput("\x03", 4000);
+    userInput("n", 1000);
+    userInput("e", 2000);
+    userInput("l", 2500);
+    userInput("j", 3000);
+    userInput("k", 3500);
+    userInput("h", 4000);
+    userInput("\r", 4500);
+    userInput("\x03", 5000);
 
     return stream;
   };
@@ -24,9 +25,10 @@ function test_environment(send, render, terminate) {
     return loop(terminate)
 	     (await userInteraction
 	       (await show(render)(compose(environmentDisplay, environmentTree()))
-	         (await parseEnvironmentTree(send)
-		   (await changeMode
-	             (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))));
+		 (await step(send)
+	           (await parseEnvironmentTree(send)
+		     (await changeMode
+	               (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))));
   };
 }
 

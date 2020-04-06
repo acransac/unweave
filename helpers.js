@@ -1,6 +1,6 @@
-const { deferredEntryLeafName, refreshSelectedEnvironmentTree, registerPendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
+const { deferredEntryLeafName, registerPendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
-const { entryValue, environmentTreeFocusInput, hasEnded, input, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isInput, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readEnvironmentTree, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
+const { entryValue, environmentTreeFocusInput, hasEnded, input, isDebuggerPaused, isEnvironmentTreeFocus, isInput, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 const { continuation, forget, now, later } = require('streamer');
 
 function parseUserInput(parsed, currentInput) {
@@ -134,10 +134,7 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
 
 function exploreEnvironmentTreeImpl(visitChildEntry) {
   return (selectionInEnvironmentTree, stream) => {
-    if (isEnvironmentTree(message(stream))) {
-      return refreshSelectedEnvironmentTree(selectionInEnvironmentTree, readEnvironmentTree(message(stream)));
-    }
-    else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "j") {
+    if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "j") {
       return selectNextEntry(selectionInEnvironmentTree);
     }
     else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "k") {
