@@ -1,6 +1,6 @@
-const { breakpoints, commandLine, displayedScript, environment, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
+const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { content, loop, makeDisplayedContent, scrollableContent, styleText, tag, topLine, unpackedContent } = require('./helpers.js');
-const { addBreakpoint, changeMode, parseCaptures, parseSourceTree, pullEnvironment, pullScriptSource, queryInspector, step } = require('./processes.js');
+const { addBreakpoint, changeMode, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { breakpointCapture, columnNumber, isBreakpointCapture, isDebuggerPaused, isQueryCapture, lineNumber, message, pauseLocation, query, scriptHandle } = require('./protocol.js');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
@@ -14,7 +14,7 @@ function debugSession(send, render, terminate) {
 			                              breakpoints(),
 			                              displayedScript(),
 		                                      topRightColumnDisplay(),
-			                              environment(),
+			                              environmentTree(),
 			                              messages(isDebuggerPaused, debugLogger),
 		                                      sourceTree(),
 			                              commandLine(),
@@ -32,8 +32,8 @@ function debugSession(send, render, terminate) {
 	                                        await step(send)(
 	                                          await queryInspector(send)(
 		                                    await addBreakpoint(send)(
-		                                      await pullEnvironment(send)(
-		                                        await pullScriptSource(send)(
+		                                      await pullScriptSource(send)(
+		                                        await parseEnvironmentTree(send)(
 			                                  await parseSourceTree()(
 			                                    await parseCaptures()(
 		  	                                      await changeMode(stream))))))))));
@@ -45,7 +45,7 @@ function developerSession(source,
 	                  breakpoints,
 	                  displayedScript,
 	                  topRightColumnDisplay,
-	                  environment,
+	                  environmentTree,
 	                  messages,
 	                  sourceTree,
 	                  command,
@@ -61,7 +61,7 @@ function developerSession(source,
 	                         tag(source))),
 	     cons(
 	       cons(
-	         topRightColumnDisplay(environment, sourceTree),
+	         topRightColumnDisplay(environmentTree, sourceTree),
 	         cons(
 	           vindent(50, sizeHeight(50, label(atom(scrollableContent(unpackedContent(messages))), tag(messages)))),
 	  	   indent(50, column(50)))),

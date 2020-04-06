@@ -151,21 +151,6 @@ function pullScriptSource(send) {
   return scriptChecker(displayedScriptSource());
 }
 
-function pullEnvironment(send) {
-  const environmentChecker = async (stream) => {
-    if (isDebuggerPaused(message(stream))) {
-      sendRequestForEnvironmentDescription(send, message(stream));
-
-      return commit(stream, environmentChecker);
-    }
-    else {
-      return commit(stream, environmentChecker);
-    }
-  };
-
-  return environmentChecker;
-}
-
 function queryInspector(send) {
   const requester = async (stream) => {
     if (isQueryCapture(message(stream)) && hasEnded(message(stream))) {
@@ -231,7 +216,6 @@ module.exports = {
   parseCaptures,
   parseEnvironmentTree,
   parseSourceTree,
-  pullEnvironment,
   pullScriptSource,
   queryInspector,
   step

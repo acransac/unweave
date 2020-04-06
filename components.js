@@ -1,7 +1,7 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
-const { content, describeEnvironment, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeSourceTree } = require('./helpers.js');
-const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironment, readScriptSource, scriptHandle } = require('./protocol.js');
+const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
+const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readScriptSource, scriptHandle } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -82,18 +82,6 @@ function breakpoints() {
       return checkDisplayChange(updateBreakpointRecorder, updateBreakpointRecorder)(stream);
     }
   };
-}
-
-function environment() {
-  return noParameters => predecessor => stream => {
-    if (isEnvironment(message(stream))) {
-      return f => f(noParameters)(makePackagedContent("environment", describeEnvironment(readEnvironment(message(stream)))));
-    }
-    else {
-      return predecessor ? f => f(noParameters)(predecessor)
-		         : f => f(noParameters)(makePackagedContent("environment", "Loading environment"));
-    }
-  }
 }
 
 function environmentTree() {
@@ -212,22 +200,23 @@ function sourceTree() {
 
 function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
-    const environmentDisplay = (environment, sourceTree) => {
-      return sizeHeight(50, label(atom(unpackedContent(environment)), tabs(0, environment, sourceTree)));
+    const environmentTreeDisplay = (environmentTree, sourceTree) => {
+      return sizeHeight(50, label(atom(writeEnvironmentTree(unpackedContent(environmentTree))),
+	                          tabs(0, environmentTree, sourceTree)));
     };
 
-    const sourceTreeDisplay = (environment, sourceTree) => {
-      return sizeHeight(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tabs(1, environment, sourceTree)));
+    const sourceTreeDisplay = (environmentTree, sourceTree) => {
+      return sizeHeight(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tabs(1, environmentTree, sourceTree)));
     };
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
       return f => f(noParameters)(sourceTreeDisplay);
     }
     else if (isSourceTreeFocus(message(stream)) && hasEnded(message(stream))) {
-      return f => f(noParameters)(environmentDisplay);
+      return f => f(noParameters)(environmentTreeDisplay);
     }
     else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(environmentDisplay);
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(environmentTreeDisplay);
     }
   };
 }
@@ -236,7 +225,6 @@ module.exports = {
   breakpoints,
   commandLine,
   displayedScript,
-  environment,
   environmentTree,
   focusableCaptureLog,
   instructions,
