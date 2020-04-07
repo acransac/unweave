@@ -1,7 +1,7 @@
 const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
-const { pullEnvironment } = require('./processes.js');
+const { parseEnvironmentTree } = require('./processes.js');
 const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('./protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
@@ -197,7 +197,7 @@ function test_resolveDeferredEntry(finish, check) {
       const requester = (environmentTree, selection, pendingEntriesRegister) => async (stream) => {
 	if (isDebuggerPaused(message(stream))) {
 	  return requester(environmentTree, selection, pendingEntriesRegister)
-		   (await later(await pullEnvironment(send)(stream)));
+		   (await later(await parseEnvironmentTree(send)(stream)));
         }
 	else if (isEnvironment(message(stream))) {
           const [newEnvironmentTree, newSelection] = makeEnvironment([["/env", readEnvironment(message(stream))]], send);
