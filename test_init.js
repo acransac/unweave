@@ -25,11 +25,11 @@ function test_init(finish, check) {
     };
 
     return async (stream) => {
-      return finish(terminate(check(value(now(await sessionStarted(stream))))));
+      return terminate(check(value(now(await sessionStarted(stream)))));
     };
   };
 
-  init(["node", "app.js", "test_target.js"], testSession);
+  init(["node", "app.js", "test_target.js"], testSession, finish);
 }
 
 Test.run([

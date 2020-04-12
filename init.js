@@ -23,8 +23,8 @@ function sessionHash(inspectorUri) {
 }
 
 // Debug session initializer --
-async function init(cliArguments, session, displayTarget)  {
-  connectToInspector(await parseCliArguments(cliArguments), session, displayTarget);
+async function init(cliArguments, session, onTerminate, displayTarget)  {
+  connectToInspector(await parseCliArguments(cliArguments), session, onTerminate, displayTarget);
 }
 
 async function parseCliArguments(cliArguments) {
@@ -90,7 +90,7 @@ function startInspectedProcess(scriptPath) {
   });
 }
 
-function connectToInspector(inspectorUri, session, displayTarget) {
+function connectToInspector(inspectorUri, session, onTerminate, displayTarget) {
   const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
 
   webSocket.onopen = () => {
@@ -104,7 +104,7 @@ function connectToInspector(inspectorUri, session, displayTarget) {
   webSocket.onclose = () => {
     console.log("Connection closed");
   
-    process.exit();
+    onTerminate();
   };
 }
 
@@ -118,12 +118,18 @@ function inputCapture() {
   return process.stdin;
 }
 
+function endInputCapture() {
+  return process.stdin.pause();
+}
+
 function startDebugSession(webSocket, session, displayTarget) {
   const send = (methodName, parameters, requestId) => webSocket.send(makeInspectorQuery(methodName, parameters, requestId));
 
   const [render, closeDisplay] = renderer(displayTarget);
 
   const terminate = () => {
+    endInputCapture();
+
     closeDisplay();
 
     setImmediate(() => webSocket.close());

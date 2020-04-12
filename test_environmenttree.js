@@ -237,12 +237,12 @@ function test_resolveDeferredEntry(finish, check) {
     };
 
     return async (stream) => {
-      return finish(terminate(check(value(now(await queryDeferredEntry()
-	                                       (await skipToDebuggerPausedAfterStepping(send, 1)(stream)))))));
+      return terminate(check(value(now(await queryDeferredEntry()
+	                                (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))));
     };
   };
 
-  init(["node", "app.js", "test_target.js"], testSession);
+  init(["node", "app.js", "test_target.js"], testSession, finish);
 }
 
 function test_explorationSkipsDeferredEntries(finish, check) {
