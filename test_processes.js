@@ -61,13 +61,13 @@ function test_parseEnvironmentTreeWithObject(finish, check) {
        finish);
 }
 
-//function test_parseEnvironmentTreeWithArray(finish, check) {
-//  init(["node", "app.js", "test_target_process_environment_array.js"],
-//       checkEnvironmentTreeFirstEntry("Array test", "0: String a: \"abc\"")(check),
-//       finish);
-//}
+function test_parseEnvironmentTreeWithArray(finish, check) {
+  init(["node", "app.js", "test_target_process_environment_array.js"],
+       checkEnvironmentTreeFirstEntry("Array test", "0: String a: \"abc\"")(check),
+       finish);
+}
 
 Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
-  //Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array")
+  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array")
 ]);
