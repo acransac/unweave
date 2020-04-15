@@ -14,7 +14,8 @@ function scriptSource() {
       return (isBreakpointCapture(message)
 	       || isQueryCapture(message)
 	       || isMessagesFocus(message)
-	       || isSourceTreeFocus(message));
+	       || isSourceTreeFocus(message)
+	       || isEnvironmentTreeFocus(message));
     });
 
     const onSelectionChange = (displayChange, scriptId) => {
