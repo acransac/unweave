@@ -113,6 +113,8 @@ function instructions() {
 
     const sourceTreeInstructions = "j: Select next entry  k: Select previous entry  l: Visit directory  h: Go to parent directory  Enter: Validate selection";
 
+    const environmentTreeInstructions = "j: Select next entry  k: Select previous entry  l: Visit entry  h: Go to parent entry  Enter: Leave";
+
     const messagesInstructions = "j: Scroll down  k: Scroll up  Enter: Leave";
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
@@ -120,6 +122,9 @@ function instructions() {
     }
     else if (isMessagesFocus(message(stream)) && !hasEnded(message(stream))) {
       return f => f(noParameters)(makePackagedContent(tag(predecessor), messagesInstructions));
+    }
+    else if (isEnvironmentTreeFocus(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(makePackagedContent(tag(predecessor), environmentTreeInstructions));
     }
     else if ((isSourceTreeFocus(message(stream)) || isMessagesFocus(message(stream))) && hasEnded(message(stream))) {
       return f => f(noParameters)(makePackagedContent(tag(predecessor), defaultInstructions));
