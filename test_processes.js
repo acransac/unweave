@@ -1,9 +1,9 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('./environmenttree.js');
 const { selectedEntry, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
-const { parseEnvironmentTree } = require('./processes.js');
+const { loop, parseEnvironmentTree } = require('./processes.js');
 const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, makeEnvironmentTreeFocus, message, readEnvironmentTree } = require('./protocol.js');
-const { continuation, floatOn, forget, later, now, value } = require('streamer');
+const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
 
@@ -67,7 +67,24 @@ function test_parseEnvironmentTreeWithArray(finish, check) {
        finish);
 }
 
+function test_loop(finish, check) {
+  const loopThenExitOnDebuggerPaused = (send, render, terminate) => {
+    const sendExitOnDebuggerPaused = async (stream) => {
+      if (isDebuggerPaused(message(stream))) {
+        userInput("\x03");
+      }
+
+      return commit(stream, sendExitOnDebuggerPaused);
+    };
+
+    return async (stream) => loop(terminate)(await sendExitOnDebuggerPaused(stream));
+  }
+
+  init(["node", "app.js", "test_target.js"], loopThenExitOnDebuggerPaused, finish);
+}
+
 Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
-  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array")
+  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
+  Test.makeTest(test_loop, "Loop With Exit")
 ]);

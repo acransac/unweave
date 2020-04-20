@@ -1,8 +1,8 @@
 const { insertInEnvironmentTree, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, resolvePendingEntry } = require('./environmenttree.js');
 const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
-const { displayedScriptSource, exploreEnvironmentTree, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeFocus, makeEnvironmentTreeMessage, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
-const { commit, floatOn } = require('streamer');
+const { displayedScriptSource, exploreEnvironmentTree, isCtrlC, parseUserInput } = require('./helpers.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeFocus, makeEnvironmentTreeMessage, makeError, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
+const { commit, continuation, floatOn, forget, now, later } = require('streamer');
 
 async function changeMode(stream) {
   const modalCapture = (makeCapture, continuation) => {
@@ -210,9 +210,29 @@ function addBreakpoint(send) {
   return breakpointAdder(breakpointSetter(undefined), displayedScriptSource());
 }
 
+function loop(terminate) {
+  const looper = async (stream) => {
+    if (isInput(message(stream)) && isCtrlC(input(message(stream)))) {
+      return terminate();
+    }
+    else {
+      try {
+        return looper(await continuation(now(stream))(forget(await later(stream))));
+      }
+      catch (exception) {
+        return looper(await continuation(now(stream))(forget(await floatOn(stream, makeError(exception.reason,
+	                                                                                     exception.stackTrace)))));
+      }
+    }
+  };
+
+  return looper;
+}
+
 module.exports = {
   addBreakpoint,
   changeMode,
+  loop,
   parseCaptures,
   parseEnvironmentTree,
   parseSourceTree,

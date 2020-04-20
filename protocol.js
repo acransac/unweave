@@ -121,6 +121,23 @@ function parsedUserScriptPath(message) {
   return parsedScriptUrl(message).slice("file://".length);
 }
 
+// Error message
+function makeError(reason, stackTrace) {
+  return JSON.stringify({error: [reason, stackTrace]});
+}
+
+function isError(message) {
+  return message.hasOwnProperty("error");
+}
+
+function reason(message) {
+  return message.error[0];
+}
+
+function trace(message) {
+  return message.error[1];
+}
+
 // Input message
 function makeInput(key) {
   return JSON.stringify({input: key});

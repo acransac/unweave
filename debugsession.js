@@ -1,6 +1,6 @@
 const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
-const { content, loop, makeDisplayedContent, scrollableContent, styleText, tag, topLine, unpackedContent } = require('./helpers.js');
-const { addBreakpoint, changeMode, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
+const { content, makeDisplayedContent, scrollableContent, styleText, tag, topLine, unpackedContent } = require('./helpers.js');
+const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { breakpointCapture, columnNumber, isBreakpointCapture, isDebuggerPaused, isQueryCapture, lineNumber, message, pauseLocation, query, scriptHandle } = require('./protocol.js');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 

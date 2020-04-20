@@ -1,7 +1,7 @@
 const { environmentTree } = require('./components.js');
-const { loop, tag, unpackedContent, writeEnvironmentTree } = require('./helpers.js');
+const { tag, unpackedContent, writeEnvironmentTree } = require('./helpers.js');
 const { init } = require('./init.js');
-const { changeMode, parseEnvironmentTree, step } = require('./processes.js');
+const { changeMode, loop, parseEnvironmentTree, step } = require('./processes.js');
 const { atom, compose, label, show, TerminalTest } = require('terminal');
 const { skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
 

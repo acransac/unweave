@@ -1,7 +1,6 @@
 const { deferredEntryLeafName, registerPendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
-const { entryValue, environmentTreeFocusInput, hasEnded, input, isDebuggerPaused, isEnvironmentTreeFocus, isInput, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
-const { continuation, forget, now, later } = require('streamer');
+const { entryValue, environmentTreeFocusInput, hasEnded, isDebuggerPaused, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 
 function parseUserInput(parsed, currentInput) {
   if (isBackspace(currentInput)) {
@@ -259,19 +258,6 @@ function tabs(number, ...packagedContents) {
 	                 .join("-");
 }
 
-function loop(terminate) {
-  const looper = async (stream) => {
-    if (isInput(message(stream)) && isCtrlC(input(message(stream)))) {
-      return terminate();
-    }
-    else {
-      return looper(await continuation(now(stream))(forget(await later(stream))));
-    }
-  };
-
-  return looper;
-}
-
 module.exports = {
   content,
   describeEnvironment,
@@ -283,7 +269,6 @@ module.exports = {
   focusableByDefault,
   highlightOneCharacter,
   isCtrlC,
-  loop,
   makeDisplayedContent,
   makePackagedContent,
   parseUserInput,
