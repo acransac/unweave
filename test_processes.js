@@ -2,7 +2,7 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { selectedEntry, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
 const { loop, parseEnvironmentTree } = require('./processes.js');
-const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, makeEnvironmentTreeFocus, message, readEnvironmentTree } = require('./protocol.js');
+const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, makeEnvironmentTreeFocus, message, readEnvironmentTree } = require('./protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
@@ -83,8 +83,28 @@ function test_loop(finish, check) {
   init(["node", "app.js", "test_target.js"], loopThenExitOnDebuggerPaused, finish);
 }
 
+function test_errorHandling(finish, check) {
+  const failOnDebuggerPausedThenExit = (send, render, terminate) => {
+    const failOnDebuggerPaused = async (stream) => {
+      if (isDebuggerPaused(message(stream))) {
+        stream();
+      }
+      else if (isError(message(stream))) {
+        userInput("\x03");
+      }
+
+      return commit(stream, failOnDebuggerPaused);
+    };
+
+    return async (stream) => loop(terminate)(await failOnDebuggerPaused(stream));
+  }
+
+  init(["node", "app.js", "test_target.js"], failOnDebuggerPausedThenExit, finish);
+}
+
 Test.runInSequence([
-  Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
-  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
-  Test.makeTest(test_loop, "Loop With Exit")
+  //Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
+  //Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
+  //Test.makeTest(test_loop, "Loop With Exit"),
+  Test.makeTest(test_errorHandling, "Error Handling"),
 ]);
