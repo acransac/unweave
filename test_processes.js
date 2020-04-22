@@ -87,7 +87,7 @@ function test_errorHandling(finish, check) {
   const failOnDebuggerPausedThenExit = (send, render, terminate) => {
     const failOnDebuggerPaused = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
-        stream();
+        stream(); // fails
       }
       else if (isError(message(stream))) {
         userInput("\x03");
@@ -106,5 +106,5 @@ Test.runInSequence([
   //Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   //Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
   //Test.makeTest(test_loop, "Loop With Exit"),
-  Test.makeTest(test_errorHandling, "Error Handling"),
+  Test.makeTest(test_errorHandling, "Error Handling")
 ]);

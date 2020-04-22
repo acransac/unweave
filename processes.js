@@ -216,12 +216,15 @@ function loop(terminate) {
       return terminate();
     }
     else {
+      const afterwards = await later(stream);
+
       try {
-        return looper(await continuation(now(stream))(forget(await later(stream))));
+        return looper(await continuation(now(stream))(forget(afterwards)));
       }
       catch (exception) {
-        return looper(await continuation(now(stream))(forget(await floatOn(stream, makeError(exception.reason,
-	                                                                                     exception.stackTrace)))));
+        return looper(await continuation(now(stream))(forget(await floatOn(afterwards,
+		                                                           makeError(exception.reason,
+										     exception.stackTrace)))));
       }
     }
   };
