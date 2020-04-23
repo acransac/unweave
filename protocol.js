@@ -122,8 +122,8 @@ function parsedUserScriptPath(message) {
 }
 
 // Error message
-function makeError(reason, stackTrace) {
-  return JSON.stringify({error: [reason, stackTrace]});
+function makeError(reason) {
+  return JSON.stringify({error: reason});
 }
 
 function isError(message) {
@@ -131,11 +131,7 @@ function isError(message) {
 }
 
 function reason(message) {
-  return message.error[0];
-}
-
-function trace(message) {
-  return message.error[1];
+  return message.error;
 }
 
 // Input message
@@ -391,6 +387,7 @@ module.exports = {
   readEnvironmentTree,
   readScriptSource,
   readSourceTree,
+  reason,
   scriptHandle,
   sendContinue,
   sendEnableDebugger,

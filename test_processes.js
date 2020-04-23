@@ -2,7 +2,7 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { selectedEntry, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
 const { loop, parseEnvironmentTree } = require('./processes.js');
-const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, makeEnvironmentTreeFocus, message, readEnvironmentTree } = require('./protocol.js');
+const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('./protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
@@ -89,7 +89,7 @@ function test_errorHandling(finish, check) {
       if (isDebuggerPaused(message(stream))) {
         stream(); // fails
       }
-      else if (isError(message(stream))) {
+      else if (isError(message(stream)) && reason(message(stream)).startsWith("TypeError: stream is not a function")) {
         userInput("\x03");
       }
 

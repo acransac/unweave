@@ -221,10 +221,8 @@ function loop(terminate) {
       try {
         return looper(await continuation(now(stream))(forget(afterwards)));
       }
-      catch (exception) {
-        return looper(await continuation(now(stream))(forget(await floatOn(afterwards,
-		                                                           makeError(exception.reason,
-										     exception.stackTrace)))));
+      catch (error) {
+        return looper(await continuation(now(stream))(forget(await floatOn(afterwards, makeError(error.stack)))));
       }
     }
   };
