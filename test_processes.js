@@ -2,7 +2,7 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { selectedEntry, selectedEntryName } = require('filetree');
 const { init } = require('./init.js');
 const { loop, parseEnvironmentTree } = require('./processes.js');
-const { isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('./protocol.js');
+const { input, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('./protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
@@ -84,27 +84,42 @@ function test_loop(finish, check) {
 }
 
 function test_errorHandling(finish, check) {
-  const failOnDebuggerPausedThenExit = (send, render, terminate) => {
-    const failOnDebuggerPaused = async (stream) => {
+  const failOnInputEThenExit = (send, render, terminate) => {
+    const failOnInputE = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
+	userInput("e");
+
+        return commit(stream, failOnInputE);
+      }
+      else if (isInput(message(stream)) && input(message(stream)) === "e") {
         stream(); // fails
+      }
+      else if (isInput(message(stream))) {
+        return commit(stream, failOnInputE);
       }
       else if (isError(message(stream)) && reason(message(stream)).startsWith("TypeError: stream is not a function")) {
         userInput("\x03");
-      }
 
-      return commit(stream, failOnDebuggerPaused);
+        return commit(stream, failOnInputE);
+      }
+      else {
+	check(false);
+
+        userInput("\x03");
+
+        return commit(stream, failOnInputE);
+      }
     };
 
-    return async (stream) => loop(terminate)(await failOnDebuggerPaused(stream));
+    return async (stream) => loop(terminate)(await failOnInputE(await skipToDebuggerPausedAfterStepping(send, 0)(stream)));
   }
 
-  init(["node", "app.js", "test_target.js"], failOnDebuggerPausedThenExit, finish);
+  init(["node", "app.js", "test_target.js"], failOnInputEThenExit, finish);
 }
 
 Test.runInSequence([
-  //Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
-  //Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
-  //Test.makeTest(test_loop, "Loop With Exit"),
+  Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
+  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
+  Test.makeTest(test_loop, "Loop With Exit"),
   Test.makeTest(test_errorHandling, "Error Handling")
 ]);
