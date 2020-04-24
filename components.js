@@ -1,7 +1,7 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
 const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
-const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironmentTree, readScriptSource, scriptHandle } = require('./protocol.js');
+const { breakpointLine, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironmentTree, readScriptSource, reason, scriptHandle } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
 function scriptSource() {
@@ -192,6 +192,11 @@ function messages(inspectedMessage, logger) {
       return f => f(noParameters)
 	            (makePackagedContent(label,
 	                                 makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${logger(message(stream))}`, topLine(displayedContent))));
+    }
+    else if (isError(message(stream))) {
+      return f => f(noParameters)
+	            (makePackagedContent(label,
+	                                 makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${reason(message(stream))}`, topLine(displayedContent))));
     }
     else {
       return f => f(noParameters)
