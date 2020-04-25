@@ -62,7 +62,7 @@ function test_parseEnvironmentTreeWithObject(finish, check) {
 }
 
 function test_parseEnvironmentTreeWithArray(finish, check) {
-  init(["node", "app.js", "test_target_process_environment_array.js"],
+  init(["node", "app.js", "test_target_array.js"],
        checkEnvironmentTreeFirstEntry("Array test", "String 0: \"abc\"")(check),
        finish);
 }

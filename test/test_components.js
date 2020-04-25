@@ -34,9 +34,9 @@ function test_environment(send, render, terminate) {
 
 TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target_component_environment.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Array", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target_process_environment_array.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "test_target_array.js"], test, finish, displayTarget);
   })
 ]);
