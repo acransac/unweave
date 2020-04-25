@@ -1,9 +1,9 @@
-const { environmentTree } = require('./components.js');
-const { tag, unpackedContent, writeEnvironmentTree } = require('./helpers.js');
-const { init } = require('./init.js');
-const { changeMode, loop, parseEnvironmentTree, step } = require('./processes.js');
+const { environmentTree } = require('../src/components.js');
+const { tag, unpackedContent, writeEnvironmentTree } = require('../src/helpers.js');
+const { init } = require('../src/init.js');
+const { changeMode, loop, parseEnvironmentTree, step } = require('../src/processes.js');
 const { atom, compose, label, show, TerminalTest } = require('terminal');
-const { skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
+const { skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function test_environment(send, render, terminate) {
   const userInteraction = async (stream) => {

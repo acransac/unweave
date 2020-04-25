@@ -1,5 +1,5 @@
-const { init } = require('./init.js');
-const { isDebuggerEnabled, isDebuggerPaused, isScriptParsed, message } = require('./protocol.js');
+const { init } = require('../src/init.js');
+const { isDebuggerEnabled, isDebuggerPaused, isScriptParsed, message } = require('../src/protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
 

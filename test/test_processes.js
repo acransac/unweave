@@ -1,11 +1,11 @@
-const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('./environmenttree.js');
+const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
 const { selectedEntry, selectedEntryName } = require('filetree');
-const { init } = require('./init.js');
-const { loop, parseEnvironmentTree } = require('./processes.js');
-const { input, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('./protocol.js');
+const { init } = require('../src/init.js');
+const { loop, parseEnvironmentTree } = require('../src/processes.js');
+const { input, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
-const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('./testutils.js');
+const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
   return check => {

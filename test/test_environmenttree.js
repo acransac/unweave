@@ -1,11 +1,11 @@
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('./environmenttree.js');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('../src/environmenttree.js');
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('filetree');
-const { init } = require('./init.js');
-const { parseEnvironmentTree } = require('./processes.js');
-const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('./protocol.js');
+const { init } = require('../src/init.js');
+const { parseEnvironmentTree } = require('../src/processes.js');
+const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('../src/protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
-const { skipToDebuggerPausedAfterStepping } = require('./testutils.js');
+const { skipToDebuggerPausedAfterStepping } = require('../src/testutils.js');
 const util = require('util');
 
 function makeFakeEnvironmentEntriesFromInspector(values) {

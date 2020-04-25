@@ -55,7 +55,7 @@ async function parseCliArguments(cliArguments) {
     }
   };
 
-  // Command line is [node binary] ["init.js"] [script | uri options]
+  // Command line is [node binary] ["app.js"] [script | uri options]
   if (cliArguments.length === 2) {
     throw "Specify either a script to debug or an Inspector session uri";
   }
