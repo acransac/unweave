@@ -263,7 +263,7 @@ function test_explorationSkipsDeferredEntries(finish, check) {
 	                && isExpectedObject(selectedEntry(visitParentEntry(visitChildEntry(visitChildEntry(selection)))))));
 }
 
-Test.run([
+module.exports = Test.run([
   Test.makeTest(test_emptyEnvironmentTree, "Empty Environment Tree"),
   Test.makeTest(test_selectionInEmptyEnvironmentTree, "Selection In Empty Environment Tree"),
   Test.makeTest(test_environmentTreeWithOneImmediateEntry, "Environment Tree With One Immediate Entry"),
@@ -271,4 +271,4 @@ Test.run([
   Test.makeTest(test_environmentTreeExploration, "Environment Tree Exploration"),
   Test.makeTest(test_resolveDeferredEntry, "Resolve Deferred Entry"),
   Test.makeTest(test_explorationSkipsDeferredEntries, "Exploration Skips Deferred Entries")
-]);
+], "Test Environment Tree");

@@ -32,6 +32,6 @@ function test_init(finish, check) {
   init(["node", "app.js", "test_target.js"], testSession, finish);
 }
 
-Test.run([
+module.exports = Test.run([
   Test.makeTest(test_init, "Session Initialization")
-]);
+], "Test Init");
