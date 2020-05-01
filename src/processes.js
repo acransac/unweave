@@ -1,14 +1,14 @@
 const { insertInEnvironmentTree, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, resolvePendingEntry } = require('./environmenttree.js');
 const { branches, insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
-const { displayedScriptSource, exploreEnvironmentTree, isCtrlC, parseUserInput } = require('./helpers.js');
-const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeFocus, makeEnvironmentTreeMessage, makeError, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
+const { ctrlCInput, displayedScriptSource, enterInput, exploreEnvironmentTree, parseUserInput } = require('./helpers.js');
+const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isScriptParsed, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeFocus, makeEnvironmentTreeMessage, makeError, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedScriptUrl, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
 const { commit, continuation, floatOn, forget, now, later } = require('streamer');
 
 async function changeMode(stream) {
   const modalCapture = (makeCapture, continuation) => {
     const modeSetter = async (stream) => {
       if (isInput(message(stream))) {
-        if (input(message(stream)) === "\r") {
+        if (input(message(stream)) === enterInput()) {
           return floatOn(commit(stream, continuation), endCapture(makeCapture(input(message(stream)))));
         }
         else {
@@ -24,19 +24,19 @@ async function changeMode(stream) {
   };
 
   if (isInput(message(stream))) {
-    if (input(message(stream)) === "q") {
+    if (input(message(stream)) === interactionKeys("queryCapture")) {
       return floatOn(commit(stream, modalCapture(makeQueryCapture, changeMode)), makeQueryCapture());
     }
-    else if (input(message(stream)) === "b") {
+    else if (input(message(stream)) === interactionKeys("breakpointCapture")) {
       return floatOn(commit(stream, modalCapture(makeBreakpointCapture, changeMode)), makeBreakpointCapture());
     }
-    else if (input(message(stream)) === "m") {
+    else if (input(message(stream)) === interactionKeys("messagesFocus")) {
       return floatOn(commit(stream, modalCapture(makeMessagesFocus, changeMode)), makeMessagesFocus());
     }
-    else if (input(message(stream)) === "w") {
+    else if (input(message(stream)) === interactionKeys("sourceTreeFocus")) {
       return floatOn(commit(stream, modalCapture(makeSourceTreeFocus, changeMode)), makeSourceTreeFocus());
     }
-    else if (input(message(stream)) === "e") {
+    else if (input(message(stream)) === interactionKeys("environmentTreeFocus")) {
       return floatOn(commit(stream, modalCapture(makeEnvironmentTreeFocus, changeMode)), makeEnvironmentTreeFocus());
     }
     else {
@@ -168,16 +168,16 @@ function queryInspector(send) {
 
 function step(send) {
   const stepper = async (stream) => {
-    if (isInput(message(stream)) && input(message(stream)) === "n") {
+    if (isInput(message(stream)) && input(message(stream)) === interactionKeys("stepOver")) {
       sendStepOver(send);
     }
-    else if (isInput(message(stream)) && input(message(stream)) === "s") {
+    else if (isInput(message(stream)) && input(message(stream)) === interactionKeys("stepInto")) {
       sendStepInto(send);
     }
-    else if (isInput(message(stream)) && input(message(stream)) === "c") {
+    else if (isInput(message(stream)) && input(message(stream)) === interactionKeys("continue")) {
       sendContinue(send);
     }
-    else if (isInput(message(stream)) && input(message(stream)) === "f") {
+    else if (isInput(message(stream)) && input(message(stream)) === interactionKeys("stepOut")) {
       sendStepOut(send);
     }
 
@@ -212,7 +212,7 @@ function addBreakpoint(send) {
 
 function loop(terminate) {
   const looper = async (stream) => {
-    if (isInput(message(stream)) && isCtrlC(input(message(stream)))) {
+    if (isInput(message(stream)) && input(message(stream)) === ctrlCInput()) {
       return terminate();
     }
     else {

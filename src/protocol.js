@@ -146,6 +146,27 @@ function input(message) {
   return message.input;
 }
 
+function interactionKeys(interaction) {
+  switch (interaction) {
+    case "stepOver": return "n";
+    case "stepInto": return "s";
+    case "stepOut": return "f";
+    case "continue": return "c";
+    case "scrollDown": return "j";
+    case "scrollUp": return "k";
+    case "selectNext": return "j";
+    case "selectPrevious": return "k";
+    case "selectChild": return "l";
+    case "selectParent": return "h";
+    case "breakpointCapture": return "b";
+    case "queryCapture": return "q";
+    case "environmentTreeFocus": return "e";
+    case "sourceTreeFocus": return "w";
+    case "messagesFocus": return "m";
+    default: throw "invalid interaction";
+  };
+}
+
 // Script source message
 function isScriptSource(message) {
   return isResult(message, "scriptSource");
@@ -345,6 +366,7 @@ module.exports = {
   environmentTreeFocusInput,
   hasEnded,
   input,
+  interactionKeys,
   isBreakpointCapture,
   isDebuggerEnabled,
   isDebuggerPaused,

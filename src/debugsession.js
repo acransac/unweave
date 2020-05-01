@@ -1,7 +1,7 @@
 const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { scrollableContent, tag, unpackedContent, writeScriptSource } = require('./helpers.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { breakpointCapture, columnNumber, isBreakpointCapture, isDebuggerPaused, isQueryCapture, pauseLocation, query } = require('./protocol.js');
+const { breakpointCapture, columnNumber, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, pauseLocation, query } = require('./protocol.js');
 const { atom, column, compose, cons, emptyList, indent, label, row, show, sizeHeight, sizeWidth, vindent } = require('terminal');
 
 function debugSession(send, render, terminate) {
@@ -22,13 +22,13 @@ function debugSession(send, render, terminate) {
                                                       focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
 						                          isQueryCapture,
 						                          "query Inspector",
-						                          "q"),
+						                          interactionKeys("queryCapture")),
                                                       focusableCaptureLog(logCapture(isBreakpointCapture,
 							                             breakpointCapture,
 						                                     "Add breakpoint at line"),
 							                  isBreakpointCapture,
 							                  "add breakpoint",
-							                  "b")))(
+							                  interactionKeys("breakpointCapture"))))(
 	                                        await step(send)(
 	                                          await queryInspector(send)(
 		                                    await addBreakpoint(send)(

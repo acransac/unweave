@@ -1,12 +1,12 @@
 const { deferredEntryLeafName, registerPendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('filetree');
-const { columnNumber, entryValue, environmentTreeFocusInput, hasEnded, isDebuggerPaused, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, lineNumber, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
+const { columnNumber, entryValue, environmentTreeFocusInput, hasEnded, interactionKeys, isDebuggerPaused, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, lineNumber, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 
 function parseUserInput(parsed, currentInput) {
-  if (isBackspace(currentInput)) {
+  if (currentInput === backspaceInput()) {
     return parsed.slice(0, -1);
   }
-  else if (currentInput === "\r") {
+  else if (currentInput === enterInput()) {
     return parsed;
   }
   else {
@@ -14,12 +14,16 @@ function parseUserInput(parsed, currentInput) {
   }
 }
 
-function isBackspace(input) {
-  return input === "\x7f";
+function enterInput() {
+  return "\r";
 }
 
-function isCtrlC(input) {
-  return input === "\x03";
+function backspaceInput() {
+  return "\x7f";
+}
+
+function ctrlCInput() {
+  return "\x03";
 }
 
 function describeEnvironment(entries) {
@@ -44,12 +48,12 @@ function topLine(displayedContent) {
 
 function scrollable(isInput, input) {
   return (displayedContent, stream) => {
-    if (isInput(message(stream)) && input(message(stream)) === "j") {
+    if (isInput(message(stream)) && input(message(stream)) === interactionKeys("scrollDown")) {
       return makeDisplayedContent(content(displayedContent),
                                   Math.min(content(displayedContent).split("\n").length - 1,
 					   topLine(displayedContent) + 1));
     }
-    else if (isInput(message(stream)) && input(message(stream)) === "k") {
+    else if (isInput(message(stream)) && input(message(stream)) === interactionKeys("scrollUp")) {
       return makeDisplayedContent(content(displayedContent), Math.max(0, topLine(displayedContent) - 1));
     }
     else {
@@ -109,20 +113,20 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
   if (isSourceTree(message(stream))) {
     return continuation(refreshSelectedFileTree(selectionInSourceTree, readSourceTree(message(stream))));
   }
-  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "j") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === interactionKeys("selectNext")) {
     return continuation(selectNext(selectionInSourceTree));
   }
-  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "k") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === interactionKeys("selectPrevious")) {
     return continuation(selectPrevious(selectionInSourceTree));
   }
-  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "l") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === interactionKeys("selectChild")) {
     return continuation(visitChildBranch(selectionInSourceTree));
   }
-  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === "h") {
+  else if (isSourceTreeFocus(message(stream)) && sourceTreeFocusInput(message(stream)) === interactionKeys("selectParent")) {
     return continuation(visitParentBranch(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream))
-	     && sourceTreeFocusInput(message(stream)) === "\r"
+	     && sourceTreeFocusInput(message(stream)) === enterInput()
 	     && isFileSelected(selectedEntry(selectionInSourceTree))) {
     return onFilePicked(selectionInSourceTree);
   }
@@ -133,16 +137,20 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
 
 function exploreEnvironmentTreeImpl(visitChildEntry) {
   return (selectionInEnvironmentTree, stream) => {
-    if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "j") {
+    if (isEnvironmentTreeFocus(message(stream))
+	  && environmentTreeFocusInput(message(stream)) === interactionKeys("selectNext")) {
       return selectNextEntry(selectionInEnvironmentTree);
     }
-    else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "k") {
+    else if (isEnvironmentTreeFocus(message(stream))
+	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectPrevious")) {
       return selectPreviousEntry(selectionInEnvironmentTree);
     }
-    else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "l") {
+    else if (isEnvironmentTreeFocus(message(stream))
+	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectChild")) {
       return visitChildEntry(selectionInEnvironmentTree);
     }
-    else if (isEnvironmentTreeFocus(message(stream)) && environmentTreeFocusInput(message(stream)) === "h") {
+    else if (isEnvironmentTreeFocus(message(stream))
+	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectParent")) {
       return visitParentEntry(selectionInEnvironmentTree);
     }
     else {
@@ -334,15 +342,16 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
 
 module.exports = {
   content,
+  ctrlCInput,
   describeEnvironment,
   displayedScriptSource,
+  enterInput,
   exploreEnvironmentTree,
   exploreEnvironmentTreeSilently,
   exploreSourceTree,
   focusable,
   focusableByDefault,
   highlightOneCharacter,
-  isCtrlC,
   makeDisplayedContent,
   makePackagedContent,
   parseUserInput,
