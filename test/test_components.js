@@ -1,9 +1,10 @@
-const { breakpoints, displayedScript, environmentTree, runLocation, scriptSource } = require('../src/components.js');
-const { ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource } = require('../src/helpers.js');
+const { breakpoints, displayedScript, environmentTree, runLocation, scriptSource, sourceTree } = require('../src/components.js');
+const { ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, pullScriptSource, step } = require('../src/processes.js');
-const { interactionKeys } = require('../src/protocol.js');
-const { atom, compose, label, show, TerminalTest } = require('terminal');
+const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
+const { interactionKeys, isDebuggerPaused, message } = require('../src/protocol.js');
+const { commit } = require('streamer');
+const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
 const { makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function test_environment(send, render, terminate) {
@@ -75,6 +76,49 @@ function test_scriptSource(send, render, terminate) {
   };
 }
 
+function test_sourceTree(send, render, terminate) {
+//  const repeat = (key, count) => new Array(count).fill(key);
+
+  const userInteraction = async (stream) => {
+    if (isDebuggerPaused(message(stream))) {
+      userInput(makeInputSequence(["", interactionKeys("sourceTreeFocus")]));
+
+      return stream;
+    }
+    else {
+      return commit(stream, userInteraction);
+    }
+  };
+
+  const sourceTreeDisplay = (scriptSource, runLocation, breakpoints, displayedScript, sourceTree) => {
+    return inline(cons(
+	           sizeWidth(50, label(atom(writeScriptSource(unpackedContent(scriptSource),
+			                                      runLocation,
+			                                      breakpoints,
+			                                      displayedScript)),
+	                               tag(scriptSource))),
+	           cons(
+		     sizeWidth(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tag(sourceTree))),
+		     emptyList())));
+  };
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(sourceTreeDisplay,
+		                           scriptSource(),
+		                           runLocation(),
+		                           breakpoints(),
+		                           displayedScript(),
+	                                   sourceTree()))
+		 (await step(send)
+	           (await pullScriptSource(send)
+		     (await parseSourceTree()
+		       (await parseCaptures()
+	                 (await changeMode(stream))))))));
+  };
+}
+
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
@@ -84,5 +128,8 @@ module.exports = TerminalTest.reviewDisplays([
   }),
   TerminalTest.makeTestableReactiveDisplay(test_scriptSource, "Script Source", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target_script_source.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_sourceTree, "Source Tree", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], test, finish, displayTarget);
   })
 ], "Test Components");

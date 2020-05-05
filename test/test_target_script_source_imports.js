@@ -1,7 +1,9 @@
 function fct() {
   const a = "abc";
 
-  return a;
+  const b = "def";
+
+  return a + b;
 }
 
 module.exports = fct;
