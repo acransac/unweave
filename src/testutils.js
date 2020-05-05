@@ -21,8 +21,35 @@ function skipToDebuggerPausedAfterStepping(send, stepsToMake) {
   return skipper(stepsToMake);
 }
 
-function userInput(input, delay) {
-  setTimeout(() => process.stdin.emit("input", makeInput(input)), delay ? delay : 0);
+// Input sequence type --
+function makeInputSequence(inputs, inputsPerSecond) {
+  return [inputs, inputsPerSecond ? inputsPerSecond : 1];
+}
+
+function inputs(inputSequence) {
+  return inputSequence[0];
+}
+
+function inputsPerSecond(inputSequence) {
+  return inputSequence[1];
+}
+
+function userInput(...inputSequences) {
+  const registerInput = (delay, inputSequences) => {
+    if (inputSequences.length === 0) {
+      return delay;
+    }
+    else {
+      return registerInput(inputs(inputSequences[0]).reduce((delay, input) => {
+        setTimeout(() => process.stdin.emit("input", makeInput(input)), delay);
+
+        return delay + 1000 / inputsPerSecond(inputSequences[0]);
+      }, delay),
+	                   inputSequences.slice(1));
+    }
+  };
+
+  return registerInput(0, inputSequences);
 }
 
 function inputIsCapture(makeCapture) {
@@ -40,6 +67,7 @@ function inputIsCapture(makeCapture) {
 
 module.exports = {
   inputIsCapture,
+  makeInputSequence,
   skipToDebuggerPausedAfterStepping,
   userInput
 }

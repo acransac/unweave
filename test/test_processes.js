@@ -1,11 +1,12 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
 const { selectedEntry, selectedEntryName } = require('filetree');
+const { ctrlCInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { loop, parseEnvironmentTree } = require('../src/processes.js');
-const { input, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
+const { input, interactionKeys, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
-const { inputIsCapture, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
+const { inputIsCapture, makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
   return check => {
@@ -20,7 +21,7 @@ function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescrip
         else if (isEnvironmentTree(message(stream))
                    && (selection => selectedEntryName(selectedEntry(selection)) === `/${entryDescription}`)
                         (controlSelection(message(stream)))) {
-          userInput("l");
+          userInput(makeInputSequence([interactionKeys("selectChild")]));
 
           return secondCheck(await continuation(now(stream))(forget(await later(stream))));
         }
@@ -71,7 +72,7 @@ function test_loop(finish, check) {
   const loopThenExitOnDebuggerPaused = (send, render, terminate) => {
     const sendExitOnDebuggerPaused = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
-        userInput("\x03");
+        userInput(makeInputSequence([ctrlCInput()]));
       }
 
       return commit(stream, sendExitOnDebuggerPaused);
@@ -87,7 +88,7 @@ function test_errorHandling(finish, check) {
   const failOnInputEThenExit = (send, render, terminate) => {
     const failOnInputE = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
-	userInput("e");
+	userInput(makeInputSequence(["e"]));
 
         return commit(stream, failOnInputE);
       }
@@ -98,14 +99,14 @@ function test_errorHandling(finish, check) {
         return commit(stream, failOnInputE);
       }
       else if (isError(message(stream)) && reason(message(stream)).startsWith("TypeError: stream is not a function")) {
-        userInput("\x03");
+        userInput(makeInputSequence([ctrlCInput()]));
 
         return commit(stream, failOnInputE);
       }
       else {
 	check(false);
 
-        userInput("\x03");
+        userInput(makeInputSequence([ctrlCInput()]));
 
         return commit(stream, failOnInputE);
       }
