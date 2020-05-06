@@ -146,7 +146,10 @@ function instructions() {
     else if (isEnvironmentTreeFocus(message(stream)) && !hasEnded(message(stream))) {
       return f => f(noParameters)(makePackagedContent(tag(predecessor), environmentTreeInstructions));
     }
-    else if ((isSourceTreeFocus(message(stream)) || isMessagesFocus(message(stream))) && hasEnded(message(stream))) {
+    else if ((isSourceTreeFocus(message(stream))
+                || isMessagesFocus(message(stream))
+                || isEnvironmentTreeFocus(message(stream)))
+               && hasEnded(message(stream))) {
       return f => f(noParameters)(makePackagedContent(tag(predecessor), defaultInstructions));
     }
     else {
