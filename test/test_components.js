@@ -1,4 +1,4 @@
-const { breakpoints, displayedScript, environmentTree, runLocation, scriptSource, sourceTree } = require('../src/components.js');
+const { breakpoints, displayedScript, environmentTree, instructions, runLocation, scriptSource, sourceTree } = require('../src/components.js');
 const { ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
@@ -137,6 +137,33 @@ function test_sourceTree(send, render, terminate) {
   };
 }
 
+function test_instructions(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence([
+      "",
+      interactionKeys("environmentTreeFocus"),
+      enterInput(),
+      interactionKeys("sourceTreeFocus"),
+      enterInput(),
+      interactionKeys("messagesFocus"),
+      enterInput(),
+      ctrlCInput()
+    ], 0.3));
+
+    return stream;
+  };
+
+  const instructionsDisplay = instructions => label(atom(unpackedContent(instructions)), tag(instructions));
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(instructionsDisplay, instructions()))
+	         (await changeMode
+	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+}
+
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
@@ -149,5 +176,8 @@ module.exports = TerminalTest.reviewDisplays([
   }),
   TerminalTest.makeTestableReactiveDisplay(test_sourceTree, "Source Tree", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_instructions, "Instructions", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
