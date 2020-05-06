@@ -65,9 +65,14 @@ function inputIsCapture(makeCapture) {
   return captureMaker;
 }
 
+function repeatKey(key, count) {
+  return new Array(count).fill(key);
+}
+
 module.exports = {
   inputIsCapture,
   makeInputSequence,
+  repeatKey,
   skipToDebuggerPausedAfterStepping,
   userInput
 }

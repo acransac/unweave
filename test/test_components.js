@@ -5,7 +5,7 @@ const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, pa
 const { interactionKeys, isDebuggerPaused, message } = require('../src/protocol.js');
 const { commit } = require('streamer');
 const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
-const { makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
+const { makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function test_environment(send, render, terminate) {
   const userInteraction = async (stream) => {
@@ -38,11 +38,12 @@ function test_environment(send, render, terminate) {
 }
 
 function test_scriptSource(send, render, terminate) {
-  const repeat = (key, count) => new Array(count).fill(key);
-
   const userInteraction = async (stream) => {
     userInput(makeInputSequence([""]),
-	      makeInputSequence([...repeat(interactionKeys("scrollDown"), 9), ...repeat(interactionKeys("scrollUp"), 9)], 2),
+	      makeInputSequence([
+	        ...repeatKey(interactionKeys("scrollDown"), 9),
+		...repeatKey(interactionKeys("scrollUp"), 9)
+	      ], 2),
               makeInputSequence([interactionKeys("breakpointCapture"), "8", enterInput()]),
 	      makeInputSequence([
 	        interactionKeys("stepOver"),
@@ -77,11 +78,28 @@ function test_scriptSource(send, render, terminate) {
 }
 
 function test_sourceTree(send, render, terminate) {
-//  const repeat = (key, count) => new Array(count).fill(key);
-
   const userInteraction = async (stream) => {
     if (isDebuggerPaused(message(stream))) {
-      userInput(makeInputSequence(["", interactionKeys("sourceTreeFocus")]));
+      userInput(makeInputSequence([
+        "",
+	interactionKeys("stepOver"),
+	interactionKeys("sourceTreeFocus"),
+	interactionKeys("selectPrevious"),
+	interactionKeys("selectChild"),
+	...repeatKey(interactionKeys("selectNext"), 2),
+	interactionKeys("selectChild"),
+	enterInput(),
+	interactionKeys("sourceTreeFocus"),
+	interactionKeys("selectParent"),
+	enterInput(),
+	interactionKeys("stepOver"),
+	interactionKeys("sourceTreeFocus"),
+	interactionKeys("selectParent"),
+	interactionKeys("selectNext"),
+	interactionKeys("selectChild"),
+	enterInput(),
+	ctrlCInput()
+      ]));
 
       return stream;
     }
