@@ -341,6 +341,7 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
 }
 
 module.exports = {
+  backspaceInput,
   content,
   ctrlCInput,
   describeEnvironment,
