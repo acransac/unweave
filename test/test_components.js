@@ -2,7 +2,7 @@ const { breakpoints, displayedScript, environmentTree, focusableCaptureLog, inst
 const { backspaceInput, ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
-const { breakpointCapture, interactionKeys, isBreakpointCapture, isDebuggerPaused, message } = require('../src/protocol.js');
+const { breakpointCapture, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, message, query } = require('../src/protocol.js');
 const { commit } = require('streamer');
 const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
 const { makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -164,10 +164,10 @@ function test_instructions(send, render, terminate) {
   };
 }
 
-function test_capture(isCapture, readCapture, focusKeyName, promptPrefix, labelName) {
+function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName) {
   return (send, render, terminate) => {
     const userInteraction = async (stream) => {
-      userInput(makeInputSequence(["", interactionKeys(focusKeyName)]),
+      userInput(makeInputSequence(["", focusKey]),
                 makeInputSequence(["a", "1", "b", "2", ...repeatKey(backspaceInput(), 5), enterInput(), ctrlCInput()], 2));
 
       return stream;
@@ -183,7 +183,7 @@ function test_capture(isCapture, readCapture, focusKeyName, promptPrefix, labelN
           					                                            promptPrefix),
           						                         isCapture,
           						                         labelName,
-          						                         interactionKeys(focusKeyName))))
+          						                         focusKey)))
                    (await parseCaptures()
                      (await changeMode
                        (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
@@ -192,7 +192,15 @@ function test_capture(isCapture, readCapture, focusKeyName, promptPrefix, labelN
 }
 
 function test_breakpointCapture() {
-  return test_capture(isBreakpointCapture, breakpointCapture, "breakpointCapture", "Add breakpoint at line", "add breakpoint");
+  return test_capture(isBreakpointCapture,
+	              breakpointCapture,
+	              interactionKeys("breakpointCapture"),
+	              "Add breakpoint at line",
+	              "add breakpoint");
+}
+
+function test_queryCapture() {
+  return test_capture(isQueryCapture, query, interactionKeys("queryCapture"), "Query Inspector", "query Inspector");
 }
 
 module.exports = TerminalTest.reviewDisplays([
@@ -212,6 +220,9 @@ module.exports = TerminalTest.reviewDisplays([
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture(), "Breakpoint Capture", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_queryCapture(), "Query Capture", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
