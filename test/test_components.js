@@ -164,30 +164,35 @@ function test_instructions(send, render, terminate) {
   };
 }
 
-function test_breakpointCapture(send, render, terminate) {
-  const userInteraction = async (stream) => {
-    userInput(makeInputSequence(["", interactionKeys("breakpointCapture")]),
-              makeInputSequence(["a", "1", "b", "2", ...repeatKey(backspaceInput(), 5), enterInput(), ctrlCInput()], 2));
+function test_capture(isCapture, readCapture, focusKeyName, promptPrefix, labelName) {
+  return (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence(["", interactionKeys(focusKeyName)]),
+                makeInputSequence(["a", "1", "b", "2", ...repeatKey(backspaceInput(), 5), enterInput(), ctrlCInput()], 2));
 
-    return stream;
+      return stream;
+    };
+
+    const captureDisplay = capture => label(atom(unpackedContent(capture)), tag(capture));
+
+    return async (stream) => {
+      return loop(terminate)
+               (await userInteraction
+                 (await show(render)(compose(captureDisplay, focusableCaptureLog(logCapture(isCapture,
+			                                                                    readCapture,
+          					                                            promptPrefix),
+          						                         isCapture,
+          						                         labelName,
+          						                         interactionKeys(focusKeyName))))
+                   (await parseCaptures()
+                     (await changeMode
+                       (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+    };
   };
+}
 
-  const breakpointCaptureDisplay = breakpointCapture => label(atom(unpackedContent(breakpointCapture)), tag(breakpointCapture));
-
-  return async (stream) => {
-    return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(breakpointCaptureDisplay,
-		                           focusableCaptureLog(logCapture(isBreakpointCapture,
-							                  breakpointCapture,
-						                          "Add breakpoint at line"),
-							       isBreakpointCapture,
-							       "add breakpoint",
-							       interactionKeys("breakpointCapture"))))
-	         (await parseCaptures()
-	           (await changeMode
-	             (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
-  };
+function test_breakpointCapture() {
+  return test_capture(isBreakpointCapture, breakpointCapture, "breakpointCapture", "Add breakpoint at line", "add breakpoint");
 }
 
 module.exports = TerminalTest.reviewDisplays([
@@ -206,7 +211,7 @@ module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_instructions, "Instructions", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
-  TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture, "Breakpoint Capture", (displayTarget, test, finish) => {
+  TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture(), "Breakpoint Capture", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
