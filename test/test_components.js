@@ -1,4 +1,4 @@
-const { breakpoints, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, runLocation, scriptSource, sourceTree } = require('../src/components.js');
+const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, runLocation, scriptSource, sourceTree } = require('../src/components.js');
 const { backspaceInput, ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
@@ -203,6 +203,45 @@ function test_queryCapture() {
   return test_capture(isQueryCapture, query, interactionKeys("queryCapture"), "Query Inspector", "query Inspector");
 }
 
+function test_commandLine(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence([
+      "",
+      interactionKeys("queryCapture"),
+      enterInput(),
+      interactionKeys("breakpointCapture"),
+      enterInput(),
+      ctrlCInput()
+    ]));
+
+    return stream;
+  };
+
+  const commandLineDisplay = (commandLine, instructions, queryCapture, breakpointCapture) => commandLine(instructions,
+	                                                                                                 queryCapture,
+	                                                                                                 breakpointCapture);
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(commandLineDisplay,
+		                           commandLine(),
+		                           instructions(),
+                                           focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
+						               isQueryCapture,
+						               "query Inspector",
+						               interactionKeys("queryCapture")),
+                                           focusableCaptureLog(logCapture(isBreakpointCapture,
+							                  breakpointCapture,
+						                          "Add breakpoint at line"),
+							       isBreakpointCapture,
+							       "add breakpoint",
+							       interactionKeys("breakpointCapture"))))
+	         (await changeMode
+	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+}
+
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
@@ -223,6 +262,9 @@ module.exports = TerminalTest.reviewDisplays([
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_queryCapture(), "Query Capture", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_commandLine, "Command Line", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
