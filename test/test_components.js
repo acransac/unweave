@@ -1,8 +1,8 @@
-const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('../src/components.js');
-const { backspaceInput, ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
+const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('../src/components.js');
+const { backspaceInput, ctrlCInput, enterInput, scrollableContent, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
-const { breakpointCapture, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, message, query } = require('../src/protocol.js');
+const { breakpointCapture, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, message, query } = require('../src/protocol.js');
 const { commit } = require('streamer');
 const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
 const { makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -268,6 +268,40 @@ function test_topRightColumnDisplay(send, render, terminate) {
   };
 }
 
+function test_messages(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence(["", interactionKeys("messagesFocus")]),
+              makeInputSequence([
+	        ...repeatKey(interactionKeys("scrollDown"), 2),
+		...repeatKey(interactionKeys("scrollUp"), 2)
+	      ], 2),
+              makeInputSequence([enterInput(), "f", ctrlCInput()]));
+
+    return stream;
+  };
+
+  const messagesDisplay = messages => label(atom(scrollableContent(unpackedContent(messages))), tag(messages));
+
+  const testLogger = message => "Debugger paused\nTest logger triggered";
+
+  const failOnF = async stream => {
+    if (isInput(message(stream)) && input(message(stream)) === "f") {
+      throw new Error("Test threw: error handled");
+    }
+    else {
+      return commit(stream, failOnF);
+    }
+  };
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(messagesDisplay, messages(isDebuggerPaused, testLogger)))
+	         (await changeMode
+	           (await failOnF
+	             (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+  };
+}
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
@@ -294,8 +328,11 @@ module.exports = TerminalTest.reviewDisplays([
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_topRightColumnDisplay,
-	                                   "Top Right Column Display",
-	                                   (displayTarget, test, finish) => {
+                                           "Top Right Column Display",
+                                           (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_messages, "Messages", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
