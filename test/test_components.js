@@ -1,4 +1,4 @@
-const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, runLocation, scriptSource, sourceTree } = require('../src/components.js');
+const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('../src/components.js');
 const { backspaceInput, ctrlCInput, enterInput, tag, unpackedContent, writeEnvironmentTree, writeScriptSource, writeSourceTree } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
@@ -242,6 +242,32 @@ function test_commandLine(send, render, terminate) {
   };
 }
 
+function test_topRightColumnDisplay(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence([
+      "",
+      interactionKeys("environmentTreeFocus"),
+      enterInput(),
+      interactionKeys("sourceTreeFocus"),
+      enterInput(),
+      ctrlCInput()
+    ]));
+
+    return stream;
+  };
+
+  const topRightDisplay = (topRightColumnDisplay, environmentTree, sourceTree) => topRightColumnDisplay(environmentTree,
+	                                                                                                sourceTree);
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(topRightDisplay, topRightColumnDisplay(), environmentTree(), sourceTree()))
+	         (await changeMode
+	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+}
+
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
@@ -265,6 +291,11 @@ module.exports = TerminalTest.reviewDisplays([
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_commandLine, "Command Line", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_topRightColumnDisplay,
+	                                   "Top Right Column Display",
+	                                   (displayTarget, test, finish) => {
     return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
