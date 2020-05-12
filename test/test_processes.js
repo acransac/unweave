@@ -1,9 +1,9 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
 const { selectedEntry, selectedEntryName } = require('filetree');
-const { ctrlCInput } = require('../src/helpers.js');
+const { ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { loop, parseEnvironmentTree } = require('../src/processes.js');
-const { input, interactionKeys, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
+const { changeMode, loop, parseEnvironmentTree } = require('../src/processes.js');
+const { breakpointCapture, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -118,9 +118,81 @@ function test_errorHandling(finish, check) {
   init(["node", "app.js", "test_target.js"], failOnInputEThenExit, finish);
 }
 
+function test_changeMode(finish, check) {
+  const changeModeTest = (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence([
+        interactionKeys("breakpointCapture"),
+	"1",
+	enterInput(),
+	ctrlCInput()
+      ], 1000));
+
+      return await later(stream);
+    };
+
+    const fail = () => {
+      check(false);
+
+      userInput(makeInputSequence([ctrlCInput()]));
+
+      const consumeAllEvents = async (stream) => commit(stream, consumeAllEvents);
+
+      return consumeAllEvents;
+    };
+
+    const controlModeOpen = isMode => continuation => async (stream) => {
+      if (isMode(message(stream)) && !hasEnded(message(stream))) {
+        return commit(stream, continuation);
+      }
+      else {
+        return commit(stream, fail());
+      }
+    };
+
+    const controlModalInput = (isMode, readInput, controlInput) => continuation => async (stream) => {
+      if (isMode(message(stream)) && !hasEnded(message(stream)) && readInput(message(stream)) === controlInput) {
+        return commit(stream, continuation);
+      }
+      else {
+        return commit(stream, fail());
+      }
+    };
+
+    const controlModeClose = isMode => continuation => async (stream) => {
+      if (isMode(message(stream)) && hasEnded(message(stream))) {
+        return commit(stream, continuation);
+      }
+      else {
+        return commit(stream, fail());
+      }
+    };
+
+    const controlSequence = (...controls) => async (stream) => {
+      if (controls.length === 0) {
+        return stream;
+      }
+      else {
+        return controls[0](controlSequence(...controls.slice(1)))(stream);
+      }
+    };
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(controlModeOpen(isBreakpointCapture),
+				                      controlModalInput(isBreakpointCapture, breakpointCapture, "1"),
+				                      controlModeClose(isBreakpointCapture))
+				 (await changeMode
+	                           (await userInteraction
+			             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+
+  init(["node", "app.js", "test_target.js"], changeModeTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
   Test.makeTest(test_loop, "Loop With Exit"),
-  Test.makeTest(test_errorHandling, "Error Handling")
+  Test.makeTest(test_errorHandling, "Error Handling"),
+  Test.makeTest(test_changeMode, "Change Mode")
 ], "Test Processes");
