@@ -8,6 +8,38 @@ const { commit, continuation, floatOn, forget, later, now, value } = require('st
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
+function controlSequence(check, ...isExpected) {
+  const fail = () => {
+    check(false);
+
+    userInput(makeInputSequence([ctrlCInput()]));
+
+    const consumeAllEvents = async (stream) => commit(stream, consumeAllEvents);
+
+    return consumeAllEvents;
+  };
+
+  const control = (isExpected, continuation) => async (stream) => {
+    if (isExpected(message(stream))) {
+      return commit(stream, continuation);
+    }
+    else {
+      return commit(stream, fail());
+    }
+  };
+
+  const sequence = (...isExpected) => async (stream) => {
+    if (isExpected.length === 0) {
+      return stream;
+    }
+    else {
+      return control(isExpected[0], sequence(...isExpected.slice(1)))(stream);
+    }
+  };
+
+  return sequence(...isExpected);
+}
+
 function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
   return check => {
     return (send, render, terminate) => {
@@ -131,63 +163,19 @@ function test_changeMode(finish, check) {
       return await later(stream);
     };
 
-    const fail = () => {
-      check(false);
+    const controlModeOpen = isMode => message => isMode(message) && !hasEnded(message);
 
-      userInput(makeInputSequence([ctrlCInput()]));
-
-      const consumeAllEvents = async (stream) => commit(stream, consumeAllEvents);
-
-      return consumeAllEvents;
+    const controlModalInput = (isMode, readInput, controlInput) => message => {
+      return isMode(message) && !hasEnded(message) && readInput(message) === controlInput
     };
 
-    const controlModeOpen = isMode => continuation => async (stream) => {
-      if (isMode(message(stream)) && !hasEnded(message(stream))) {
-        return commit(stream, continuation);
-      }
-      else {
-        return commit(stream, fail());
-      }
-    };
+    const controlModeClose = isMode => message => isMode(message) && hasEnded(message);
 
-    const controlModalInput = (isMode, readInput, controlInput) => continuation => async (stream) => {
-      if (isMode(message(stream)) && !hasEnded(message(stream)) && readInput(message(stream)) === controlInput) {
-        return commit(stream, continuation);
-      }
-      else {
-        return commit(stream, fail());
-      }
-    };
-
-    const controlModeClose = isMode => continuation => async (stream) => {
-      if (isMode(message(stream)) && hasEnded(message(stream))) {
-        return commit(stream, continuation);
-      }
-      else {
-        return commit(stream, fail());
-      }
-    };
-
-    const controlDefaultInput = controlInput => continuation => async (stream) => {
-      if (isInput(message(stream)) && input(message(stream)) === controlInput) {
-        return commit(stream, continuation);
-      }
-      else {
-        return commit(stream, fail());
-      }
-    };
-
-    const controlSequence = (...controls) => async (stream) => {
-      if (controls.length === 0) {
-        return stream;
-      }
-      else {
-        return controls[0](controlSequence(...controls.slice(1)))(stream);
-      }
-    };
+    const controlDefaultInput = controlInput => message => isInput(message) && input(message) === controlInput;
 
     return async (stream) => loop(terminate)
-                               (await controlSequence(controlModeOpen(isBreakpointCapture),
+                               (await controlSequence(check,
+				                      controlModeOpen(isBreakpointCapture),
 				                      controlModalInput(isBreakpointCapture, breakpointCapture, "1"),
 				                      controlModeClose(isBreakpointCapture),
                                                       controlModeOpen(isQueryCapture),
