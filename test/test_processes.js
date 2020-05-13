@@ -125,7 +125,8 @@ function test_changeMode(finish, check) {
                 makeInputSequence([interactionKeys("queryCapture"), "a", enterInput()], 1000),
                 makeInputSequence([interactionKeys("sourceTreeFocus"), "j", enterInput()], 1000),
                 makeInputSequence([interactionKeys("environmentTreeFocus"), "j", enterInput()], 1000),
-                makeInputSequence([interactionKeys("messagesFocus"), "j", enterInput(), ctrlCInput()], 1000));
+                makeInputSequence([interactionKeys("messagesFocus"), "j", enterInput()], 1000),
+                makeInputSequence(["d", ctrlCInput()], 1000));
 
       return await later(stream);
     };
@@ -167,6 +168,15 @@ function test_changeMode(finish, check) {
       }
     };
 
+    const controlDefaultInput = controlInput => continuation => async (stream) => {
+      if (isInput(message(stream)) && input(message(stream)) === controlInput) {
+        return commit(stream, continuation);
+      }
+      else {
+        return commit(stream, fail());
+      }
+    };
+
     const controlSequence = (...controls) => async (stream) => {
       if (controls.length === 0) {
         return stream;
@@ -191,7 +201,8 @@ function test_changeMode(finish, check) {
 				                      controlModeClose(isEnvironmentTreeFocus),
                                                       controlModeOpen(isMessagesFocus),
 				                      controlModalInput(isMessagesFocus, messagesFocusInput, "j"),
-				                      controlModeClose(isMessagesFocus))
+				                      controlModeClose(isMessagesFocus),
+                                                      controlDefaultInput("d"))
 				 (await changeMode
 	                           (await userInteraction
 			             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
