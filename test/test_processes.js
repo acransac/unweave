@@ -3,7 +3,7 @@ const { selectedEntry, selectedEntryName } = require('filetree');
 const { ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { changeMode, loop, parseEnvironmentTree } = require('../src/processes.js');
-const { breakpointCapture, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, makeEnvironmentTreeFocus, message, readEnvironmentTree, reason } = require('../src/protocol.js');
+const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isSourceTreeFocus, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -121,12 +121,11 @@ function test_errorHandling(finish, check) {
 function test_changeMode(finish, check) {
   const changeModeTest = (send, render, terminate) => {
     const userInteraction = async (stream) => {
-      userInput(makeInputSequence([
-        interactionKeys("breakpointCapture"),
-	"1",
-	enterInput(),
-	ctrlCInput()
-      ], 1000));
+      userInput(makeInputSequence([interactionKeys("breakpointCapture"), "1", enterInput()], 1000),
+                makeInputSequence([interactionKeys("queryCapture"), "a", enterInput()], 1000),
+                makeInputSequence([interactionKeys("sourceTreeFocus"), "j", enterInput()], 1000),
+                makeInputSequence([interactionKeys("environmentTreeFocus"), "j", enterInput()], 1000),
+                makeInputSequence([interactionKeys("messagesFocus"), "j", enterInput(), ctrlCInput()], 1000));
 
       return await later(stream);
     };
@@ -180,7 +179,19 @@ function test_changeMode(finish, check) {
     return async (stream) => loop(terminate)
                                (await controlSequence(controlModeOpen(isBreakpointCapture),
 				                      controlModalInput(isBreakpointCapture, breakpointCapture, "1"),
-				                      controlModeClose(isBreakpointCapture))
+				                      controlModeClose(isBreakpointCapture),
+                                                      controlModeOpen(isQueryCapture),
+				                      controlModalInput(isQueryCapture, query, "a"),
+				                      controlModeClose(isQueryCapture),
+                                                      controlModeOpen(isSourceTreeFocus),
+				                      controlModalInput(isSourceTreeFocus, sourceTreeFocusInput, "j"),
+				                      controlModeClose(isSourceTreeFocus),
+                                                      controlModeOpen(isEnvironmentTreeFocus),
+				                      controlModalInput(isEnvironmentTreeFocus, environmentTreeFocusInput, "j"),
+				                      controlModeClose(isEnvironmentTreeFocus),
+                                                      controlModeOpen(isMessagesFocus),
+				                      controlModalInput(isMessagesFocus, messagesFocusInput, "j"),
+				                      controlModeClose(isMessagesFocus))
 				 (await changeMode
 	                           (await userInteraction
 			             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
