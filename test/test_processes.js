@@ -1,12 +1,12 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
 const { selectedEntry, selectedEntryName } = require('filetree');
-const { ctrlCInput, enterInput } = require('../src/helpers.js');
+const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { changeMode, loop, parseEnvironmentTree } = require('../src/processes.js');
+const { changeMode, loop, parseCaptures, parseEnvironmentTree } = require('../src/processes.js');
 const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isSourceTreeFocus, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
-const { inputIsCapture, makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
+const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function controlSequence(check, ...isExpected) {
   const fail = () => {
@@ -199,10 +199,72 @@ function test_changeMode(finish, check) {
   init(["node", "app.js", "test_target.js"], changeModeTest, finish);
 }
 
+function test_parseCaptures(finish, check) {
+  const parseCapturesTest = (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence([
+        interactionKeys("breakpointCapture"),
+	"1",
+	...repeatKey(backspaceInput(), 2),
+	"1",
+	"2",
+	enterInput(),
+      ], 1000),
+                makeInputSequence([
+        interactionKeys("queryCapture"),
+	"a",
+	...repeatKey(backspaceInput(), 2),
+	"a",
+	"b",
+	enterInput(),
+	"d",
+	ctrlCInput()
+      ], 1000));
+
+      return await later(stream);
+    };
+
+    const controlCurrentCapture = (isCapture, readCapture, controlCapture) => message => {
+      return isCapture(message) && !hasEnded(message) && readCapture(message) === controlCapture;
+    };
+
+    const controlEndedCapture = (isCapture, readCapture, controlCapture) => message => {
+      return isCapture(message) && hasEnded(message) && readCapture(message) === controlCapture;
+    };
+
+    const controlDefaultInput = controlInput => message => isInput(message) && input(message) === controlInput;
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, ""),
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, "1"),
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, ""),
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, ""),
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, "1"),
+                                                      controlCurrentCapture(isBreakpointCapture, breakpointCapture, "12"),
+                                                      controlEndedCapture(isBreakpointCapture, breakpointCapture, "12"),
+                                                      controlCurrentCapture(isQueryCapture, query, ""),
+                                                      controlCurrentCapture(isQueryCapture, query, "a"),
+                                                      controlCurrentCapture(isQueryCapture, query, ""),
+                                                      controlCurrentCapture(isQueryCapture, query, ""),
+                                                      controlCurrentCapture(isQueryCapture, query, "a"),
+                                                      controlCurrentCapture(isQueryCapture, query, "ab"),
+                                                      controlEndedCapture(isQueryCapture, query, "ab"),
+                                                      controlDefaultInput("d"))
+				 (await parseCaptures()
+				   (await changeMode
+	                             (await userInteraction
+			               (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+  };
+
+  init(["node", "app.js", "test_target.js"], parseCapturesTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
   Test.makeTest(test_loop, "Loop With Exit"),
   Test.makeTest(test_errorHandling, "Error Handling"),
-  Test.makeTest(test_changeMode, "Change Mode")
+  Test.makeTest(test_changeMode, "Change Mode"),
+  Test.makeTest(test_parseCaptures, "Parse Captures")
 ], "Test Processes");
