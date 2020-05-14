@@ -1,9 +1,9 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
-const { selectedEntry, selectedEntryName } = require('filetree');
+const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName } = require('filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { changeMode, loop, parseCaptures, parseEnvironmentTree } = require('../src/processes.js');
-const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isSourceTreeFocus, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
+const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, step } = require('../src/processes.js');
+const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isSourceTree, isSourceTreeFocus, isUserScriptParsed, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -260,11 +260,58 @@ function test_parseCaptures(finish, check) {
   init(["node", "app.js", "test_target.js"], parseCapturesTest, finish);
 }
 
+function test_parseSourceTree(finish, check) {
+  const parseSourceTreeTest = (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence([interactionKeys("stepOver")], 1000));
+
+      return await later(stream);
+    };
+
+    const passUserScriptParsedMessages = async (stream) => {
+      if (isUserScriptParsed(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passUserScriptParsedMessages);
+      }
+      else {
+        return passUserScriptParsedMessages(await continuation(now(stream))(forget(await later(stream))));
+      }
+    };
+
+    const controlBaseScriptAndFirstImport = message => {
+      const controlSelection = message => refreshSelectedFileTree(makeSelectionInFileTree(makeFileTree()),
+	                                                          readSourceTree(message));
+
+      return isSourceTree(message)
+               && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree.js`)
+                    (controlSelection(message))
+    };
+
+    const interrupt = async (stream) => {
+      userInput(makeInputSequence([ctrlCInput()]));
+
+      return stream;
+    };
+
+    return async (stream) => loop(terminate)
+	                       (await interrupt
+                                 (await controlSequence(check,
+                                                        controlBaseScriptAndFirstImport)
+				   (await parseSourceTree()
+			             (await passUserScriptParsedMessages
+				       (await step(send)
+	                                 (await userInteraction
+			                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
+  };
+
+  init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
   Test.makeTest(test_loop, "Loop With Exit"),
   Test.makeTest(test_errorHandling, "Error Handling"),
   Test.makeTest(test_changeMode, "Change Mode"),
-  Test.makeTest(test_parseCaptures, "Parse Captures")
+  Test.makeTest(test_parseCaptures, "Parse Captures"),
+  Test.makeTest(test_parseSourceTree, "Parse Source Tree")
 ], "Test Processes");
