@@ -1,5 +1,5 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
-const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName } = require('filetree');
+const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, step } = require('../src/processes.js');
@@ -262,14 +262,14 @@ function test_parseCaptures(finish, check) {
 
 function test_parseSourceTree(finish, check) {
   const parseSourceTreeTest = (send, render, terminate) => {
-    const userInteraction = async (stream) => {
+    const stepOnDebuggerPaused = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
-        userInput(makeInputSequence([interactionKeys("stepOver")], 1000));
+        userInput(makeInputSequence([interactionKeys("stepOver")]));
 
         return await later(stream);
       }
       else {
-        return commit(stream, userInteraction);
+        return commit(stream, stepOnDebuggerPaused);
       }
     };
 
@@ -282,29 +282,45 @@ function test_parseSourceTree(finish, check) {
       }
     };
 
-    const controlBaseScript = message => {
-      const controlSelection = message => refreshSelectedFileTree(makeSelectionInFileTree(makeFileTree()),
-	                                                          readSourceTree(message));
+    const controlSelection = message => refreshSelectedFileTree(makeSelectionInFileTree(makeFileTree()),
+                                                                readSourceTree(message));
 
+    const controlBaseScript = message => {
       return isSourceTree(message)
                && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree.js`)
                     (controlSelection(message))
     };
 
-    const interrupt = async (stream) => {
+    const controlFirstImport = message => {
+      userInput(makeInputSequence([interactionKeys("stepOver")]));
+
+      return isSourceTree(message)
+               && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree_subdir`)
+                    (selectNext(controlSelection(message)))
+               && (selection => selectedEntryName(selectedEntry(selection))
+		                  === `/test_target_source_tree_subdir/test_target_source_tree_imports.js`)
+                    (visitChildBranch(selectNext(controlSelection(message))))
+    };
+
+    const controlSecondImport = message => {
       userInput(makeInputSequence([ctrlCInput()]));
 
-      return stream;
+      return isSourceTree(message)
+               && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree_imports.js`)
+                    (controlSelection(message))
+               && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree_dir`)
+                    (selectNext(controlSelection(message)))
     };
 
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
                                                       controlBaseScript,
-			                              interrupt)
+                                                      controlFirstImport,
+			                              controlSecondImport)
 			         (await parseSourceTree()
 			           (await passUserScriptParsedMessages
 				     (await step(send)
-			               (await userInteraction(stream))))));
+			               (await stepOnDebuggerPaused(stream))))));
   };
 
   init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
