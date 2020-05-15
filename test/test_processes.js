@@ -263,9 +263,14 @@ function test_parseCaptures(finish, check) {
 function test_parseSourceTree(finish, check) {
   const parseSourceTreeTest = (send, render, terminate) => {
     const userInteraction = async (stream) => {
-      userInput(makeInputSequence([interactionKeys("stepOver")], 1000));
+      if (isDebuggerPaused(message(stream))) {
+        userInput(makeInputSequence([interactionKeys("stepOver")], 1000));
 
-      return await later(stream);
+        return await later(stream);
+      }
+      else {
+        return commit(stream, userInteraction);
+      }
     };
 
     const passUserScriptParsedMessages = async (stream) => {
@@ -277,7 +282,7 @@ function test_parseSourceTree(finish, check) {
       }
     };
 
-    const controlBaseScriptAndFirstImport = message => {
+    const controlBaseScript = message => {
       const controlSelection = message => refreshSelectedFileTree(makeSelectionInFileTree(makeFileTree()),
 	                                                          readSourceTree(message));
 
@@ -293,14 +298,13 @@ function test_parseSourceTree(finish, check) {
     };
 
     return async (stream) => loop(terminate)
-	                       (await interrupt
-                                 (await controlSequence(check,
-                                                        controlBaseScriptAndFirstImport)
-				   (await parseSourceTree()
-			             (await passUserScriptParsedMessages
-				       (await step(send)
-	                                 (await userInteraction
-			                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
+                               (await controlSequence(check,
+                                                      controlBaseScript,
+			                              interrupt)
+			         (await parseSourceTree()
+			           (await passUserScriptParsedMessages
+				     (await step(send)
+			               (await userInteraction(stream))))));
   };
 
   init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
