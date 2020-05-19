@@ -2,8 +2,8 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
-const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTree, isSourceTreeFocus, isUserScriptParsed, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, readScriptSource, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
+const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('../src/processes.js');
+const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTree, isSourceTreeFocus, isUserScriptParsed, lineNumber, makeEnvironmentTreeFocus, message, messagesFocusInput, pauseLocation, query, readEnvironmentTree, readScriptSource, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -12,7 +12,7 @@ function controlSequence(check, ...isExpected) {
   const fail = () => {
     check(false);
 
-    userInput(makeInputSequence([ctrlCInput()]));
+    userInput(makeInputSequence([enterInput(), ctrlCInput()], 1000));
 
     const consumeAllEvents = async (stream) => commit(stream, consumeAllEvents);
 
@@ -389,6 +389,50 @@ function test_pullScriptSource(finish, check) {
   init(["node", "app.js", "test_target_pull_script_source.js"], pullScriptSourceTest, finish);
 }
 
+function test_queryInspector(finish, check) {
+  const queryInspectorTest = (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence([
+        interactionKeys("queryCapture"),
+        "D", "e", "b", "u", "g", "g", "e", "r", ".", "s", "t", "e", "p", "O", "v", "e", "r",
+	enterInput()
+      ], 1000));
+
+      return stream;
+    };
+
+    const passDebuggerPausedMessages = async (stream) => {
+      if (isDebuggerPaused(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passDebuggerPausedMessages);
+      }
+      else {
+        return passDebuggerPausedMessages(await continuation(now(stream))(forget(await later(stream))));
+      }
+    };
+
+    const controlInit = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 0;
+
+    const controlStep = message => {
+      userInput(makeInputSequence([ctrlCInput()]));
+
+      return isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 2;
+    };
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+				                      controlInit,
+                                                      controlStep)
+			         (await passDebuggerPausedMessages
+			           (await queryInspector(send)
+			             (await parseCaptures()
+				       (await changeMode
+					 (await userInteraction
+			                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
+  };
+
+  init(["node", "app.js", "test_target_pull_script_source.js"], queryInspectorTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
@@ -397,5 +441,6 @@ module.exports = Test.runInSequence([
   Test.makeTest(test_changeMode, "Change Mode"),
   Test.makeTest(test_parseCaptures, "Parse Captures"),
   Test.makeTest(test_parseSourceTree, "Parse Source Tree"),
-  Test.makeTest(test_pullScriptSource, "Pull Script Source")
+  Test.makeTest(test_pullScriptSource, "Pull Script Source"),
+  Test.makeTest(test_queryInspector, "Query Inspector")
 ], "Test Processes");
