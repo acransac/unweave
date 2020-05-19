@@ -2,8 +2,8 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, step } = require('../src/processes.js');
-const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isSourceTree, isSourceTreeFocus, isUserScriptParsed, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
+const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
+const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTree, isSourceTreeFocus, isUserScriptParsed, makeEnvironmentTreeFocus, message, messagesFocusInput, query, readEnvironmentTree, readScriptSource, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
@@ -39,6 +39,26 @@ function controlSequence(check, ...isExpected) {
 
   return sequence(...isExpected);
 }
+
+function interactOnDebuggerPaused(...inputSequences) {
+  const onDebuggerPaused = async (stream) => {
+    if (isDebuggerPaused(message(stream))) {
+      if (inputSequences.length === 0) {
+        return stream;
+      }
+      else {
+        userInput(inputSequences[0]);
+
+        return commit(stream, interactOnDebuggerPaused(...inputSequences.slice(1)));
+      }
+    }
+    else {
+      return commit(stream, onDebuggerPaused);
+    }
+  };
+
+  return onDebuggerPaused;
+};
 
 function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
   return check => {
@@ -326,6 +346,49 @@ function test_parseSourceTree(finish, check) {
   init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
 }
 
+function test_pullScriptSource(finish, check) {
+  const pullScriptSourceTest = (send, render, terminate) => {
+    const userInteraction = interactOnDebuggerPaused(makeInputSequence([interactionKeys("stepOver")]),
+                                                     makeInputSequence([interactionKeys("stepInto")]),
+                                                     makeInputSequence([interactionKeys("sourceTreeFocus"), enterInput()],
+							               1000));
+
+    const passScriptSourceMessages = async (stream) => {
+      if (isScriptSource(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passScriptSourceMessages);
+      }
+      else {
+        return passScriptSourceMessages(await continuation(now(stream))(forget(await later(stream))));
+      }
+    };
+
+    const controlBaseScript = message => isScriptSource(message)
+		                           && readScriptSource(message).startsWith("const fct = require(");
+
+    const controlImport = message => isScriptSource(message) && readScriptSource(message).startsWith("function fct() {");
+
+    const controlSelectedBaseScript = message => {
+      userInput(makeInputSequence([ctrlCInput()]));
+
+      return isScriptSource(message) && readScriptSource(message).startsWith("const fct = require(");
+    };
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+                                                      controlBaseScript,
+			                              controlImport,
+			                              controlSelectedBaseScript)
+			         (await passScriptSourceMessages
+			           (await pullScriptSource(send)
+			             (await parseSourceTree()
+				       (await step(send)
+				         (await changeMode
+			                   (await userInteraction(stream))))))));
+  };
+
+  init(["node", "app.js", "test_target_pull_script_source.js"], pullScriptSourceTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
@@ -333,5 +396,6 @@ module.exports = Test.runInSequence([
   Test.makeTest(test_errorHandling, "Error Handling"),
   Test.makeTest(test_changeMode, "Change Mode"),
   Test.makeTest(test_parseCaptures, "Parse Captures"),
-  Test.makeTest(test_parseSourceTree, "Parse Source Tree")
+  Test.makeTest(test_parseSourceTree, "Parse Source Tree"),
+  Test.makeTest(test_pullScriptSource, "Pull Script Source")
 ], "Test Processes");
