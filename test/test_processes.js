@@ -433,6 +433,45 @@ function test_queryInspector(finish, check) {
   init(["node", "app.js", "test_target_pull_script_source.js"], queryInspectorTest, finish);
 }
 
+function test_addBreakpoint(finish, check) {
+  const addBreakpointTest = (send, render, terminate) => {
+    const userInteraction = interactOnDebuggerPaused(
+      makeInputSequence([interactionKeys("breakpointCapture"), "7", enterInput(), interactionKeys("stepOver")], 1000),
+      makeInputSequence([interactionKeys("continue")]),
+      makeInputSequence([ctrlCInput()]));
+
+    const passDebuggerPausedMessages = async (stream) => {
+      if (isDebuggerPaused(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passDebuggerPausedMessages);
+      }
+      else {
+        return passDebuggerPausedMessages(await continuation(now(stream))(forget(await later(stream))));
+      }
+    };
+
+    const controlInit = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 0;
+
+    const controlStepOver = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 2;
+
+    const controlContinue = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 8;
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+				                      controlInit,
+			                              controlStepOver,
+				                      controlContinue)
+			         (await passDebuggerPausedMessages
+			           (await step(send)
+				     (await addBreakpoint(send)
+			               (await parseCaptures()
+				         (await changeMode
+					   (await userInteraction
+			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+  };
+
+  init(["node", "app.js", "test_target_script_source.js"], addBreakpointTest, finish);
+}
+
 function test_step(finish, check) {
   const stepTest = (send, render, terminate) => {
     const userInteraction = interactOnDebuggerPaused(
@@ -490,5 +529,6 @@ module.exports = Test.runInSequence([
   Test.makeTest(test_parseSourceTree, "Parse Source Tree"),
   Test.makeTest(test_pullScriptSource, "Pull Script Source"),
   Test.makeTest(test_queryInspector, "Query Inspector"),
+  Test.makeTest(test_addBreakpoint, "Add Breakpoint"),
   Test.makeTest(test_step, "Step")
 ], "Test Processes");
