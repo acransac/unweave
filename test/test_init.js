@@ -29,7 +29,7 @@ function test_init(finish, check) {
     };
   };
 
-  init(["node", "app.js", "test_target.js"], testSession, finish);
+  init(["node", "app.js", "targets/test_target.js"], testSession, finish);
 }
 
 module.exports = Test.run([

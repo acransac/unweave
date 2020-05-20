@@ -242,7 +242,7 @@ function test_resolveDeferredEntry(finish, check) {
     };
   };
 
-  init(["node", "app.js", "test_target.js"], testSession, finish);
+  init(["node", "app.js", "targets/test_target.js"], testSession, finish);
 }
 
 function test_explorationSkipsDeferredEntries(finish, check) {

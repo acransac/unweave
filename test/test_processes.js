@@ -109,13 +109,13 @@ function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescrip
 }
 
 function test_parseEnvironmentTreeWithObject(finish, check) {
-  init(["node", "app.js", "test_target.js"],
+  init(["node", "app.js", "targets/test_target.js"],
        checkEnvironmentTreeFirstEntry("Object test", "String a: \"abc\"")(check),
        finish);
 }
 
 function test_parseEnvironmentTreeWithArray(finish, check) {
-  init(["node", "app.js", "test_target_array.js"],
+  init(["node", "app.js", "targets/test_target_array.js"],
        checkEnvironmentTreeFirstEntry("Array test", "String 0: \"abc\"")(check),
        finish);
 }
@@ -133,7 +133,7 @@ function test_loop(finish, check) {
     return async (stream) => loop(terminate)(await sendExitOnDebuggerPaused(stream));
   }
 
-  init(["node", "app.js", "test_target.js"], loopThenExitOnDebuggerPaused, finish);
+  init(["node", "app.js", "targets/test_target.js"], loopThenExitOnDebuggerPaused, finish);
 }
 
 function test_errorHandling(finish, check) {
@@ -167,7 +167,7 @@ function test_errorHandling(finish, check) {
     return async (stream) => loop(terminate)(await failOnInputE(await skipToDebuggerPausedAfterStepping(send, 0)(stream)));
   }
 
-  init(["node", "app.js", "test_target.js"], failOnInputEThenExit, finish);
+  init(["node", "app.js", "targets/test_target.js"], failOnInputEThenExit, finish);
 }
 
 function test_changeMode(finish, check) {
@@ -216,7 +216,7 @@ function test_changeMode(finish, check) {
 			             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
   };
 
-  init(["node", "app.js", "test_target.js"], changeModeTest, finish);
+  init(["node", "app.js", "targets/test_target.js"], changeModeTest, finish);
 }
 
 function test_parseCaptures(finish, check) {
@@ -277,7 +277,7 @@ function test_parseCaptures(finish, check) {
 			               (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
   };
 
-  init(["node", "app.js", "test_target.js"], parseCapturesTest, finish);
+  init(["node", "app.js", "targets/test_target.js"], parseCapturesTest, finish);
 }
 
 function test_parseSourceTree(finish, check) {
@@ -343,7 +343,7 @@ function test_parseSourceTree(finish, check) {
 			               (await stepOnDebuggerPaused(stream))))));
   };
 
-  init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
+  init(["node", "app.js", "targets/test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
 }
 
 function test_pullScriptSource(finish, check) {
@@ -386,7 +386,7 @@ function test_pullScriptSource(finish, check) {
 			                   (await userInteraction(stream))))))));
   };
 
-  init(["node", "app.js", "test_target_pull_script_source.js"], pullScriptSourceTest, finish);
+  init(["node", "app.js", "targets/test_target_pull_script_source.js"], pullScriptSourceTest, finish);
 }
 
 function test_queryInspector(finish, check) {
@@ -430,7 +430,7 @@ function test_queryInspector(finish, check) {
 			                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
   };
 
-  init(["node", "app.js", "test_target_pull_script_source.js"], queryInspectorTest, finish);
+  init(["node", "app.js", "targets/test_target_pull_script_source.js"], queryInspectorTest, finish);
 }
 
 function test_addBreakpoint(finish, check) {
@@ -469,7 +469,7 @@ function test_addBreakpoint(finish, check) {
 			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
   };
 
-  init(["node", "app.js", "test_target_script_source.js"], addBreakpointTest, finish);
+  init(["node", "app.js", "targets/test_target_script_source.js"], addBreakpointTest, finish);
 }
 
 function test_step(finish, check) {
@@ -516,7 +516,7 @@ function test_step(finish, check) {
 			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
   };
 
-  init(["node", "app.js", "test_target_script_source.js"], stepTest, finish);
+  init(["node", "app.js", "targets/test_target_script_source.js"], stepTest, finish);
 }
 
 module.exports = Test.runInSequence([

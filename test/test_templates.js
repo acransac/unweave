@@ -42,6 +42,6 @@ function test_developerDisplay(send, render, terminate) {
 
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_developerDisplay, "Developer Display", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   })
 ], "Test Templates");

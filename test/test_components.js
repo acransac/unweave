@@ -304,35 +304,38 @@ function test_messages(send, render, terminate) {
 }
 module.exports = TerminalTest.reviewDisplays([
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Array", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target_array.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target_array.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_scriptSource, "Script Source", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target_script_source.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target_script_source.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_sourceTree, "Source Tree", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target_source_tree_dir/test_target_source_tree.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target_source_tree_dir/test_target_source_tree.js"],
+	        test,
+	        finish,
+	        displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_instructions, "Instructions", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture(), "Breakpoint Capture", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_queryCapture(), "Query Capture", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_commandLine, "Command Line", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_topRightColumnDisplay,
                                            "Top Right Column Display",
                                            (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_messages, "Messages", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "test_target.js"], test, finish, displayTarget);
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
