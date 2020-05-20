@@ -2,7 +2,7 @@ const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvi
 const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
-const { changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('../src/processes.js');
+const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('../src/processes.js');
 const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTree, isSourceTreeFocus, isUserScriptParsed, lineNumber, makeEnvironmentTreeFocus, message, messagesFocusInput, pauseLocation, query, readEnvironmentTree, readScriptSource, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
 const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
 const Test = require('tester');
@@ -433,6 +433,53 @@ function test_queryInspector(finish, check) {
   init(["node", "app.js", "test_target_pull_script_source.js"], queryInspectorTest, finish);
 }
 
+function test_step(finish, check) {
+  const stepTest = (send, render, terminate) => {
+    const userInteraction = interactOnDebuggerPaused(
+      makeInputSequence([interactionKeys("breakpointCapture"), "7", enterInput(), interactionKeys("stepOver")], 1000),
+      makeInputSequence([interactionKeys("stepInto")]),
+      makeInputSequence([interactionKeys("stepOut")]),
+      makeInputSequence([interactionKeys("continue")]),
+      makeInputSequence([ctrlCInput()]));
+
+    const passDebuggerPausedMessages = async (stream) => {
+      if (isDebuggerPaused(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passDebuggerPausedMessages);
+      }
+      else {
+        return passDebuggerPausedMessages(await continuation(now(stream))(forget(await later(stream))));
+      }
+    };
+
+    const controlInit = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 0;
+
+    const controlStepOver = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 2;
+
+    const controlStepInto = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 1;
+
+    const controlStepOut = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 4;
+
+    const controlContinue = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 8;
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+				                      controlInit,
+			                              controlStepOver,
+			                              controlStepInto,
+			                              controlStepOut,
+				                      controlContinue)
+			         (await passDebuggerPausedMessages
+			           (await step(send)
+				     (await addBreakpoint(send)
+			               (await parseCaptures()
+				         (await changeMode
+					   (await userInteraction
+			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+  };
+
+  init(["node", "app.js", "test_target_script_source.js"], stepTest, finish);
+}
+
 module.exports = Test.runInSequence([
   Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
@@ -442,5 +489,6 @@ module.exports = Test.runInSequence([
   Test.makeTest(test_parseCaptures, "Parse Captures"),
   Test.makeTest(test_parseSourceTree, "Parse Source Tree"),
   Test.makeTest(test_pullScriptSource, "Pull Script Source"),
-  Test.makeTest(test_queryInspector, "Query Inspector")
+  Test.makeTest(test_queryInspector, "Query Inspector"),
+  Test.makeTest(test_step, "Step")
 ], "Test Processes");
