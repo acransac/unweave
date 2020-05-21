@@ -4,7 +4,10 @@
   "description": "DevTools Protocol Client",
   "main": "debug.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "(cd test && node test_all.js)"
+  },
+  "bin": {
+    "unweave": "src/app.js"
   },
   "author": "Adrien Cransac",
   "license": "ISC",
