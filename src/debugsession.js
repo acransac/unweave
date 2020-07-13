@@ -4,6 +4,13 @@ const { breakpointCapture, columnNumber, interactionKeys, isBreakpointCapture, i
 const { developerDisplay } = require('./templates.js');
 const { compose, show } = require('terminal');
 
+/*
+ * Get a streamer process that organizes an interactive Node.js debugging session backed by Google's V8 Inspector
+ * @param {function} send - A callback that sends requests over websocket to Inspector
+ * @param {function} render - Terminal's render callback
+ * @param {function} terminate - Terminal's tear down callback
+ * @return {Process}
+ */
 function debugSession(send, render, terminate) {
   return async (stream) => {
     const debugLogger = message => columnNumber(pauseLocation(message));
