@@ -1,73 +1,13 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('filetree');
-const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, scrollableContent, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
-const { breakpointLine, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptParsed, isScriptSource, isSourceTree, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, parsedScriptHandle, parsedScriptUrl, pauseLocation, readEnvironmentTree, readScriptSource, reason, scriptHandle } = require('./protocol.js');
+const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
+const { breakpointLine, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, pauseLocation, readEnvironmentTree, readScriptSource, reason } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('terminal');
 
-function scriptSource() {
-  return (displayChange, scriptId) => predecessor => stream => {
-    const label = predecessor ? tag(predecessor) : styleText("script source", "bold");
-
-    const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Loading script source");
-
-    const focusableScriptSource = focusableByDefault(message => {
-      return (isBreakpointCapture(message)
-	       || isQueryCapture(message)
-	       || isMessagesFocus(message)
-	       || isSourceTreeFocus(message)
-	       || isEnvironmentTreeFocus(message));
-    });
-
-    const onSelectionChange = (displayChange, scriptId) => {
-      if (isScriptSource(message(stream))) {
-        return f => f(displayChange, scriptId)
-                      (makePackagedContent(label, makeDisplayedContent(readScriptSource(message(stream)),
-			                                               topLine(displayedContent))));
-      }
-      else {
-        return f => f(displayChange, scriptId)
-	              (makePackagedContent(focusableScriptSource(label, stream),
-			                   scrollable(isInput, input)(displayedContent, stream)));
-      }
-    };
-
-    const onDisplayChange = (displayChange, newScriptId) => {
-      if (isDebuggerPaused(message(stream))) {
-        return f => f(displayChange, newScriptId)
-		      (makePackagedContent(label,
-			                   makeDisplayedContent(content(displayedContent),
-				                                Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0))));
-      }
-      else {
-        return f => f(displayChange, newScriptId)
-	              (makePackagedContent(focusableScriptSource(label, stream),
-			                   makeDisplayedContent(content(displayedContent), 0)));
-      }
-    };
-
-    return (displayChange ? displayChange : displayedScriptSource())(onSelectionChange, onDisplayChange)(stream);
-  };
-}
-
-function runLocation() {
-  return noParameters => predecessor => stream => {
-    if (isDebuggerPaused(message(stream))) {
-      return f => f(noParameters)(pauseLocation(message(stream)));
-    }
-    else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(makeLocation());
-    }
-  };
-}
-
-function displayedScript() {
-  return displayChange => predecessor => stream => {
-    const updateDisplayedScript = (displayChange, scriptId) => f => f(displayChange)(scriptId);
-
-    return (displayChange ? displayChange : displayedScriptSource())(updateDisplayedScript, updateDisplayedScript)(stream);
-  };
-}
-
+/*
+ * Get the list of lines from all the loaded scripts where a breakpoint is set
+ * @return {Component} - The component's output is an array of breakpoint locations
+ */
 function breakpoints() {
   return (displayChange, scriptId) => predecessor => stream => {
     const checkDisplayChange = displayChange ? displayChange : displayedScriptSource();
@@ -85,6 +25,47 @@ function breakpoints() {
   };
 }
 
+/*
+ * Change the active tab where the captures or mode instructions are displayed
+ * @return {Component} - The component's output is a labelled atom where the active tab's content is injected
+ */
+function commandLine() {
+  return noParameters => predecessor => stream => {
+    const tabbedDisplays = displayPosition => (...contents) => {
+      return label(atom(unpackedContent(contents[displayPosition])), tabs(displayPosition, ...contents));
+    };
+
+    if (isQueryCapture(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(tabbedDisplays(1));
+    }
+    else if (isBreakpointCapture(message(stream)) && !hasEnded(message(stream))) {
+      return f => f(noParameters)(tabbedDisplays(2));
+    }
+    else if ((isQueryCapture(message(stream)) || isBreakpointCapture(message(stream))) && hasEnded(message(stream))) {
+      return f => f(noParameters)(tabbedDisplays(0));
+    }
+    else {
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(tabbedDisplays(0));
+    }
+  };
+}
+
+/*
+ * Track the displayed script's id
+ * @return {Component} - The component's output is the id of the script whose source is currently displayed
+ */
+function displayedScript() {
+  return displayChange => predecessor => stream => {
+    const updateDisplayedScript = (displayChange, scriptId) => f => f(displayChange)(scriptId);
+
+    return (displayChange ? displayChange : displayedScriptSource())(updateDisplayedScript, updateDisplayedScript)(stream);
+  };
+}
+
+/*
+ * Get the selection in the updated environment tree
+ * @return {Component} - The component's output is the packaged current selection in the up-to-date environment tree
+ */
 function environmentTree() {
   return noParameters => predecessor => stream => {
     const label = predecessor ? tag(predecessor) : highlightOneCharacter("environment",
@@ -111,6 +92,29 @@ function environmentTree() {
   };
 }
 
+/*
+ * Update the label of a capture log
+ * @param {Component} logger - A component that logs the capture (the result of calling {@link logCapture})
+ * @param {function} isFocus - A function checking if the capture is active
+ * @param {string} label - The label of the capture log
+ * @param {string} alwaysHighlightedCharacter - A character in the label that is always highlighted and that is the key to activate the capture
+ * @return {Component} - The component's output is the packaged result of the capture log with the updated label
+ */
+function focusableCaptureLog(logger, isFocus, label, alwaysHighlightedCharacter) {
+  return noParameters => predecessor => stream => {
+    const title = predecessor ? tag(predecessor) : highlightOneCharacter(label, alwaysHighlightedCharacter);
+
+    const log = predecessor ? unpackedContent(predecessor) : undefined;
+
+    return f => f(noParameters)(makePackagedContent(focusable(isFocus, alwaysHighlightedCharacter)(title, stream),
+			                            logger()(log)(stream)(f => g => g)));
+  };
+}
+
+/*
+ * Get the current mode's instructions
+ * @return {Component} - The component's output are the packaged instructions for the current mode
+ */
 function instructions() {
   return noParameters => predecessor => stream => {
     const defaultInstructions = `${interactionKeys("stepOver")}: Step over  `
@@ -159,6 +163,13 @@ function instructions() {
   };
 }
 
+/*
+ * Log the content of a capture
+ * @param {function} isCapture - A function checking if a message carries a capture's input
+ * @param {function} readCapture - A function retrieving the capture's input
+ * @param {string} logPrefix - The text that is always visible in the log before the capture
+ * @return {Component} - The component's output is the capture's content with the specified prefix
+ */
 function logCapture(isCapture, readCapture, logPrefix) {
   return noParameters => predecessor => stream => {
     if (isCapture(message(stream)) && !hasEnded(message(stream))) {
@@ -173,38 +184,12 @@ function logCapture(isCapture, readCapture, logPrefix) {
   };
 }
 
-function focusableCaptureLog(logger, isFocus, label, alwaysHighlightedCharacter) {
-  return noParameters => predecessor => stream => {
-    const title = predecessor ? tag(predecessor) : highlightOneCharacter(label, alwaysHighlightedCharacter);
-
-    const log = predecessor ? unpackedContent(predecessor) : undefined;
-
-    return f => f(noParameters)(makePackagedContent(focusable(isFocus, alwaysHighlightedCharacter)(title, stream),
-			                            logger()(log)(stream)(f => g => g)));
-  };
-}
-
-function commandLine() {
-  return noParameters => predecessor => stream => {
-    const tabbedDisplays = displayPosition => (...contents) => {
-      return label(atom(unpackedContent(contents[displayPosition])), tabs(displayPosition, ...contents));
-    };
-
-    if (isQueryCapture(message(stream)) && !hasEnded(message(stream))) {
-      return f => f(noParameters)(tabbedDisplays(1));
-    }
-    else if (isBreakpointCapture(message(stream)) && !hasEnded(message(stream))) {
-      return f => f(noParameters)(tabbedDisplays(2));
-    }
-    else if ((isQueryCapture(message(stream)) || isBreakpointCapture(message(stream))) && hasEnded(message(stream))) {
-      return f => f(noParameters)(tabbedDisplays(0));
-    }
-    else {
-      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(tabbedDisplays(0));
-    }
-  };
-}
-
+/*
+ * Log unweave errors and user defined information
+ * @param {function} inspectedMessage - A function that checks if a message is relevant for logging
+ * @param {function} logger - A function that extracts and formats relevant information from the inspected messages
+ * @return {Component} - The component's output is the packaged log of errors and user defined information
+ */
 function messages(inspectedMessage, logger) {
   return noParameters => predecessor => stream => {
     const label = predecessor ? tag(predecessor) : highlightOneCharacter("messages", interactionKeys("messagesFocus"));
@@ -229,6 +214,74 @@ function messages(inspectedMessage, logger) {
   };
 }
 
+/*
+ * Get the current location of the run
+ * @return {Component} - The component's output is the location of the run when paused
+ */
+function runLocation() {
+  return noParameters => predecessor => stream => {
+    if (isDebuggerPaused(message(stream))) {
+      return f => f(noParameters)(pauseLocation(message(stream)));
+    }
+    else {
+      return predecessor ? f => f(noParameters)(predecessor) : f => f(noParameters)(makeLocation());
+    }
+  };
+}
+
+/*
+ * Get the displayed script's source
+ * @return {Component} - The component's output is the packaged source
+ */
+function scriptSource() {
+  return (displayChange, scriptId) => predecessor => stream => {
+    const label = predecessor ? tag(predecessor) : styleText("script source", "bold");
+
+    const displayedContent = predecessor ? unpackedContent(predecessor) : makeDisplayedContent("Loading script source");
+
+    const focusableScriptSource = focusableByDefault(message => {
+      return (isBreakpointCapture(message)
+	       || isQueryCapture(message)
+	       || isMessagesFocus(message)
+	       || isSourceTreeFocus(message)
+	       || isEnvironmentTreeFocus(message));
+    });
+
+    const onSelectionChange = (displayChange, scriptId) => {
+      if (isScriptSource(message(stream))) {
+        return f => f(displayChange, scriptId)
+                      (makePackagedContent(label, makeDisplayedContent(readScriptSource(message(stream)),
+			                                               topLine(displayedContent))));
+      }
+      else {
+        return f => f(displayChange, scriptId)
+	              (makePackagedContent(focusableScriptSource(label, stream),
+			                   scrollable(isInput, input)(displayedContent, stream)));
+      }
+    };
+
+    const onDisplayChange = (displayChange, newScriptId) => {
+      if (isDebuggerPaused(message(stream))) {
+        return f => f(displayChange, newScriptId)
+		      (makePackagedContent(label,
+			                   makeDisplayedContent(content(displayedContent),
+				                                Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0))));
+      }
+      else {
+        return f => f(displayChange, newScriptId)
+	              (makePackagedContent(focusableScriptSource(label, stream),
+			                   makeDisplayedContent(content(displayedContent), 0)));
+      }
+    };
+
+    return (displayChange ? displayChange : displayedScriptSource())(onSelectionChange, onDisplayChange)(stream);
+  };
+}
+
+/*
+ * Get the selection in the updated source tree
+ * @return {Component} - The component's output is the packaged current selection in the up-to-date source tree
+ */
 function sourceTree() {
   return noParameters => predecessor => stream => {
     const label = predecessor ? tag(predecessor) : highlightOneCharacter("workspace", interactionKeys("sourceTreeFocus"));
@@ -243,6 +296,10 @@ function sourceTree() {
   };
 }
 
+/*
+ * Change the active tab where the environment and source trees are displayed
+ * @return {Component} - The component's output is a labelled atom where the active tab's content is injected
+ */
 function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
     const environmentTreeDisplay = (environmentTree, sourceTree) => {
