@@ -1,7 +1,13 @@
+/*
+ * Get the javascript value that is spelled by a string
+ * @param {string} jsValueString - The value as a string. This is not JSON but the value like it would be written in a script source
+ * @return {*}
+ */
 function parseJsValue(jsValueString) {
   return syntaxJsValue(lexJsValue(jsValueString));
 }
 
+// # Lex
 function lexJsValue(jsValueString) {
   const lexJsValueImpl = (tokens, jsValueString) => {
     if (jsValueString === "") {
@@ -50,28 +56,29 @@ function stringAtom(jsValueString) {
   return stringAtomImpl("\"", jsValueString.slice(1));
 }
 
+// # Syntax
 function syntaxJsValue(tokens) {
   return syntaxJsValueImpl(null, tokens)[0];
 }
 
-function syntaxJsValueImpl(jsValue, tokens) {
-  if (tokens.length === 0) {
-    return [jsValue, tokens];
-  }
-  
-  switch (tokens[0]) {
-    case 'ObjBegin': return syntaxObject({}, tokens.slice(1));
-    case 'ArrayBegin': return syntaxArray([], tokens.slice(1));
-    default: return syntaxAtomicValue(tokens[0], tokens);
-  }
+function getAtomicValue(atom) {
+  return atom.match(/(^Atom: )|[^\1]+/g)[1];
 }
 
 function isAtom(atom) {
   return atom.search(/^Atom: /g) === 0;
 }
 
-function getAtomicValue(atom) {
-  return atom.match(/(^Atom: )|[^\1]+/g)[1];
+function syntaxArray(array, tokens) {
+  if (tokens.length === 0) {
+    throw "invalid syntax";
+  }
+
+  switch (tokens[0]) {
+    case 'ArrayEnd': return [array, tokens.slice(1)];
+    case 'IterableElementSeparator': return syntaxArray(array, tokens.slice(1));
+    default: return syntaxArray(...((element, rest) => [[...array, element], rest])(...syntaxJsValueImpl(tokens[0], tokens)));
+  }
 }
 
 function syntaxAtomicValue(atom, tokens) {
@@ -91,6 +98,18 @@ function syntaxAtomicValue(atom, tokens) {
     case "null": return [null, tokens.slice(1)];
     case "undefined": return [undefined, tokens.slice(1)];
     default: return [matchStringOrNumber(value), tokens.slice(1)];
+  }
+}
+
+function syntaxJsValueImpl(jsValue, tokens) {
+  if (tokens.length === 0) {
+    return [jsValue, tokens];
+  }
+  
+  switch (tokens[0]) {
+    case 'ObjBegin': return syntaxObject({}, tokens.slice(1));
+    case 'ArrayBegin': return syntaxArray([], tokens.slice(1));
+    default: return syntaxAtomicValue(tokens[0], tokens);
   }
 }
 
@@ -116,18 +135,6 @@ function syntaxObjectKeyValuePair(object, tokens) {
   object[getAtomicValue(tokens[0])] = objectProperty;
 
   return [object, rest];
-}
-
-function syntaxArray(array, tokens) {
-  if (tokens.length === 0) {
-    throw "invalid syntax";
-  }
-
-  switch (tokens[0]) {
-    case 'ArrayEnd': return [array, tokens.slice(1)];
-    case 'IterableElementSeparator': return syntaxArray(array, tokens.slice(1));
-    default: return syntaxArray(...((element, rest) => [[...array, element], rest])(...syntaxJsValueImpl(tokens[0], tokens)));
-  }
 }
 
 module.exports = parseJsValue;
