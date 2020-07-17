@@ -5,26 +5,53 @@ const { makeEmitter, mergeEvents, later, Source } = require('streamer');
 const { renderer } = require('terminal');
 const WebSocket = require('ws');
 
-// Inspector uri type --
-function makeInspectorUri(address, port, sessionHash) {
-  return [address ? address : "127.0.0.1", port ? port : "9229", sessionHash];
-}
+// # Debug Session Initializer
 
-function address(inspectorUri) {
-  return inspectorUri[0];
-}
-
-function port(inspectorUri) {
-  return inspectorUri[1];
-}
-
-function sessionHash(inspectorUri) {
-  return inspectorUri[2];
-}
-
-// Debug session initializer --
+/*
+ * Initialize a debug session communicating with Inspector
+ * @param {string[]} cliArguments - The process' command line arguments to forward
+ * @param {function} session - A function receiving the callback to send requests to Inspector, the render and terminate functions provided by Terminal and generating a Streamer process that organizes the debug session interactivity and display
+ * @param {function} onTerminate - A callback called after the session is finished
+ * @param {function} [displayTarget: process.stdout] - The writable Node.js stream to write the display to
+ * @return {}
+ */
 async function init(cliArguments, session, onTerminate, displayTarget)  {
   connectToInspector(await parseCliArguments(cliArguments), session, onTerminate, displayTarget);
+}
+
+function connectToInspector(inspectorUri, session, onTerminate, displayTarget) {
+  const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
+
+  webSocket.onopen = () => {
+    console.log("Connection opened");
+ 
+    startDebugSession(webSocket, session, displayTarget);
+  };
+
+  webSocket.onerror = error => console.log(error);
+
+  webSocket.onclose = () => {
+    console.log("Connection closed");
+  
+    onTerminate();
+  };
+}
+
+function enableDebugger(send) {
+  return stream => {
+    sendEnableDebugger(send);
+
+    const debuggerEnabled = async (stream) => {
+      if (isDebuggerEnabled(message(stream))) {
+        return stream;
+      }
+      else {
+        return debuggerEnabled(await later(stream));
+      }
+    };
+
+    return debuggerEnabled(stream);
+  };
 }
 
 async function parseCliArguments(cliArguments) {
@@ -70,56 +97,21 @@ async function parseCliArguments(cliArguments) {
   }
 }
 
-function startInspectedProcess(scriptPath) {
-  return new Promise(resolve => {
-    const inspectedProcess = fork(scriptPath, options = {stdio: ["ignore", "ignore", "pipe", "ipc"],
-	                                                 execArgv: ["--inspect-brk"]});
+function runProgram(send) {
+  return async (stream) => {
+    sendStartRun(send);
 
-    const stderrLines = Readline.createInterface({input: inspectedProcess.stderr});
-
-    stderrLines.on('line', line => {
-      const uriLinePrefix = "Debugger listening on ws://";
-
-      if (line.startsWith(uriLinePrefix)) {
-        resolve((uriString => makeInspectorUri(uriString.match(/^.+:/g)[0].slice(0, -1),
-		                               uriString.match(/:.+\//g)[0].slice(1, -1),
-					       uriString.match(/\/.+/g)[0].slice(1)))
-		  (line.slice(uriLinePrefix.length)));
-      }
-    });
-  });
-}
-
-function connectToInspector(inspectorUri, session, onTerminate, displayTarget) {
-  const webSocket = new WebSocket(`ws://${address(inspectorUri)}:${port(inspectorUri)}/${sessionHash(inspectorUri)}`);
-
-  webSocket.onopen = () => {
-    console.log("Connection opened");
- 
-    startDebugSession(webSocket, session, displayTarget);
-  };
-
-  webSocket.onerror = error => console.log(error);
-
-  webSocket.onclose = () => {
-    console.log("Connection closed");
-  
-    onTerminate();
+    return stream;
   };
 }
 
-function inputCapture() {
-  Readline.emitKeypressEvents(process.stdin);
-
-  process.stdin.setRawMode(true);
-
-  process.stdin.on('keypress', key => process.stdin.emit('input', makeInput(key)));
-
-  return process.stdin;
-}
-
-function endInputCapture() {
-  return process.stdin.pause();
+async function runtimeEnabled(stream) {
+  if (isExecutionContextCreated(message(stream))) {
+    return stream;
+  }
+  else {
+    return runtimeEnabled(await later(stream));
+  }
 }
 
 function startDebugSession(webSocket, session, displayTarget) {
@@ -145,38 +137,56 @@ function startDebugSession(webSocket, session, displayTarget) {
   sendEnableRuntime(send);
 }
 
-async function runtimeEnabled(stream) {
-  if (isExecutionContextCreated(message(stream))) {
-    return stream;
-  }
-  else {
-    return runtimeEnabled(await later(stream));
-  }
+function startInspectedProcess(scriptPath) {
+  return new Promise(resolve => {
+    const inspectedProcess = fork(scriptPath, options = {stdio: ["ignore", "ignore", "pipe", "ipc"],
+	                                                 execArgv: ["--inspect-brk"]});
+
+    const stderrLines = Readline.createInterface({input: inspectedProcess.stderr});
+
+    stderrLines.on('line', line => {
+      const uriLinePrefix = "Debugger listening on ws://";
+
+      if (line.startsWith(uriLinePrefix)) {
+        resolve((uriString => makeInspectorUri(uriString.match(/^.+:/g)[0].slice(0, -1),
+		                               uriString.match(/:.+\//g)[0].slice(1, -1),
+					       uriString.match(/\/.+/g)[0].slice(1)))
+		  (line.slice(uriLinePrefix.length)));
+      }
+    });
+  });
 }
 
-function enableDebugger(send) {
-  return stream => {
-    sendEnableDebugger(send);
+// # Input Capture
+function inputCapture() {
+  Readline.emitKeypressEvents(process.stdin);
 
-    const debuggerEnabled = async (stream) => {
-      if (isDebuggerEnabled(message(stream))) {
-        return stream;
-      }
-      else {
-        return debuggerEnabled(await later(stream));
-      }
-    };
+  process.stdin.setRawMode(true);
 
-    return debuggerEnabled(stream);
-  };
+  process.stdin.on('keypress', key => process.stdin.emit('input', makeInput(key)));
+
+  return process.stdin;
 }
 
-function runProgram(send) {
-  return async (stream) => {
-    sendStartRun(send);
+function endInputCapture() {
+  return process.stdin.pause();
+}
 
-    return stream;
-  };
+// # Inspector URI
+function makeInspectorUri(address, port, sessionHash) {
+  return [address ? address : "127.0.0.1", port ? port : "9229", sessionHash];
+}
+
+function address(inspectorUri) {
+  return inspectorUri[0];
+}
+
+function port(inspectorUri) {
+  return inspectorUri[1];
+}
+
+function sessionHash(inspectorUri) {
+  return inspectorUri[2];
 }
 
 module.exports = { init };
