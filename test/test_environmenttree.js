@@ -2,11 +2,23 @@ const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelect
 const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('filetree');
 const { init } = require('../src/init.js');
 const { parseEnvironmentTree } = require('../src/processes.js');
-const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, name, readEnvironment, sendStepOver } = require('../src/protocol.js');
+const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('../src/protocol.js');
 const { floatOn, later, now, value } = require('streamer');
 const Test = require('tester');
 const { skipToDebuggerPausedAfterStepping } = require('../src/testutils.js');
 const util = require('util');
+
+// # Helpers
+function makeEnvironment(pathsAndValues, send) {
+  return pathsAndValues.reduce(([environmentTree, selection], [path, values]) => {
+    return (environmentTree => {
+      return [
+        environmentTree,
+        refreshSelectedEnvironmentTree(selection, environmentTree)
+      ];
+    })(insertInEnvironmentTree(environmentTree, path, values, send ? send : () => {}));
+  }, [makeEnvironmentTree(), makeSelectionInEnvironmentTree(makeEnvironmentTree())]);
+}
 
 function makeFakeEnvironmentEntriesFromInspector(values) {
   const entryValueFromInspector = (value, id) => {
@@ -110,17 +122,7 @@ function makeFakeEnvironmentEntriesFromInspector(values) {
   });
 }
 
-function makeEnvironment(pathsAndValues, send) {
-  return pathsAndValues.reduce(([environmentTree, selection], [path, values]) => {
-    return (environmentTree => {
-      return [
-        environmentTree,
-        refreshSelectedEnvironmentTree(selection, environmentTree)
-      ];
-    })(insertInEnvironmentTree(environmentTree, path, values, send ? send : () => {}));
-  }, [makeEnvironmentTree(), makeSelectionInEnvironmentTree(makeEnvironmentTree())]);
-}
-
+// # Tests
 function test_emptyEnvironmentTree(finish, check) {
   const emptyEnvironmentTree = makeEnvironmentTree();
 
