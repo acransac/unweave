@@ -1,6 +1,22 @@
 const { scrollableContent, tag, unpackedContent, writeScriptSource } = require('./helpers.js');
 const { atom, column, cons, emptyList, indent, label, row, sizeHeight, sizeWidth, vindent } = require('terminal');
 
+/*
+ * The template of a debug session's display with developer-friendly features such as an error log and custom Inspector queries
+ * @param {Component} source - A component yielding the displayed script's source
+ * @param {Component} runLocation - A component yielding the execution location
+ * @param {Component} breakpoints - A component yielding an array of active breakpoints
+ * @param {Component} displayedScript - A component yielding the id of the displayed script
+ * @param {Component} topRightColumnDisplay - A component yielding the tabulated display of either the source tree or the environment tree
+ * @param {Component} environmentTree - A component yielding the environment tree
+ * @param {Component} messages - A component yielding the error log and custom log
+ * @param {Component} sourceTree - A component yielding the source tree
+ * @param {Component} command - A component yielding the tabulated display of either the instructions, the query capture or the breakpoint capture
+ * @param {Component} instructions - A component yielding the instructions applying to the active mode
+ * @param {Component} queryCapture - A component yielding the query capture
+ * @param {Component} breakpointCapture - A component yielding the breakpoint capture
+ * @return {Display}
+ */
 function developerDisplay(source,
 	                  runLocation,
 	                  breakpoints,
