@@ -5,6 +5,12 @@ const { now, value } = require('streamer');
 
 // # Common Message Processing
 // ## Extract Messages From The Stream
+
+/*
+ * Get the current message from the stream
+ * @param {Stream} stream - The stream
+ * @return {Message}
+ */
 function message(stream) {
   return JSON.parse(value(now(stream)));
 }
@@ -19,6 +25,14 @@ function isResult(message, resultName) {
 }
 
 // ## Location In Script Source
+
+/*
+ * Make a location
+ * @param {number} scriptHandle - The id of the script given by Inspector
+ * @param {number} lineNumber - The line in the script
+ * @param {number} columnNumber - The column in the line
+ * @return {Location}
+ */
 function makeLocation(scriptHandle, lineNumber, columnNumber) {
   return [scriptHandle, lineNumber, columnNumber];
 }
@@ -27,25 +41,46 @@ function makeLocationFromInspectorLocation(inspectorLocation) {
   return [inspectorLocation.scriptId, inspectorLocation.lineNumber, inspectorLocation.columnNumber];
 }
 
+/*
+ * Get the script id of the location
+ * @param {Location} location - A location
+ * @return {number}
+ */
 function scriptHandle(location) {
   return location[0];
 }
 
+/*
+ * Get the line number of the location
+ * @param {Location} location - A location
+ * @return {number}
+ */
 function lineNumber(location) {
   return location[1];
 }
 
+/*
+ * Get the column number of the location
+ * @param {Location} location - A location
+ * @return {number}
+ */
 function columnNumber(location) {
   return location[2];
 }
 
 // # Message Types
 // ## Captures
-// Once activated, a capture aggregates all subsequent user inputs to form a value. The final useful value can be retrieved when the capture ends.
+// Once activated, a capture aggregates all subsequent user inputs to form a string. The final useful string can be retrieved when the capture ends.
+
 function makeCapture(category, value) {
   return JSON.stringify(Object.fromEntries([[category, value], ["ended", false]]));
 }
 
+/*
+ * Terminate a capture
+ * @param {Capture} captureString - An active capture
+ * @return {Capture} - The ended capture
+ */
 function endCapture(captureString) {
   return (capture => {
     capture.ended = true;
@@ -54,91 +89,215 @@ function endCapture(captureString) {
   })(JSON.parse(captureString));
 }
 
+/*
+ * Check if a capture has ended
+ * @param {Capture} message - A capture
+ * @return {boolean}
+ */
 function hasEnded(message) {
   return message.hasOwnProperty("ended") && message.ended;
 }
 
 // ### Breakpoint Capture
+// A breakpoint capture is a number, expressed as a string, which is the line number of a breakpoint to record in the current displayed script.
+
+/*
+ * Make a breakpoint capture
+ * @param {string} [capture: ""] - The capture's string
+ * @return {BreakpointCapture}
+ */
 function makeBreakpointCapture(capture) {
   return makeCapture("breakpoint", capture ? capture : "");
 }
 
+/*
+ * Check if a message is a breakpoint capture
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isBreakpointCapture(message) {
   return message.hasOwnProperty("breakpoint");
 }
 
+/*
+ * Get the breakpoint capture as a string
+ * @param {BreakpointCapture} message - A breakpoint capture
+ * @return {string} - The capture as a string
+ */
 function breakpointCapture(message) {
   return message.breakpoint;
 }
 
+/*
+ * Get the breakpoint capture as a number
+ * @param {BreakpointCapture} message - A breakpoint capture
+ * @return {number} - The capture as a number
+ */
 function breakpointLine(message) {
   return Number(breakpointCapture(message));
 }
 
+/*
+ * Send a request to Inspector to record a breakpoint
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @param {number} scriptHandle - The id given by Inspector to the script where the breakpoint is set
+ * @param {number} breakpointLine - The line number in the script where the breakpoint is set
+ * @return {}
+ */
 function sendSetBreakpoint(send, scriptHandle, breakpointLine) {
   send("Debugger.setBreakpoint", {location: {scriptId: scriptHandle, lineNumber: breakpointLine}});
 }
 
 // ### Query Capture
+// A query capture is a user defined query to Inspector consisting of the method to call followed by the parameters object.
+
+/*
+ * Make a query capture
+ * @param {string} [capture: ""] - The capture's string
+ * @return {QueryCapture}
+ */
 function makeQueryCapture(capture) {
   return makeCapture("query", capture ? capture : "");
 }
 
+/*
+ * Check if a message is a query capture
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isQueryCapture(message) {
   return message.hasOwnProperty("query");
 }
 
+/*
+ * Get the user defined query
+ * @param {QueryCapture} message - A query capture
+ * @return {InspectorQuery}
+ */
 function query(message) {
   return message.query;
 }
 
+/*
+ * Send a user defined query to Inspector
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @param {QueryCapture} message - A query capture
+ * @return {}
+ */
+function sendQuery(send, message) {
+  send(...parseInspectorQuery(query(message)));
+}
+
 // ## Debugger Enabled
+
+/*
+ * Check if a message is a debugger enabled message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isDebuggerEnabled(message) {
   return isResult(message, "debuggerId");
 }
 
+/*
+ * Send a request to Inspector to initialize the debug session
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendEnableDebugger(send) {
   send("Debugger.enable", {}); 
 }
 
+/*
+ * Send a request to Inspector to start execution
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendStartRun(send) {
   send("Runtime.runIfWaitingForDebugger", {}); 
 }
 
 // ## Debugger Paused
+
+/*
+ * Check if a message is a debugger paused message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isDebuggerPaused(message) {
   return isMethod(message, "Debugger.paused");
 }
 
+/*
+ * Get the location of the execution when the debugger is paused
+ * @param {DebuggerPausedMessage} message - A debugger paused message
+ * @return {Location}
+ */
 function pauseLocation(message) {
   return makeLocationFromInspectorLocation(message.params.callFrames[0].location);
 }
 
+/*
+ * Send a request to Inspector to resume execution
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendContinue(send) {
   send("Debugger.resume", {});
 }
 
+/*
+ * Send a request to Inspector to step into the next function call if any, or step to the next statement otherwise
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendStepInto(send) {
   send("Debugger.stepInto", {});
 }
 
+/*
+ * Send a request to Inspector to step out of the current function
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendStepOut(send) {
   send("Debugger.stepOut", {});
 }
 
+/*
+ * Send a request to Inspector to step to the next statement in the current function
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendStepOver(send) {
   send("Debugger.stepOver", {});
 }
 
 // ## Environment
+
+/*
+ * Check if a message is an environment message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isEnvironment(message) {
   return isResult(message, "result") && message.id === 0;
 }
 
+/*
+ * Check if a message is an environment entry message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isEnvironmentEntry(message) {
   return isResult(message, "result") && message.id !== 0;
 }
 
+/*
+ * Get the environment entries' descriptions as sent by Inspector
+ * @param {EnvironmentMessage} message - An environment message
+ * @return {EnvironmentEntryDescription[]}
+ */
 function readEnvironment(message) {
   return message.result.result.filter(entry => {
     return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
@@ -146,18 +305,38 @@ function readEnvironment(message) {
   });
 }
 
+/*
+ * Get an environment entry's id
+ * @param {EnvironmentEntryMessage} message - An environment entry message
+ * @return {number}
+ */
 function readEnvironmentEntryUniqueId(message) {
   return message.id;
 }
 
+/*
+ * Get the unique id of a queried deferred entry
+ * @param {EnvironmentEntryDescription} entry - An environment entry's description as sent by Inspector
+ * @return {number}
+ */
 function entryUniqueId(entry) {
   return (({injectedScriptId, id}) => Number(`${injectedScriptId}0${id}`))(remoteHandle(entry));
 }
 
+/*
+ * Get the javascript value of an entry
+ * @param {EnvironmentEntryDescription} entry - An environment entry's description as sent by Inspector
+ * @return {*}
+ */
 function entryValue(entry) {
   return (entry.value.type === "string" ? value => `\"${value}\"` :  value => value)(entry.value.value)
 }
 
+/*
+ * Get the name of an entry
+ * @param {EnvironmentEntryDescription} entry - An environment entry's description as sent by Inspector
+ * @return {string}
+ */
 function name(entry) {
   return entry.name;
 }
@@ -166,6 +345,11 @@ function remoteHandle(entry) {
   return JSON.parse(entry.value.objectId);
 }
 
+/*
+ * Get the name of the javascript type of an entry
+ * @param {EnvironmentEntryDescription} entry - An environment entry's description as sent by Inspector
+ * @return {string}
+ */
 function type(entry) {
   const capitalizeName = name => name.charAt(0).toUpperCase() + name.slice(1);
 
@@ -182,45 +366,100 @@ function type(entry) {
   }
 }
 
+/*
+ * Send a request to Inspector to describe the entries in the environment in the current stack frame
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @param {DebuggerPausedMessage} message - A debugger paused message
+ * @return {}
+ */
 function sendRequestForEnvironmentDescription(send, message) {
   send("Runtime.getProperties", {objectId: message.params.callFrames[0].scopeChain[0].object.objectId});
 }
 
+/*
+ * Send a request to Inspector to describe the entries in a visitable entry of the current environment (object, array...)
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @param {EnvironmentEntryDescription} entry - An environment entry's description as sent by Inspector
+ * @return {}
+ */
 function sendRequestForEnvironmentEntryDescription(send, entry) {
   send("Runtime.getProperties", {objectId: JSON.stringify(remoteHandle(entry))}, entryUniqueId(entry));
 }
 
 // ## Environment Tree
+
+/*
+ * Make an environment tree message
+ * @param {EnvironmentTree} environmentTree - An environment tree
+ * @return {EnvironmentTreeMessage}
+ */
 function makeEnvironmentTreeMessage(environmentTree) {
   return JSON.stringify({environmentTree: environmentTree});
 }
 
+/*
+ * Check if a message is an environment tree message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isEnvironmentTree(message) {
   return message.hasOwnProperty("environmentTree");
 }
 
+/*
+ * Get the environment tree
+ * @param {EnvironmentTreeMessage} message - An environment tree message
+ * @return {EnvironmentTree}
+ */
 function readEnvironmentTree(message) {
   return message.environmentTree;
 }
 
 // ## Error
+
+/*
+ * Make an error message
+ * @param {string} reason - The reason of the error
+ * @return {ErrorMessage}
+ */
 function makeError(reason) {
   return JSON.stringify({error: reason});
 }
 
+/*
+ * Check if a message is an error message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isError(message) {
   return message.hasOwnProperty("error");
 }
 
+/*
+ * Get an error's reason
+ * @param {ErrorMessage} message - An error message
+ * @return {string}
+ */
 function reason(message) {
   return message.error;
 }
 
 // ## Execution Context Created
+
+/*
+ * Check if a message is an execution context created message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isExecutionContextCreated(message) {
   return isMethod(message, "Runtime.executionContextCreated");
 }
 
+/*
+ * Send a request to Inspector to initialize runtime inspection
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @return {}
+ */
 function sendEnableRuntime(send) {
   send("Runtime.enable", {}); 
 }
@@ -229,56 +468,129 @@ function sendEnableRuntime(send) {
 // While activated, a focus attributes each user input to a specified category.
 
 // ### Environment Tree Focus
+// When the environment tree focus is active, the associated user inputs trigger actions relative to navigating the environment tree and querying deferred entries
+
+/*
+ * Make an environment tree focus
+ * @param {string} [capture: ""] - The current input of the focus
+ * @return {EnvironmentTreeFocus}
+ */
 function makeEnvironmentTreeFocus(capture) {
   return makeCapture("focusEnvironmentTree", capture ? capture : "");
 }
 
+/*
+ * Check if a message is an environment tree focus
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isEnvironmentTreeFocus(message) {
   return message.hasOwnProperty("focusEnvironmentTree");
 }
 
+/*
+ * Get the input of the environment tree focus
+ * @param {EnvironmentTreeFocus} message - An environment tree focus
+ * @return {string}
+ */
 function environmentTreeFocusInput(message) {
   return message.focusEnvironmentTree;
 }
 
 // ### Messages Focus
+// When the messages focus is active, the associated user inputs trigger actions relative to scrolling the messages log
+
+/*
+ * Make a messages focus
+ * @param {string} [capture: ""] - The current input of the focus
+ * @return {MessagesFocus}
+ */
 function makeMessagesFocus(capture) {
   return makeCapture("focusMessages", capture ? capture : "");
 }
 
+/*
+ * Check if a message is a messages focus
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isMessagesFocus(message) {
   return message.hasOwnProperty("focusMessages");
 }
 
+/*
+ * Get the current input from a messages focus
+ * @param {MessagesFocus} message - A messages focus
+ * @return {string}
+ */
 function messagesFocusInput(message) {
   return message.focusMessages;
 }
 
 // ### Source Tree Focus
+// When the source tree focus is active, the associated user inputs trigger actions relative to navigating the source tree and selecting files
+
+/*
+ * Make a source tree focus
+ * @param {string} [capture: ""] - The current input of the focus
+ * @return {SourceTreeFocus}
+ */
 function makeSourceTreeFocus(capture) {
   return makeCapture("focusSourceTree", capture ? capture : "");
 }
 
+/*
+ * Check if a message is a source tree focus
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isSourceTreeFocus(message) {
   return message.hasOwnProperty("focusSourceTree");
 }
 
+/*
+ * Get the current input from a source tree focus
+ * @param {SourceTreeFocus} message - The source tree focus
+ * @return {string}
+ */
 function sourceTreeFocusInput(message) {
   return message.focusSourceTree;
 }
 
 // ## Input
+
+/*
+ * Make an input message
+ * @param {string} key - The input character
+ * @return {InputMessage}
+ */
 function makeInput(key) {
   return JSON.stringify({input: key});
 }
+
+/*
+ * Check if a message is an input message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isInput(message) {
   return message.hasOwnProperty("input");
 }
 
+/*
+ * Get the input key
+ * @param {InputMessage} message - An input message
+ * @return {string}
+ */
 function input(message) {
   return message.input;
 }
 
+/*
+ * Get the key corresponding to a specific user interaction
+ * @param {string} interaction - The name of the user interaction
+ * @return {string}
+ */
 function interactionKeys(interaction) {
   switch (interaction) {
     case "stepOver": return "n";
@@ -301,6 +613,15 @@ function interactionKeys(interaction) {
 }
 
 // ## Inspector Query
+// An Inspector query is a user defined query to Inspector following its protocol. The validation of the query is left to the Inspector session and the input is also not sanitized.
+
+/*
+ * Make an Inspector query
+ * @param {string} method - The method name as defined in the Inspector protocol
+ * @param {object} parameters - The method's parameters object as defined in the Inspector protocol
+ * @param {number} [requestId: 0] - An id that Inspector associates with possible answers to the query so that they can be tracked on unweave's side
+ * @return {InspectorQuery}
+ */
 function makeInspectorQuery(method, parameters, requestId) {
   return JSON.stringify({method: method, params: parameters, id: requestId ? requestId : 0})
 }
@@ -311,53 +632,109 @@ function parseInspectorQuery(line) {
   return [method, parseJsValue(parameters ? parameters : "")];
 }
 
-function sendQuery(send, message) {
-  send(...parseInspectorQuery(query(message)));
-}
-
 // ## Script Parsed
+// A parsed script message is emitted when the runtime parses the source of a module of the debugged program. These files can be standard Node.js imports or specific to the user's program, in which case they are called here user scripts.
+
+/*
+ * Check if a message is a script parsed message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isScriptParsed(message) {
   return isMethod(message, "Debugger.scriptParsed");
 }
 
+/*
+ * Check if a message is a user script parsed message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isUserScriptParsed(message) {
   return isScriptParsed(message) && parsedScriptUrl(message).startsWith("file://");
 }
 
+/*
+ * Get the id of a parsed script 
+ * @param {ParsedScriptMessage} message - A parsed script message
+ * @return {number}
+ */
 function parsedScriptHandle(message) {
   return message.params.scriptId;
 }
 
+/*
+ * Get the url of a parsed script 
+ * @param {ParsedScriptMessage} message - A parsed script message
+ * @return {string}
+ */
 function parsedScriptUrl(message) {
   return message.params.url;
 }
 
+/*
+ * Get the url of a parsed user script, minus the filesystem prefix
+ * @param {ParsedUserScriptMessage} message - A parsed user script message
+ * @return {string}
+ */
 function parsedUserScriptPath(message) {
   return parsedScriptUrl(message).slice("file://".length);
 }
 
 // ## Script Source
+
+/*
+ * Check if a message is a script source message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isScriptSource(message) {
   return isResult(message, "scriptSource");
 }
 
+/*
+ * Get the script source
+ * @param {ScriptSourceMessage} message - A script source message
+ * @return {string}
+ */
 function readScriptSource(message) {
   return message.result.scriptSource.trim();
 }
 
+/*
+ * Send a request to Inspector for a script's source
+ * @param {function} send - The callback to send requests over websocket to Inspector
+ * @param {number} scriptHandle - The id given by Inspector to the script when parsed
+ * @return {}
+ */
 function sendRequestForScriptSource(send, scriptHandle) {
   send("Debugger.getScriptSource", {scriptId: scriptHandle});
 }
 
 // ## Source Tree
+
+/*
+ * Make a source tree message
+ * @param {SourceTree} sourceTree - A source tree
+ * @return {SourceTreeMessage}
+ */
 function makeSourceTreeMessage(sourceTree) {
   return JSON.stringify({sourceTree: sourceTree});
 }
 
+/*
+ * Check if a message is a source tree message
+ * @param {Message} message - A message
+ * @return {boolean}
+ */
 function isSourceTree(message) {
   return message.hasOwnProperty("sourceTree");
 }
 
+/*
+ * Get the source tree
+ * @param {SourceTreeMessage} message - A source tree message
+ * @return {SourceTree}
+ */
 function readSourceTree(message) {
   return message.sourceTree;
 }

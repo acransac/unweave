@@ -130,7 +130,7 @@ function makeEnvironmentTree(branches) {
  * Insert entries in an environment tree
  * @param {EnvironmentTree} environmentTree - An environment tree
  * @param {string} path - The path to the entries
- * @param {Entry[]} entries - An array of entries
+ * @param {EnvironmentEntryDescription[]} entries - An array of environment entries' descriptions as sent by Inspector
  * @param {function} send - A callback that send requests over websocket to Inspector
  * @return {EnvironmentTree}
  */
