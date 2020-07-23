@@ -19,34 +19,34 @@ function debugSession(send, render, terminate) {
     const debugLogger = message => columnNumber(pauseLocation(message));
 
     return loop(terminate)(await show(render)(compose(developerDisplay,
-			                              scriptSource(),
-			                              runLocation(),
-			                              breakpoints(),
-			                              displayedScript(),
-		                                      topRightColumnDisplay(),
-			                              environmentTree(),
-			                              messages(isDebuggerPaused, debugLogger),
-		                                      sourceTree(),
-			                              commandLine(),
+                                                      scriptSource(),
+                                                      runLocation(),
+                                                      breakpoints(),
+                                                      displayedScript(),
+                                                      topRightColumnDisplay(),
+                                                      environmentTree(),
+                                                      messages(isDebuggerPaused, debugLogger),
+                                                      sourceTree(),
+                                                      commandLine(),
                                                       instructions(),
                                                       focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
-						                          isQueryCapture,
-						                          "query Inspector",
-						                          interactionKeys("queryCapture")),
+                                                                          isQueryCapture,
+                                                                          "query Inspector",
+                                                                          interactionKeys("queryCapture")),
                                                       focusableCaptureLog(logCapture(isBreakpointCapture,
-							                             breakpointCapture,
-						                                     "Add breakpoint at line"),
-							                  isBreakpointCapture,
-							                  "add breakpoint",
-							                  interactionKeys("breakpointCapture"))))(
-	                                        await step(send)(
-	                                          await queryInspector(send)(
-		                                    await addBreakpoint(send)(
-		                                      await pullScriptSource(send)(
-		                                        await parseEnvironmentTree(send)(
-			                                  await parseSourceTree()(
-			                                    await parseCaptures()(
-		  	                                      await changeMode(stream))))))))));
+                                                                                     breakpointCapture,
+                                                                                     "Add breakpoint at line"),
+                                                                          isBreakpointCapture,
+                                                                          "add breakpoint",
+                                                                          interactionKeys("breakpointCapture"))))(
+                                                await step(send)(
+                                                  await queryInspector(send)(
+                                                    await addBreakpoint(send)(
+                                                      await pullScriptSource(send)(
+                                                        await parseEnvironmentTree(send)(
+                                                          await parseSourceTree()(
+                                                            await parseCaptures()(
+                                                              await changeMode(stream))))))))));
   };
 }
 
