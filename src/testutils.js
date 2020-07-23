@@ -99,7 +99,7 @@ function userInput(...inputSequences) {
 
         return delay + 1000 / inputsPerSecond(inputSequences[0]);
       }, delay),
-	                   inputSequences.slice(1));
+                           inputSequences.slice(1));
     }
   };
 
