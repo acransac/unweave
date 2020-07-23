@@ -4,7 +4,7 @@ const { init } = require('../src/init.js');
 const { loop } = require('../src/processes.js');
 const { interactionKeys } = require('../src/protocol.js');
 const { developerDisplay } = require('../src/templates.js');
-const { compose, show, TerminalTest } = require('terminal');
+const { compose, show, TerminalTest } = require('@acransac/terminal');
 const { makeInputSequence, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function test_developerDisplay(send, render, terminate) {

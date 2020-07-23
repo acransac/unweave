@@ -3,8 +3,8 @@ const { backspaceInput, ctrlCInput, enterInput, scrollableContent, tag, unpacked
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, step } = require('../src/processes.js');
 const { breakpointCapture, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isInput, isQueryCapture, message, query } = require('../src/protocol.js');
-const { commit } = require('streamer');
-const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
+const { commit } = require('@acransac/streamer');
+const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('@acransac/terminal');
 const { makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName) {

@@ -1,8 +1,8 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
-const { makeSelectionInFileTree, makeFileTree } = require('filetree');
+const { makeSelectionInFileTree, makeFileTree } = require('@acransac/filetree');
 const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
 const { breakpointLine, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, pauseLocation, readEnvironmentTree, readScriptSource, reason } = require('./protocol.js');
-const { atom, label, sizeHeight } = require('terminal');
+const { atom, label, sizeHeight } = require('@acransac/terminal');
 
 /*
  * Get the list of lines from all the loaded scripts where a breakpoint is set

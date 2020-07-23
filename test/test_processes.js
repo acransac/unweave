@@ -1,11 +1,11 @@
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, visitChildEntry } = require('../src/environmenttree.js');
-const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('filetree');
+const { makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryName, selectNext, visitChildBranch } = require('@acransac/filetree');
 const { backspaceInput, ctrlCInput, enterInput } = require('../src/helpers.js');
 const { init } = require('../src/init.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('../src/processes.js');
 const { breakpointCapture, environmentTreeFocusInput, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTree, isSourceTreeFocus, isUserScriptParsed, lineNumber, makeEnvironmentTreeFocus, message, messagesFocusInput, pauseLocation, query, readEnvironmentTree, readScriptSource, readSourceTree, reason, sourceTreeFocusInput } = require('../src/protocol.js');
-const { commit, continuation, floatOn, forget, later, now, value } = require('streamer');
-const Test = require('tester');
+const { commit, continuation, floatOn, forget, later, now, value } = require('@acransac/streamer');
+const Test = require('@acransac/tester');
 const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
 // # Helpers

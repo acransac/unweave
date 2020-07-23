@@ -2,7 +2,7 @@ const { breakpoints, commandLine, displayedScript, environmentTree, focusableCap
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
 const { breakpointCapture, columnNumber, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, pauseLocation, query } = require('./protocol.js');
 const { developerDisplay } = require('./templates.js');
-const { compose, show } = require('terminal');
+const { compose, show } = require('@acransac/terminal');
 
 /*
  * Get a streamer process that organizes an interactive Node.js debugging session backed by Google's V8 Inspector

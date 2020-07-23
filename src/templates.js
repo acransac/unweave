@@ -1,5 +1,5 @@
 const { scrollableContent, tag, unpackedContent, writeScriptSource } = require('./helpers.js');
-const { atom, column, cons, emptyList, indent, label, row, sizeHeight, sizeWidth, vindent } = require('terminal');
+const { atom, column, cons, emptyList, indent, label, row, sizeHeight, sizeWidth, vindent } = require('@acransac/terminal');
 
 /*
  * The template of a debug session's display with developer-friendly features such as an error log and custom Inspector queries

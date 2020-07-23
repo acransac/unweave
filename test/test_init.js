@@ -1,7 +1,7 @@
 const { init } = require('../src/init.js');
 const { isDebuggerEnabled, isDebuggerPaused, isScriptParsed, message } = require('../src/protocol.js');
-const { floatOn, later, now, value } = require('streamer');
-const Test = require('tester');
+const { floatOn, later, now, value } = require('@acransac/streamer');
+const Test = require('@acransac/tester');
 
 function test_init(finish, check) {
   const testSession = (send, render, terminate) => {

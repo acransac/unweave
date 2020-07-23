@@ -1,8 +1,8 @@
 {
-  "name": "debug",
-  "version": "0.0.1",
-  "description": "DevTools Protocol Client",
-  "main": "debug.js",
+  "name": "unweave",
+  "version": "1.0.0",
+  "description": "A terminal interface to Google's V8 Inspector for Node.js applications",
+  "main": "src/app.js",
   "scripts": {
     "test": "(cd test && node test_all.js)"
   },
@@ -10,12 +10,20 @@
     "unweave": "src/app.js"
   },
   "author": "Adrien Cransac",
-  "license": "ISC",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acransac/unweave.git"
+  },
+  "bugs": {
+    "url": "https://github.com/acransac/unweave/issues"
+  },
+  "homepage": "https://github.com/acransac/unweave",
   "dependencies": {
-    "filetree": "file:../filetree",
-    "streamer": "file:../streamer",
-    "terminal": "file:../terminal",
-    "tester": "file:../tester",
+    "@acransac/filetree": "file:../filetree",
+    "@acransac/streamer": "file:../streamer",
+    "@acransac/terminal": "file:../terminal",
+    "@acransac/tester": "file:../tester",
     "ws": "^7.1.1"
   }
 }

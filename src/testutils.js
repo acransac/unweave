@@ -1,5 +1,5 @@
 const { input, isDebuggerPaused, isInput, makeInput, message, sendStepOver } = require('./protocol.js');
-const { commit, floatOn, later } = require('streamer');
+const { commit, floatOn, later } = require('@acransac/streamer');
 
 // # Initialize Tests
 

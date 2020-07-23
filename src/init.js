@@ -1,8 +1,8 @@
 const { fork } = require('child_process');
 const { isDebuggerEnabled, isExecutionContextCreated, makeInput, makeInspectorQuery, message, sendEnableDebugger, sendEnableRuntime, sendStartRun } = require('./protocol.js');
 const Readline = require('readline');
-const { makeEmitter, mergeEvents, later, Source } = require('streamer');
-const { renderer } = require('terminal');
+const { makeEmitter, mergeEvents, later, Source } = require('@acransac/streamer');
+const { renderer } = require('@acransac/terminal');
 const WebSocket = require('ws');
 
 // # Debug Session Initializer

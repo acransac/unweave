@@ -1,10 +1,10 @@
 const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('../src/environmenttree.js');
-const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('filetree');
+const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('@acransac/filetree');
 const { init } = require('../src/init.js');
 const { parseEnvironmentTree } = require('../src/processes.js');
 const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('../src/protocol.js');
-const { floatOn, later, now, value } = require('streamer');
-const Test = require('tester');
+const { floatOn, later, now, value } = require('@acransac/streamer');
+const Test = require('@acransac/tester');
 const { skipToDebuggerPausedAfterStepping } = require('../src/testutils.js');
 const util = require('util');
 

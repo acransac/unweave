@@ -1,8 +1,8 @@
 const { insertInEnvironmentTree, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, resolvePendingEntry } = require('./environmenttree.js');
-const { insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('filetree');
+const { insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('@acransac/filetree');
 const { ctrlCInput, displayedScriptSource, enterInput, exploreEnvironmentTree, parseUserInput } = require('./helpers.js');
 const { breakpointCapture, breakpointLine, endCapture, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironment, isEnvironmentEntry, isInput, isQueryCapture, isUserScriptParsed, makeBreakpointCapture, makeEnvironmentTreeFocus, makeEnvironmentTreeMessage, makeError, makeMessagesFocus, makeQueryCapture, makeSourceTreeFocus, makeSourceTreeMessage, message, parsedScriptHandle, parsedUserScriptPath, query, readEnvironment, sendContinue, sendQuery, sendRequestForEnvironmentDescription, sendRequestForScriptSource, sendSetBreakpoint, sendStepInto, sendStepOut, sendStepOver } = require('./protocol.js');
-const { commit, continuation, floatOn, forget, now, later } = require('streamer');
+const { commit, continuation, floatOn, forget, now, later } = require('@acransac/streamer');
 
 /*
  * Record a breakpoint
