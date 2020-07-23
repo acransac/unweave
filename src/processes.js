@@ -120,7 +120,7 @@ function parseCaptures() {
         return floatOn(commit(stream, parser("")), endCapture(makeCapture(capture)));
       }
       else {
-	const newCapture = parseUserInput(capture, readCapture(message(stream)));
+        const newCapture = parseUserInput(capture, readCapture(message(stream)));
 
         return floatOn(commit(stream, parser(newCapture)), makeCapture(newCapture));
       }
@@ -151,8 +151,8 @@ function parseEnvironmentTree(send) {
       sendRequestForEnvironmentDescription(send, message(stream));
 
       return commit(stream, builder(makeEnvironmentTree(),
-	                            makeSelectionInEnvironmentTree(makeEnvironmentTree()),
-	                            makePendingEntriesRegister()));
+                                    makeSelectionInEnvironmentTree(makeEnvironmentTree()),
+                                    makePendingEntriesRegister()));
     }
     else if (isEnvironment(message(stream))) {
       const [newEnvironmentTree, newSelection] = (environmentTree => {
@@ -160,18 +160,18 @@ function parseEnvironmentTree(send) {
       })(insertInEnvironmentTree(environmentTree, "/env", readEnvironment(message(stream)), send));
 
       return floatOn(commit(stream, builder(newEnvironmentTree, newSelection, pendingEntriesRegister)),
-	             makeEnvironmentTreeMessage(newEnvironmentTree));
+                     makeEnvironmentTreeMessage(newEnvironmentTree));
     }
     else if (isEnvironmentEntry(message(stream))) {
       return resolvePendingEntry(environmentTree,
-		                 selection,
-		                 pendingEntriesRegister,
-		                 message(stream),
-		                 entries => entries.filter(entry => entry.isOwn),
-		                 send,
-		                 (environmentTree, selection, pendingEntriesRegister) => {
-			           return floatOn(commit(stream, builder(environmentTree, selection, pendingEntriesRegister)),
-					          makeEnvironmentTreeMessage(environmentTree));
+                                 selection,
+                                 pendingEntriesRegister,
+                                 message(stream),
+                                 entries => entries.filter(entry => entry.isOwn),
+                                 send,
+                                 (environmentTree, selection, pendingEntriesRegister) => {
+                                   return floatOn(commit(stream, builder(environmentTree, selection, pendingEntriesRegister)),
+                                                  makeEnvironmentTreeMessage(environmentTree));
                                  });
     }
     else {
@@ -194,8 +194,8 @@ function parseSourceTree() {
       const [path, fileName] = parseFilePath(parsedUserScriptPath(message(stream)));
 
       const newSourceTree = insertInFileTree(sourceTree,
-	                                     path,
-	                                     makeFileEntry(fileName, parsedScriptHandle(message(stream))));
+                                             path,
+                                             makeFileEntry(fileName, parsedScriptHandle(message(stream))));
 
       return floatOn(commit(stream, builder(newSourceTree)), makeSourceTreeMessage(newSourceTree));
     }
@@ -223,7 +223,7 @@ function pullScriptSource(send) {
     const onSelectionChange = (displayChange, scriptId) => {
       return commit(stream, scriptChecker(displayChange));
     };
-	  
+          
     return displayChange(onSelectionChange, onDisplayChange)(stream);
   };
 
