@@ -304,7 +304,7 @@ function isEnvironmentEntry(message) {
 function readEnvironment(message) {
   return message.result.result.filter(entry => {
     return !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
-	     || name(entry) === "__filename" || name(entry) === "__dirname");
+             || name(entry) === "__filename" || name(entry) === "__dirname");
   });
 }
 
