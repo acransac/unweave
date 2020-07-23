@@ -18,7 +18,7 @@ function message(stream) {
   return JSON.parse(value(now(stream)));
 }
 
-// ## Classify Inspector Messages 
+// ## Classify Inspector Messages
 function isMethod(message, methodName) {
   return message.hasOwnProperty("method") && message.method === methodName;
 }
@@ -87,7 +87,7 @@ function makeCapture(category, value) {
 function endCapture(captureString) {
   return (capture => {
     capture.ended = true;
-   
+
     return JSON.stringify(capture);
   })(JSON.parse(captureString));
 }
@@ -208,7 +208,7 @@ function isDebuggerEnabled(message) {
  * @return {}
  */
 function sendEnableDebugger(send) {
-  send("Debugger.enable", {}); 
+  send("Debugger.enable", {});
 }
 
 /*
@@ -217,7 +217,7 @@ function sendEnableDebugger(send) {
  * @return {}
  */
 function sendStartRun(send) {
-  send("Runtime.runIfWaitingForDebugger", {}); 
+  send("Runtime.runIfWaitingForDebugger", {});
 }
 
 // ## Debugger Paused
@@ -464,7 +464,7 @@ function isExecutionContextCreated(message) {
  * @return {}
  */
 function sendEnableRuntime(send) {
-  send("Runtime.enable", {}); 
+  send("Runtime.enable", {});
 }
 
 // ## Focuses
@@ -657,7 +657,7 @@ function isUserScriptParsed(message) {
 }
 
 /*
- * Get the id of a parsed script 
+ * Get the id of a parsed script
  * @param {ParsedScriptMessage} message - A parsed script message
  * @return {number}
  */
@@ -666,7 +666,7 @@ function parsedScriptHandle(message) {
 }
 
 /*
- * Get the url of a parsed script 
+ * Get the url of a parsed script
  * @param {ParsedScriptMessage} message - A parsed script message
  * @return {string}
  */
