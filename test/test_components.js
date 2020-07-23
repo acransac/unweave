@@ -25,11 +25,11 @@ function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName)
       return loop(terminate)
                (await userInteraction
                  (await show(render)(compose(captureDisplay, focusableCaptureLog(logCapture(isCapture,
-			                                                                    readCapture,
-          					                                            promptPrefix),
-          						                         isCapture,
-          						                         labelName,
-          						                         focusKey)))
+                                                                                            readCapture,
+                                                                                            promptPrefix),
+                                                                                 isCapture,
+                                                                                 labelName,
+                                                                                 focusKey)))
                    (await parseCaptures()
                      (await changeMode
                        (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
@@ -39,10 +39,10 @@ function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName)
 
 function test_breakpointCapture() {
   return test_capture(isBreakpointCapture,
-	              breakpointCapture,
-	              interactionKeys("breakpointCapture"),
-	              "Add breakpoint at line",
-	              "add breakpoint");
+                      breakpointCapture,
+                      interactionKeys("breakpointCapture"),
+                      "Add breakpoint at line",
+                      "add breakpoint");
 }
 
 function test_queryCapture() {
@@ -64,27 +64,27 @@ function test_commandLine(send, render, terminate) {
   };
 
   const commandLineDisplay = (commandLine, instructions, queryCapture, breakpointCapture) => commandLine(instructions,
-	                                                                                                 queryCapture,
-	                                                                                                 breakpointCapture);
+                                                                                                         queryCapture,
+                                                                                                         breakpointCapture);
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(commandLineDisplay,
-		                           commandLine(),
-		                           instructions(),
+             (await userInteraction
+               (await show(render)(compose(commandLineDisplay,
+                                           commandLine(),
+                                           instructions(),
                                            focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
-						               isQueryCapture,
-						               "query Inspector",
-						               interactionKeys("queryCapture")),
+                                                               isQueryCapture,
+                                                               "query Inspector",
+                                                               interactionKeys("queryCapture")),
                                            focusableCaptureLog(logCapture(isBreakpointCapture,
-							                  breakpointCapture,
-						                          "Add breakpoint at line"),
-							       isBreakpointCapture,
-							       "add breakpoint",
-							       interactionKeys("breakpointCapture"))))
-	         (await changeMode
-	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+                                                                          breakpointCapture,
+                                                                          "Add breakpoint at line"),
+                                                               isBreakpointCapture,
+                                                               "add breakpoint",
+                                                               interactionKeys("breakpointCapture"))))
+                 (await changeMode
+                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
   };
 }
 
@@ -109,12 +109,12 @@ function test_environment(send, render, terminate) {
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(environmentDisplay, environmentTree()))
-		 (await step(send)
-	           (await parseEnvironmentTree(send)
-		     (await changeMode
-	               (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))));
+             (await userInteraction
+               (await show(render)(compose(environmentDisplay, environmentTree()))
+                 (await step(send)
+                   (await parseEnvironmentTree(send)
+                     (await changeMode
+                       (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))));
   };
 }
 
@@ -138,10 +138,10 @@ function test_instructions(send, render, terminate) {
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(instructionsDisplay, instructions()))
-	         (await changeMode
-	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+             (await userInteraction
+               (await show(render)(compose(instructionsDisplay, instructions()))
+                 (await changeMode
+                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
   };
 }
 
@@ -149,9 +149,9 @@ function test_messages(send, render, terminate) {
   const userInteraction = async (stream) => {
     userInput(makeInputSequence(["", interactionKeys("messagesFocus")]),
               makeInputSequence([
-	        ...repeatKey(interactionKeys("scrollDown"), 2),
-		...repeatKey(interactionKeys("scrollUp"), 2)
-	      ], 2),
+                ...repeatKey(interactionKeys("scrollDown"), 2),
+                ...repeatKey(interactionKeys("scrollUp"), 2)
+              ], 2),
               makeInputSequence([enterInput(), "f", ctrlCInput()]));
 
     return stream;
@@ -172,28 +172,28 @@ function test_messages(send, render, terminate) {
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(messagesDisplay, messages(isDebuggerPaused, testLogger)))
-	         (await changeMode
-	           (await failOnF
-	             (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+             (await userInteraction
+               (await show(render)(compose(messagesDisplay, messages(isDebuggerPaused, testLogger)))
+                 (await changeMode
+                   (await failOnF
+                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
   };
 }
 
 function test_scriptSource(send, render, terminate) {
   const userInteraction = async (stream) => {
     userInput(makeInputSequence([""]),
-	      makeInputSequence([
-	        ...repeatKey(interactionKeys("scrollDown"), 9),
-		...repeatKey(interactionKeys("scrollUp"), 9)
-	      ], 2),
+              makeInputSequence([
+                ...repeatKey(interactionKeys("scrollDown"), 9),
+                ...repeatKey(interactionKeys("scrollUp"), 9)
+              ], 2),
               makeInputSequence([interactionKeys("breakpointCapture"), "8", enterInput()]),
-	      makeInputSequence([
-	        interactionKeys("stepOver"),
-		interactionKeys("stepInto"),
-		interactionKeys("stepOut"),
-		interactionKeys("continue"),
-		ctrlCInput()
+              makeInputSequence([
+                interactionKeys("stepOver"),
+                interactionKeys("stepInto"),
+                interactionKeys("stepOut"),
+                interactionKeys("continue"),
+                ctrlCInput()
               ], 0.5));
 
     return stream;
@@ -205,18 +205,18 @@ function test_scriptSource(send, render, terminate) {
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(scriptSourceDisplay,
-		                           scriptSource(),
-		                           runLocation(),
-		                           breakpoints(),
-		                           displayedScript()))
-		 (await step(send)
-	           (await addBreakpoint(send)
-	             (await pullScriptSource(send)
-		       (await parseCaptures()
-		         (await changeMode
-	                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+             (await userInteraction
+               (await show(render)(compose(scriptSourceDisplay,
+                                           scriptSource(),
+                                           runLocation(),
+                                           breakpoints(),
+                                           displayedScript()))
+                 (await step(send)
+                   (await addBreakpoint(send)
+                     (await pullScriptSource(send)
+                       (await parseCaptures()
+                         (await changeMode
+                           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
   };
 }
 
@@ -225,23 +225,23 @@ function test_sourceTree(send, render, terminate) {
     if (isDebuggerPaused(message(stream))) {
       userInput(makeInputSequence([
         "",
-	interactionKeys("stepOver"),
-	interactionKeys("sourceTreeFocus"),
-	interactionKeys("selectPrevious"),
-	interactionKeys("selectChild"),
-	...repeatKey(interactionKeys("selectNext"), 2),
-	interactionKeys("selectChild"),
-	enterInput(),
-	interactionKeys("sourceTreeFocus"),
-	interactionKeys("selectParent"),
-	enterInput(),
-	interactionKeys("stepOver"),
-	interactionKeys("sourceTreeFocus"),
-	interactionKeys("selectParent"),
-	interactionKeys("selectNext"),
-	interactionKeys("selectChild"),
-	enterInput(),
-	ctrlCInput()
+        interactionKeys("stepOver"),
+        interactionKeys("sourceTreeFocus"),
+        interactionKeys("selectPrevious"),
+        interactionKeys("selectChild"),
+        ...repeatKey(interactionKeys("selectNext"), 2),
+        interactionKeys("selectChild"),
+        enterInput(),
+        interactionKeys("sourceTreeFocus"),
+        interactionKeys("selectParent"),
+        enterInput(),
+        interactionKeys("stepOver"),
+        interactionKeys("sourceTreeFocus"),
+        interactionKeys("selectParent"),
+        interactionKeys("selectNext"),
+        interactionKeys("selectChild"),
+        enterInput(),
+        ctrlCInput()
       ]));
 
       return stream;
@@ -253,30 +253,30 @@ function test_sourceTree(send, render, terminate) {
 
   const sourceTreeDisplay = (scriptSource, runLocation, breakpoints, displayedScript, sourceTree) => {
     return inline(cons(
-	           sizeWidth(50, label(atom(writeScriptSource(unpackedContent(scriptSource),
-			                                      runLocation,
-			                                      breakpoints,
-			                                      displayedScript)),
-	                               tag(scriptSource))),
-	           cons(
-		     sizeWidth(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tag(sourceTree))),
-		     emptyList())));
+                    sizeWidth(50, label(atom(writeScriptSource(unpackedContent(scriptSource),
+                                                               runLocation,
+                                                               breakpoints,
+                                                               displayedScript)),
+                                        tag(scriptSource))),
+                    cons(
+                      sizeWidth(50, label(atom(writeSourceTree(unpackedContent(sourceTree))), tag(sourceTree))),
+                      emptyList())));
   };
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(sourceTreeDisplay,
-		                           scriptSource(),
-		                           runLocation(),
-		                           breakpoints(),
-		                           displayedScript(),
-	                                   sourceTree()))
-		 (await step(send)
-	           (await pullScriptSource(send)
-		     (await parseSourceTree()
-		       (await parseCaptures()
-	                 (await changeMode(stream))))))));
+             (await userInteraction
+               (await show(render)(compose(sourceTreeDisplay,
+                                           scriptSource(),
+                                           runLocation(),
+                                           breakpoints(),
+                                           displayedScript(),
+                                           sourceTree()))
+                 (await step(send)
+                   (await pullScriptSource(send)
+                     (await parseSourceTree()
+                       (await parseCaptures()
+                         (await changeMode(stream))))))));
   };
 }
 
@@ -295,14 +295,14 @@ function test_topRightColumnDisplay(send, render, terminate) {
   };
 
   const topRightDisplay = (topRightColumnDisplay, environmentTree, sourceTree) => topRightColumnDisplay(environmentTree,
-	                                                                                                sourceTree);
+                                                                                                        sourceTree);
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(topRightDisplay, topRightColumnDisplay(), environmentTree(), sourceTree()))
-	         (await changeMode
-	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+             (await userInteraction
+               (await show(render)(compose(topRightDisplay, topRightColumnDisplay(), environmentTree(), sourceTree()))
+                 (await changeMode
+                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
   };
 }
 
@@ -333,9 +333,9 @@ module.exports = TerminalTest.reviewDisplays([
   }),
   TerminalTest.makeTestableReactiveDisplay(test_sourceTree, "Source Tree", (displayTarget, test, finish) => {
     return init(["node", "app.js", "targets/test_target_source_tree_dir/test_target_source_tree.js"],
-	        test,
-	        finish,
-	        displayTarget);
+                test,
+                finish,
+                displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_topRightColumnDisplay,
                                            "Top Right Column Display",
