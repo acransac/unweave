@@ -8,6 +8,55 @@ const { commit, continuation, floatOn, forget, later, now, value } = require('st
 const Test = require('tester');
 const { inputIsCapture, makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
+// # Helpers
+function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
+  return check => {
+    return (send, render, terminate) => {
+      const controlSelection = message => refreshSelectedEnvironmentTree(makeSelectionInEnvironmentTree(makeEnvironmentTree()),
+                                                                         readEnvironmentTree(message));
+
+      const firstCheck = async (stream) => {
+        if (isDebuggerPaused(message(stream))) {
+          return firstCheck(await continuation(now(stream))(forget(await later(stream))));
+        }
+        else if (isEnvironmentTree(message(stream))
+                   && (selection => selectedEntryName(selectedEntry(selection)) === `/${entryDescription}`)
+                        (controlSelection(message(stream)))) {
+          userInput(makeInputSequence([interactionKeys("selectChild")]));
+
+          return secondCheck(await continuation(now(stream))(forget(await later(stream))));
+        }
+        else {
+          return floatOn(stream, false);
+        }
+      };
+
+      const secondCheck = async (stream) => {
+        if (isEnvironmentTreeFocus(message(stream))) {
+          return secondCheck(await continuation(now(stream))(forget(await later(stream))));
+        }
+        else if (isEnvironmentTree(message(stream))
+                   && (selection => selectedEntryName(selectedEntry(selection))
+          		            === `/${entryDescription}${firstChildEntryDescription ? "/" + firstChildEntryDescription
+          		                                                                  : ""}`)
+                        (visitChildEntry(controlSelection(message(stream))))) {
+          return floatOn(stream, true);
+        }
+        else {
+          return floatOn(stream, false);
+        }
+      };
+
+      return async (stream) => {
+        return terminate(check(value(now(await firstCheck
+                                          (await parseEnvironmentTree(send)
+                                            (await inputIsCapture(makeEnvironmentTreeFocus)
+          				      (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))))));
+      };
+    };
+  };
+}
+
 function controlSequence(check, ...isExpected) {
   const fail = () => {
     check(false);
@@ -60,114 +109,44 @@ function interactOnDebuggerPaused(...inputSequences) {
   return onDebuggerPaused;
 };
 
-function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescription) {
-  return check => {
-    return (send, render, terminate) => {
-      const controlSelection = message => refreshSelectedEnvironmentTree(makeSelectionInEnvironmentTree(makeEnvironmentTree()),
-                                                                         readEnvironmentTree(message));
+// # Tests
+function test_addBreakpoint(finish, check) {
+  const addBreakpointTest = (send, render, terminate) => {
+    const userInteraction = interactOnDebuggerPaused(
+      makeInputSequence([interactionKeys("breakpointCapture"), "7", enterInput(), interactionKeys("stepOver")], 1000),
+      makeInputSequence([interactionKeys("continue")]),
+      makeInputSequence([ctrlCInput()]));
 
-      const firstCheck = async (stream) => {
-        if (isDebuggerPaused(message(stream))) {
-          return firstCheck(await continuation(now(stream))(forget(await later(stream))));
-        }
-        else if (isEnvironmentTree(message(stream))
-                   && (selection => selectedEntryName(selectedEntry(selection)) === `/${entryDescription}`)
-                        (controlSelection(message(stream)))) {
-          userInput(makeInputSequence([interactionKeys("selectChild")]));
-
-          return secondCheck(await continuation(now(stream))(forget(await later(stream))));
-        }
-        else {
-          return floatOn(stream, false);
-        }
-      };
-
-      const secondCheck = async (stream) => {
-        if (isEnvironmentTreeFocus(message(stream))) {
-          return secondCheck(await continuation(now(stream))(forget(await later(stream))));
-        }
-        else if (isEnvironmentTree(message(stream))
-                   && (selection => selectedEntryName(selectedEntry(selection))
-          		            === `/${entryDescription}${firstChildEntryDescription ? "/" + firstChildEntryDescription
-          		                                                                  : ""}`)
-                        (visitChildEntry(controlSelection(message(stream))))) {
-          return floatOn(stream, true);
-        }
-        else {
-          return floatOn(stream, false);
-        }
-      };
-
-      return async (stream) => {
-        return terminate(check(value(now(await firstCheck
-                                          (await parseEnvironmentTree(send)
-                                            (await inputIsCapture(makeEnvironmentTreeFocus)
-          				      (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))))));
-      };
-    };
-  };
-}
-
-function test_parseEnvironmentTreeWithObject(finish, check) {
-  init(["node", "app.js", "targets/test_target.js"],
-       checkEnvironmentTreeFirstEntry("Object test", "String a: \"abc\"")(check),
-       finish);
-}
-
-function test_parseEnvironmentTreeWithArray(finish, check) {
-  init(["node", "app.js", "targets/test_target_array.js"],
-       checkEnvironmentTreeFirstEntry("Array test", "String 0: \"abc\"")(check),
-       finish);
-}
-
-function test_loop(finish, check) {
-  const loopThenExitOnDebuggerPaused = (send, render, terminate) => {
-    const sendExitOnDebuggerPaused = async (stream) => {
-      if (isDebuggerPaused(message(stream))) {
-        userInput(makeInputSequence([ctrlCInput()]));
-      }
-
-      return commit(stream, sendExitOnDebuggerPaused);
-    };
-
-    return async (stream) => loop(terminate)(await sendExitOnDebuggerPaused(stream));
-  }
-
-  init(["node", "app.js", "targets/test_target.js"], loopThenExitOnDebuggerPaused, finish);
-}
-
-function test_errorHandling(finish, check) {
-  const failOnInputEThenExit = (send, render, terminate) => {
-    const failOnInputE = async (stream) => {
-      if (isDebuggerPaused(message(stream))) {
-	userInput(makeInputSequence(["e"]));
-
-        return commit(stream, failOnInputE);
-      }
-      else if (isInput(message(stream)) && input(message(stream)) === "e") {
-        stream(); // fails
-      }
-      else if (isInput(message(stream))) {
-        return commit(stream, failOnInputE);
-      }
-      else if (isError(message(stream)) && reason(message(stream)).startsWith("TypeError: stream is not a function")) {
-        userInput(makeInputSequence([ctrlCInput()]));
-
-        return commit(stream, failOnInputE);
+    const passDebuggerPausedMessages = async (stream) => {
+      if (isDebuggerPaused(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
+        return commit(stream, passDebuggerPausedMessages);
       }
       else {
-	check(false);
-
-        userInput(makeInputSequence([ctrlCInput()]));
-
-        return commit(stream, failOnInputE);
+        return passDebuggerPausedMessages(await continuation(now(stream))(forget(await later(stream))));
       }
     };
 
-    return async (stream) => loop(terminate)(await failOnInputE(await skipToDebuggerPausedAfterStepping(send, 0)(stream)));
-  }
+    const controlInit = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 0;
 
-  init(["node", "app.js", "targets/test_target.js"], failOnInputEThenExit, finish);
+    const controlStepOver = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 2;
+
+    const controlContinue = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 8;
+
+    return async (stream) => loop(terminate)
+                               (await controlSequence(check,
+				                      controlInit,
+			                              controlStepOver,
+				                      controlContinue)
+			         (await passDebuggerPausedMessages
+			           (await step(send)
+				     (await addBreakpoint(send)
+			               (await parseCaptures()
+				         (await changeMode
+					   (await userInteraction
+			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+  };
+
+  init(["node", "app.js", "targets/test_target_script_source.js"], addBreakpointTest, finish);
 }
 
 function test_changeMode(finish, check) {
@@ -217,6 +196,56 @@ function test_changeMode(finish, check) {
   };
 
   init(["node", "app.js", "targets/test_target.js"], changeModeTest, finish);
+}
+
+function test_errorHandling(finish, check) {
+  const failOnInputEThenExit = (send, render, terminate) => {
+    const failOnInputE = async (stream) => {
+      if (isDebuggerPaused(message(stream))) {
+	userInput(makeInputSequence(["e"]));
+
+        return commit(stream, failOnInputE);
+      }
+      else if (isInput(message(stream)) && input(message(stream)) === "e") {
+        stream(); // fails
+      }
+      else if (isInput(message(stream))) {
+        return commit(stream, failOnInputE);
+      }
+      else if (isError(message(stream)) && reason(message(stream)).startsWith("TypeError: stream is not a function")) {
+        userInput(makeInputSequence([ctrlCInput()]));
+
+        return commit(stream, failOnInputE);
+      }
+      else {
+	check(false);
+
+        userInput(makeInputSequence([ctrlCInput()]));
+
+        return commit(stream, failOnInputE);
+      }
+    };
+
+    return async (stream) => loop(terminate)(await failOnInputE(await skipToDebuggerPausedAfterStepping(send, 0)(stream)));
+  }
+
+  init(["node", "app.js", "targets/test_target.js"], failOnInputEThenExit, finish);
+}
+
+function test_loop(finish, check) {
+  const loopThenExitOnDebuggerPaused = (send, render, terminate) => {
+    const sendExitOnDebuggerPaused = async (stream) => {
+      if (isDebuggerPaused(message(stream))) {
+        userInput(makeInputSequence([ctrlCInput()]));
+      }
+
+      return commit(stream, sendExitOnDebuggerPaused);
+    };
+
+    return async (stream) => loop(terminate)(await sendExitOnDebuggerPaused(stream));
+  }
+
+  init(["node", "app.js", "targets/test_target.js"], loopThenExitOnDebuggerPaused, finish);
 }
 
 function test_parseCaptures(finish, check) {
@@ -278,6 +307,18 @@ function test_parseCaptures(finish, check) {
   };
 
   init(["node", "app.js", "targets/test_target.js"], parseCapturesTest, finish);
+}
+
+function test_parseEnvironmentTreeWithArray(finish, check) {
+  init(["node", "app.js", "targets/test_target_array.js"],
+       checkEnvironmentTreeFirstEntry("Array test", "String 0: \"abc\"")(check),
+       finish);
+}
+
+function test_parseEnvironmentTreeWithObject(finish, check) {
+  init(["node", "app.js", "targets/test_target.js"],
+       checkEnvironmentTreeFirstEntry("Object test", "String a: \"abc\"")(check),
+       finish);
 }
 
 function test_parseSourceTree(finish, check) {
@@ -433,45 +474,6 @@ function test_queryInspector(finish, check) {
   init(["node", "app.js", "targets/test_target_pull_script_source.js"], queryInspectorTest, finish);
 }
 
-function test_addBreakpoint(finish, check) {
-  const addBreakpointTest = (send, render, terminate) => {
-    const userInteraction = interactOnDebuggerPaused(
-      makeInputSequence([interactionKeys("breakpointCapture"), "7", enterInput(), interactionKeys("stepOver")], 1000),
-      makeInputSequence([interactionKeys("continue")]),
-      makeInputSequence([ctrlCInput()]));
-
-    const passDebuggerPausedMessages = async (stream) => {
-      if (isDebuggerPaused(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
-        return commit(stream, passDebuggerPausedMessages);
-      }
-      else {
-        return passDebuggerPausedMessages(await continuation(now(stream))(forget(await later(stream))));
-      }
-    };
-
-    const controlInit = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 0;
-
-    const controlStepOver = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 2;
-
-    const controlContinue = message => isDebuggerPaused(message) && lineNumber(pauseLocation(message)) === 8;
-
-    return async (stream) => loop(terminate)
-                               (await controlSequence(check,
-				                      controlInit,
-			                              controlStepOver,
-				                      controlContinue)
-			         (await passDebuggerPausedMessages
-			           (await step(send)
-				     (await addBreakpoint(send)
-			               (await parseCaptures()
-				         (await changeMode
-					   (await userInteraction
-			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
-  };
-
-  init(["node", "app.js", "targets/test_target_script_source.js"], addBreakpointTest, finish);
-}
-
 function test_step(finish, check) {
   const stepTest = (send, render, terminate) => {
     const userInteraction = interactOnDebuggerPaused(
@@ -520,15 +522,15 @@ function test_step(finish, check) {
 }
 
 module.exports = Test.runInSequence([
-  Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
-  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
-  Test.makeTest(test_loop, "Loop With Exit"),
-  Test.makeTest(test_errorHandling, "Error Handling"),
+  Test.makeTest(test_addBreakpoint, "Add Breakpoint"),
   Test.makeTest(test_changeMode, "Change Mode"),
+  Test.makeTest(test_errorHandling, "Error Handling"),
+  Test.makeTest(test_loop, "Loop With Exit"),
   Test.makeTest(test_parseCaptures, "Parse Captures"),
+  Test.makeTest(test_parseEnvironmentTreeWithArray, "Parse Environment Tree With Array"),
+  Test.makeTest(test_parseEnvironmentTreeWithObject, "Parse Environment Tree With Object"),
   Test.makeTest(test_parseSourceTree, "Parse Source Tree"),
   Test.makeTest(test_pullScriptSource, "Pull Script Source"),
   Test.makeTest(test_queryInspector, "Query Inspector"),
-  Test.makeTest(test_addBreakpoint, "Add Breakpoint"),
   Test.makeTest(test_step, "Step")
 ], "Test Processes");
