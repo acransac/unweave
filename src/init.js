@@ -27,7 +27,7 @@ function connectToInspector(inspectorUri, session, onTerminate, displayTarget) {
 
   webSocket.onopen = () => {
     console.log("Connection opened");
- 
+
     startDebugSession(webSocket, session, displayTarget);
   };
 
@@ -35,7 +35,7 @@ function connectToInspector(inspectorUri, session, onTerminate, displayTarget) {
 
   webSocket.onclose = () => {
     console.log("Connection closed");
-  
+
     onTerminate();
   };
 }
@@ -131,7 +131,7 @@ function startDebugSession(webSocket, session, displayTarget) {
   };
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
-        .withDownstream(async (stream) => 
+        .withDownstream(async (stream) =>
           session(send, render, terminate)(
             await runProgram(send)(
               await enableDebugger(send)(
