@@ -40,8 +40,8 @@ function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescrip
         }
         else if (isEnvironmentTree(message(stream))
                    && (selection => selectedEntryName(selectedEntry(selection))
-          		            === `/${entryDescription}${firstChildEntryDescription ? "/" + firstChildEntryDescription
-          		                                                                  : ""}`)
+                                      === `/${entryDescription}${firstChildEntryDescription ? "/" + firstChildEntryDescription
+                                                                                            : ""}`)
                         (visitChildEntry(controlSelection(message(stream))))) {
           return floatOn(stream, true);
         }
@@ -54,7 +54,7 @@ function checkEnvironmentTreeFirstEntry(entryDescription, firstChildEntryDescrip
         return terminate(check(value(now(await firstCheck
                                           (await parseEnvironmentTree(send)
                                             (await inputIsCapture(makeEnvironmentTreeFocus)
-          				      (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))))));
+                                              (await skipToDebuggerPausedAfterStepping(send, 1)(stream))))))));
       };
     };
   };
@@ -137,16 +137,16 @@ function test_addBreakpoint(finish, check) {
 
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
-				                      controlInit,
-			                              controlStepOver,
-				                      controlContinue)
-			         (await passDebuggerPausedMessages
-			           (await step(send)
-				     (await addBreakpoint(send)
-			               (await parseCaptures()
-				         (await changeMode
-					   (await userInteraction
-			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+                                                      controlInit,
+                                                      controlStepOver,
+                                                      controlContinue)
+                                 (await passDebuggerPausedMessages
+                                   (await step(send)
+                                     (await addBreakpoint(send)
+                                       (await parseCaptures()
+                                         (await changeMode
+                                           (await userInteraction
+                                             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
   };
 
   init(["node", "app.js", "targets/test_target_script_source.js"], addBreakpointTest, finish);
@@ -177,25 +177,25 @@ function test_changeMode(finish, check) {
 
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
-				                      controlModeOpen(isBreakpointCapture),
-				                      controlModalInput(isBreakpointCapture, breakpointCapture, "1"),
-				                      controlModeClose(isBreakpointCapture),
+                                                      controlModeOpen(isBreakpointCapture),
+                                                      controlModalInput(isBreakpointCapture, breakpointCapture, "1"),
+                                                      controlModeClose(isBreakpointCapture),
                                                       controlModeOpen(isQueryCapture),
-				                      controlModalInput(isQueryCapture, query, "a"),
-				                      controlModeClose(isQueryCapture),
+                                                      controlModalInput(isQueryCapture, query, "a"),
+                                                      controlModeClose(isQueryCapture),
                                                       controlModeOpen(isSourceTreeFocus),
-				                      controlModalInput(isSourceTreeFocus, sourceTreeFocusInput, "j"),
-				                      controlModeClose(isSourceTreeFocus),
+                                                      controlModalInput(isSourceTreeFocus, sourceTreeFocusInput, "j"),
+                                                      controlModeClose(isSourceTreeFocus),
                                                       controlModeOpen(isEnvironmentTreeFocus),
-				                      controlModalInput(isEnvironmentTreeFocus, environmentTreeFocusInput, "j"),
-				                      controlModeClose(isEnvironmentTreeFocus),
+                                                      controlModalInput(isEnvironmentTreeFocus, environmentTreeFocusInput, "j"),
+                                                      controlModeClose(isEnvironmentTreeFocus),
                                                       controlModeOpen(isMessagesFocus),
-				                      controlModalInput(isMessagesFocus, messagesFocusInput, "j"),
-				                      controlModeClose(isMessagesFocus),
+                                                      controlModalInput(isMessagesFocus, messagesFocusInput, "j"),
+                                                      controlModeClose(isMessagesFocus),
                                                       controlDefaultInput("d"))
-				 (await changeMode
-	                           (await userInteraction
-			             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+                                 (await changeMode
+                                   (await userInteraction
+                                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
   };
 
   init(["node", "app.js", "targets/test_target.js"], changeModeTest, finish);
@@ -205,7 +205,7 @@ function test_errorHandling(finish, check) {
   const failOnInputEThenExit = (send, render, terminate) => {
     const failOnInputE = async (stream) => {
       if (isDebuggerPaused(message(stream))) {
-	userInput(makeInputSequence(["e"]));
+        userInput(makeInputSequence(["e"]));
 
         return commit(stream, failOnInputE);
       }
@@ -221,7 +221,7 @@ function test_errorHandling(finish, check) {
         return commit(stream, failOnInputE);
       }
       else {
-	check(false);
+        check(false);
 
         userInput(makeInputSequence([ctrlCInput()]));
 
@@ -256,21 +256,21 @@ function test_parseCaptures(finish, check) {
     const userInteraction = async (stream) => {
       userInput(makeInputSequence([
         interactionKeys("breakpointCapture"),
-	"1",
-	...repeatKey(backspaceInput(), 2),
-	"1",
-	"2",
-	enterInput(),
+        "1",
+        ...repeatKey(backspaceInput(), 2),
+        "1",
+        "2",
+        enterInput(),
       ], 1000),
                 makeInputSequence([
         interactionKeys("queryCapture"),
-	"a",
-	...repeatKey(backspaceInput(), 2),
-	"a",
-	"b",
-	enterInput(),
-	"d",
-	ctrlCInput()
+        "a",
+        ...repeatKey(backspaceInput(), 2),
+        "a",
+        "b",
+        enterInput(),
+        "d",
+        ctrlCInput()
       ], 1000));
 
       return await later(stream);
@@ -303,10 +303,10 @@ function test_parseCaptures(finish, check) {
                                                       controlCurrentCapture(isQueryCapture, query, "ab"),
                                                       controlEndedCapture(isQueryCapture, query, "ab"),
                                                       controlDefaultInput("d"))
-				 (await parseCaptures()
-				   (await changeMode
-	                             (await userInteraction
-			               (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+                                 (await parseCaptures()
+                                   (await changeMode
+                                     (await userInteraction
+                                       (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
   };
 
   init(["node", "app.js", "targets/test_target.js"], parseCapturesTest, finish);
@@ -362,7 +362,7 @@ function test_parseSourceTree(finish, check) {
                && (selection => selectedEntryName(selectedEntry(selection)) === `/test_target_source_tree_subdir`)
                     (selectNext(controlSelection(message)))
                && (selection => selectedEntryName(selectedEntry(selection))
-		                  === `/test_target_source_tree_subdir/test_target_source_tree_imports.js`)
+                                  === `/test_target_source_tree_subdir/test_target_source_tree_imports.js`)
                     (visitChildBranch(selectNext(controlSelection(message))))
     };
 
@@ -380,11 +380,11 @@ function test_parseSourceTree(finish, check) {
                                (await controlSequence(check,
                                                       controlBaseScript,
                                                       controlFirstImport,
-			                              controlSecondImport)
-			         (await parseSourceTree()
-			           (await passUserScriptParsedMessages
-				     (await step(send)
-			               (await stepOnDebuggerPaused(stream))))));
+                                                      controlSecondImport)
+                                 (await parseSourceTree()
+                                   (await passUserScriptParsedMessages
+                                     (await step(send)
+                                       (await stepOnDebuggerPaused(stream))))));
   };
 
   init(["node", "app.js", "targets/test_target_source_tree_dir/test_target_source_tree.js"], parseSourceTreeTest, finish);
@@ -395,7 +395,7 @@ function test_pullScriptSource(finish, check) {
     const userInteraction = interactOnDebuggerPaused(makeInputSequence([interactionKeys("stepOver")]),
                                                      makeInputSequence([interactionKeys("stepInto")]),
                                                      makeInputSequence([interactionKeys("sourceTreeFocus"), enterInput()],
-							               1000));
+                                                                       1000));
 
     const passScriptSourceMessages = async (stream) => {
       if (isScriptSource(message(stream)) || (isInput(message(stream)) && input(message(stream)) === ctrlCInput())) {
@@ -407,7 +407,7 @@ function test_pullScriptSource(finish, check) {
     };
 
     const controlBaseScript = message => isScriptSource(message)
-		                           && readScriptSource(message).startsWith("const fct = require(");
+                                           && readScriptSource(message).startsWith("const fct = require(");
 
     const controlImport = message => isScriptSource(message) && readScriptSource(message).startsWith("function fct() {");
 
@@ -420,14 +420,14 @@ function test_pullScriptSource(finish, check) {
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
                                                       controlBaseScript,
-			                              controlImport,
-			                              controlSelectedBaseScript)
-			         (await passScriptSourceMessages
-			           (await pullScriptSource(send)
-			             (await parseSourceTree()
-				       (await step(send)
-				         (await changeMode
-			                   (await userInteraction(stream))))))));
+                                                      controlImport,
+                                                      controlSelectedBaseScript)
+                                 (await passScriptSourceMessages
+                                   (await pullScriptSource(send)
+                                     (await parseSourceTree()
+                                       (await step(send)
+                                         (await changeMode
+                                           (await userInteraction(stream))))))));
   };
 
   init(["node", "app.js", "targets/test_target_pull_script_source.js"], pullScriptSourceTest, finish);
@@ -439,7 +439,7 @@ function test_queryInspector(finish, check) {
       userInput(makeInputSequence([
         interactionKeys("queryCapture"),
         "D", "e", "b", "u", "g", "g", "e", "r", ".", "s", "t", "e", "p", "O", "v", "e", "r",
-	enterInput()
+        enterInput()
       ], 1000));
 
       return stream;
@@ -464,14 +464,14 @@ function test_queryInspector(finish, check) {
 
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
-				                      controlInit,
+                                                      controlInit,
                                                       controlStep)
-			         (await passDebuggerPausedMessages
-			           (await queryInspector(send)
-			             (await parseCaptures()
-				       (await changeMode
-					 (await userInteraction
-			                   (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
+                                 (await passDebuggerPausedMessages
+                                   (await queryInspector(send)
+                                     (await parseCaptures()
+                                       (await changeMode
+                                         (await userInteraction
+                                           (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))))));
   };
 
   init(["node", "app.js", "targets/test_target_pull_script_source.js"], queryInspectorTest, finish);
@@ -507,18 +507,18 @@ function test_step(finish, check) {
 
     return async (stream) => loop(terminate)
                                (await controlSequence(check,
-				                      controlInit,
-			                              controlStepOver,
-			                              controlStepInto,
-			                              controlStepOut,
-				                      controlContinue)
-			         (await passDebuggerPausedMessages
-			           (await step(send)
-				     (await addBreakpoint(send)
-			               (await parseCaptures()
-				         (await changeMode
-					   (await userInteraction
-			                     (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
+                                                      controlInit,
+                                                      controlStepOver,
+                                                      controlStepInto,
+                                                      controlStepOut,
+                                                      controlContinue)
+                                 (await passDebuggerPausedMessages
+                                   (await step(send)
+                                     (await addBreakpoint(send)
+                                       (await parseCaptures()
+                                         (await changeMode
+                                           (await userInteraction
+                                             (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))))));
   };
 
   init(["node", "app.js", "targets/test_target_script_source.js"], stepTest, finish);
