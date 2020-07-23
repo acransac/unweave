@@ -7,6 +7,84 @@ const { commit } = require('streamer');
 const { atom, compose, cons, emptyList, inline, label, show, sizeWidth, TerminalTest } = require('terminal');
 const { makeInputSequence, repeatKey, skipToDebuggerPausedAfterStepping, userInput } = require('../src/testutils.js');
 
+function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName) {
+  return (send, render, terminate) => {
+    const userInteraction = async (stream) => {
+      userInput(makeInputSequence(["", focusKey]),
+                makeInputSequence(["a", "1", "b", "2", ...repeatKey(backspaceInput(), 5), enterInput(), ctrlCInput()], 2));
+
+      return stream;
+    };
+
+    const captureDisplay = capture => label(atom(unpackedContent(capture)), tag(capture));
+
+    return async (stream) => {
+      return loop(terminate)
+               (await userInteraction
+                 (await show(render)(compose(captureDisplay, focusableCaptureLog(logCapture(isCapture,
+			                                                                    readCapture,
+          					                                            promptPrefix),
+          						                         isCapture,
+          						                         labelName,
+          						                         focusKey)))
+                   (await parseCaptures()
+                     (await changeMode
+                       (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
+    };
+  };
+}
+
+function test_breakpointCapture() {
+  return test_capture(isBreakpointCapture,
+	              breakpointCapture,
+	              interactionKeys("breakpointCapture"),
+	              "Add breakpoint at line",
+	              "add breakpoint");
+}
+
+function test_queryCapture() {
+  return test_capture(isQueryCapture, query, interactionKeys("queryCapture"), "Query Inspector", "query Inspector");
+}
+
+function test_commandLine(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence([
+      "",
+      interactionKeys("queryCapture"),
+      enterInput(),
+      interactionKeys("breakpointCapture"),
+      enterInput(),
+      ctrlCInput()
+    ]));
+
+    return stream;
+  };
+
+  const commandLineDisplay = (commandLine, instructions, queryCapture, breakpointCapture) => commandLine(instructions,
+	                                                                                                 queryCapture,
+	                                                                                                 breakpointCapture);
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(commandLineDisplay,
+		                           commandLine(),
+		                           instructions(),
+                                           focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
+						               isQueryCapture,
+						               "query Inspector",
+						               interactionKeys("queryCapture")),
+                                           focusableCaptureLog(logCapture(isBreakpointCapture,
+							                  breakpointCapture,
+						                          "Add breakpoint at line"),
+							       isBreakpointCapture,
+							       "add breakpoint",
+							       interactionKeys("breakpointCapture"))))
+	         (await changeMode
+	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+}
+
 function test_environment(send, render, terminate) {
   const userInteraction = async (stream) => {
     userInput(makeInputSequence([
@@ -34,6 +112,68 @@ function test_environment(send, render, terminate) {
 	           (await parseEnvironmentTree(send)
 		     (await changeMode
 	               (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))))));
+  };
+}
+
+function test_instructions(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence([
+      "",
+      interactionKeys("environmentTreeFocus"),
+      enterInput(),
+      interactionKeys("sourceTreeFocus"),
+      enterInput(),
+      interactionKeys("messagesFocus"),
+      enterInput(),
+      ctrlCInput()
+    ], 0.3));
+
+    return stream;
+  };
+
+  const instructionsDisplay = instructions => label(atom(unpackedContent(instructions)), tag(instructions));
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(instructionsDisplay, instructions()))
+	         (await changeMode
+	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
+  };
+}
+
+function test_messages(send, render, terminate) {
+  const userInteraction = async (stream) => {
+    userInput(makeInputSequence(["", interactionKeys("messagesFocus")]),
+              makeInputSequence([
+	        ...repeatKey(interactionKeys("scrollDown"), 2),
+		...repeatKey(interactionKeys("scrollUp"), 2)
+	      ], 2),
+              makeInputSequence([enterInput(), "f", ctrlCInput()]));
+
+    return stream;
+  };
+
+  const messagesDisplay = messages => label(atom(scrollableContent(unpackedContent(messages))), tag(messages));
+
+  const testLogger = message => "Debugger paused\nTest logger triggered";
+
+  const failOnF = async stream => {
+    if (isInput(message(stream)) && input(message(stream)) === "f") {
+      throw new Error("Test threw: error handled");
+    }
+    else {
+      return commit(stream, failOnF);
+    }
+  };
+
+  return async (stream) => {
+    return loop(terminate)
+	     (await userInteraction
+	       (await show(render)(compose(messagesDisplay, messages(isDebuggerPaused, testLogger)))
+	         (await changeMode
+	           (await failOnF
+	             (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
   };
 }
 
@@ -137,111 +277,6 @@ function test_sourceTree(send, render, terminate) {
   };
 }
 
-function test_instructions(send, render, terminate) {
-  const userInteraction = async (stream) => {
-    userInput(makeInputSequence([
-      "",
-      interactionKeys("environmentTreeFocus"),
-      enterInput(),
-      interactionKeys("sourceTreeFocus"),
-      enterInput(),
-      interactionKeys("messagesFocus"),
-      enterInput(),
-      ctrlCInput()
-    ], 0.3));
-
-    return stream;
-  };
-
-  const instructionsDisplay = instructions => label(atom(unpackedContent(instructions)), tag(instructions));
-
-  return async (stream) => {
-    return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(instructionsDisplay, instructions()))
-	         (await changeMode
-	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
-  };
-}
-
-function test_capture(isCapture, readCapture, focusKey, promptPrefix, labelName) {
-  return (send, render, terminate) => {
-    const userInteraction = async (stream) => {
-      userInput(makeInputSequence(["", focusKey]),
-                makeInputSequence(["a", "1", "b", "2", ...repeatKey(backspaceInput(), 5), enterInput(), ctrlCInput()], 2));
-
-      return stream;
-    };
-
-    const captureDisplay = capture => label(atom(unpackedContent(capture)), tag(capture));
-
-    return async (stream) => {
-      return loop(terminate)
-               (await userInteraction
-                 (await show(render)(compose(captureDisplay, focusableCaptureLog(logCapture(isCapture,
-			                                                                    readCapture,
-          					                                            promptPrefix),
-          						                         isCapture,
-          						                         labelName,
-          						                         focusKey)))
-                   (await parseCaptures()
-                     (await changeMode
-                       (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
-    };
-  };
-}
-
-function test_breakpointCapture() {
-  return test_capture(isBreakpointCapture,
-	              breakpointCapture,
-	              interactionKeys("breakpointCapture"),
-	              "Add breakpoint at line",
-	              "add breakpoint");
-}
-
-function test_queryCapture() {
-  return test_capture(isQueryCapture, query, interactionKeys("queryCapture"), "Query Inspector", "query Inspector");
-}
-
-function test_commandLine(send, render, terminate) {
-  const userInteraction = async (stream) => {
-    userInput(makeInputSequence([
-      "",
-      interactionKeys("queryCapture"),
-      enterInput(),
-      interactionKeys("breakpointCapture"),
-      enterInput(),
-      ctrlCInput()
-    ]));
-
-    return stream;
-  };
-
-  const commandLineDisplay = (commandLine, instructions, queryCapture, breakpointCapture) => commandLine(instructions,
-	                                                                                                 queryCapture,
-	                                                                                                 breakpointCapture);
-
-  return async (stream) => {
-    return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(commandLineDisplay,
-		                           commandLine(),
-		                           instructions(),
-                                           focusableCaptureLog(logCapture(isQueryCapture, query, "Query Inspector"),
-						               isQueryCapture,
-						               "query Inspector",
-						               interactionKeys("queryCapture")),
-                                           focusableCaptureLog(logCapture(isBreakpointCapture,
-							                  breakpointCapture,
-						                          "Add breakpoint at line"),
-							       isBreakpointCapture,
-							       "add breakpoint",
-							       interactionKeys("breakpointCapture"))))
-	         (await changeMode
-	           (await skipToDebuggerPausedAfterStepping(send, 0)(stream)))));
-  };
-}
-
 function test_topRightColumnDisplay(send, render, terminate) {
   const userInteraction = async (stream) => {
     userInput(makeInputSequence([
@@ -268,46 +303,27 @@ function test_topRightColumnDisplay(send, render, terminate) {
   };
 }
 
-function test_messages(send, render, terminate) {
-  const userInteraction = async (stream) => {
-    userInput(makeInputSequence(["", interactionKeys("messagesFocus")]),
-              makeInputSequence([
-	        ...repeatKey(interactionKeys("scrollDown"), 2),
-		...repeatKey(interactionKeys("scrollUp"), 2)
-	      ], 2),
-              makeInputSequence([enterInput(), "f", ctrlCInput()]));
-
-    return stream;
-  };
-
-  const messagesDisplay = messages => label(atom(scrollableContent(unpackedContent(messages))), tag(messages));
-
-  const testLogger = message => "Debugger paused\nTest logger triggered";
-
-  const failOnF = async stream => {
-    if (isInput(message(stream)) && input(message(stream)) === "f") {
-      throw new Error("Test threw: error handled");
-    }
-    else {
-      return commit(stream, failOnF);
-    }
-  };
-
-  return async (stream) => {
-    return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(messagesDisplay, messages(isDebuggerPaused, testLogger)))
-	         (await changeMode
-	           (await failOnF
-	             (await skipToDebuggerPausedAfterStepping(send, 0)(stream))))));
-  };
-}
 module.exports = TerminalTest.reviewDisplays([
+  TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture(), "Breakpoint Capture", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_queryCapture(), "Query Capture", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_commandLine, "Command Line", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
+  }),
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Object", (displayTarget, test, finish) => {
     return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_environment, "Environment With Array", (displayTarget, test, finish) => {
     return init(["node", "app.js", "targets/test_target_array.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_instructions, "Instructions", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
+  }),
+  TerminalTest.makeTestableReactiveDisplay(test_messages, "Messages", (displayTarget, test, finish) => {
+    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   }),
   TerminalTest.makeTestableReactiveDisplay(test_scriptSource, "Script Source", (displayTarget, test, finish) => {
     return init(["node", "app.js", "targets/test_target_script_source.js"], test, finish, displayTarget);
@@ -318,24 +334,9 @@ module.exports = TerminalTest.reviewDisplays([
 	        finish,
 	        displayTarget);
   }),
-  TerminalTest.makeTestableReactiveDisplay(test_instructions, "Instructions", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
-  }),
-  TerminalTest.makeTestableReactiveDisplay(test_breakpointCapture(), "Breakpoint Capture", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
-  }),
-  TerminalTest.makeTestableReactiveDisplay(test_queryCapture(), "Query Capture", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
-  }),
-  TerminalTest.makeTestableReactiveDisplay(test_commandLine, "Command Line", (displayTarget, test, finish) => {
-    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
-  }),
   TerminalTest.makeTestableReactiveDisplay(test_topRightColumnDisplay,
                                            "Top Right Column Display",
                                            (displayTarget, test, finish) => {
-    return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
-  }),
-  TerminalTest.makeTestableReactiveDisplay(test_messages, "Messages", (displayTarget, test, finish) => {
     return init(["node", "app.js", "targets/test_target.js"], test, finish, displayTarget);
   })
 ], "Test Components");
