@@ -16,7 +16,7 @@ function lexJsValue(jsValueString) {
     if (jsValueString === "") {
       return [tokens, jsValueString];
     }
-  
+
     switch (jsValueString[0]) {
       case '{': return lexJsValueImpl([...tokens, 'ObjBegin'], jsValueString.substring(1));
       case '}': return lexJsValueImpl([...tokens, 'ObjEnd'], jsValueString.substring(1));
@@ -108,7 +108,7 @@ function syntaxJsValueImpl(jsValue, tokens) {
   if (tokens.length === 0) {
     return [jsValue, tokens];
   }
-  
+
   switch (tokens[0]) {
     case 'ObjBegin': return syntaxObject({}, tokens.slice(1));
     case 'ArrayBegin': return syntaxArray([], tokens.slice(1));
