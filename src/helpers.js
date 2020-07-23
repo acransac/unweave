@@ -287,7 +287,7 @@ function displayedScriptSource() {
 
         return onDisplayChange(displayUpdater(selectionInSourceTree, scriptId), scriptId);
       };
-      
+
       return exploreSourceTree(selectionInSourceTree, stream, selectionChange, displayChange);
     }
   };
@@ -458,7 +458,7 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
                                                 topLine(scriptSource)));
 }
 
-// ## Tree Writers 
+// ## Tree Writers
 function writeTreeImpl(visitedTree, filterBranch) {
   const formatEntry = entry => {
     return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedTree))
@@ -469,9 +469,9 @@ function writeTreeImpl(visitedTree, filterBranch) {
           entryName(entry)));
   };
 
-  return (selectedEntryBranchName(selectedEntry(visitedTree)) === "" 
+  return (selectedEntryBranchName(selectedEntry(visitedTree)) === ""
     ? `${styleText("root", "bold")}\n`
-    : `${styleText(selectedEntryBranchName(selectedEntry(visitedTree)), "bold")}\n`) 
+    : `${styleText(selectedEntryBranchName(selectedEntry(visitedTree)), "bold")}\n`)
     + selectedBranch(visitedTree).filter(entry => filterBranch ? filterBranch(entry) : true)
                                  .map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
