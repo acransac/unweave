@@ -72,7 +72,7 @@ function displayedScript() {
 function environmentTree() {
   return noParameters => predecessor => stream => {
     const label = predecessor ? tag(predecessor) : highlightOneCharacter("environment",
-	                                                                 interactionKeys("environmentTreeFocus"));
+                                                                         interactionKeys("environmentTreeFocus"));
 
     const selection = predecessor ? unpackedContent(predecessor) : makeSelectionInEnvironmentTree(makeEnvironmentTree());
 
@@ -81,15 +81,15 @@ function environmentTree() {
     }
     else if (isEnvironmentTree(message(stream))) {
       return f => f(noParameters)
-	            (makePackagedContent(label, refreshSelectedEnvironmentTree(selection,
-			                                                       readEnvironmentTree(message(stream)))));
+                    (makePackagedContent(label, refreshSelectedEnvironmentTree(selection,
+                                                                               readEnvironmentTree(message(stream)))));
     }
     else {
       return exploreEnvironmentTreeSilently(selection, stream, newSelection => {
         return f => f(noParameters)
-	              (makePackagedContent(focusable(isEnvironmentTreeFocus, interactionKeys("environmentTreeFocus"))
-			                     (label, stream),
-			                   newSelection));
+                      (makePackagedContent(focusable(isEnvironmentTreeFocus, interactionKeys("environmentTreeFocus"))
+                                             (label, stream),
+                                           newSelection));
       });
     }
   };
@@ -110,7 +110,7 @@ function focusableCaptureLog(logger, isFocus, label, alwaysHighlightedCharacter)
     const log = predecessor ? unpackedContent(predecessor) : undefined;
 
     return f => f(noParameters)(makePackagedContent(focusable(isFocus, alwaysHighlightedCharacter)(title, stream),
-			                            logger()(log)(stream)(f => g => g)));
+                                                    logger()(log)(stream)(f => g => g)));
   };
 }
 
@@ -121,27 +121,27 @@ function focusableCaptureLog(logger, isFocus, label, alwaysHighlightedCharacter)
 function instructions() {
   return noParameters => predecessor => stream => {
     const defaultInstructions = `${interactionKeys("stepOver")}: Step over  `
-	                          + `${interactionKeys("stepInto")}: Step into  `
-	                          + `${interactionKeys("stepOut")}: Step out  `
-	                          + `${interactionKeys("continue")}: Continue  `
-	                          + `${interactionKeys("scrollDown")}: Scroll down  `
-	                          + `${interactionKeys("scrollUp")}: Scroll up  `
-	                          + "Ctrl+C: Quit";
+                                  + `${interactionKeys("stepInto")}: Step into  `
+                                  + `${interactionKeys("stepOut")}: Step out  `
+                                  + `${interactionKeys("continue")}: Continue  `
+                                  + `${interactionKeys("scrollDown")}: Scroll down  `
+                                  + `${interactionKeys("scrollUp")}: Scroll up  `
+                                  + "Ctrl+C: Quit";
 
     const sourceTreeInstructions = `${interactionKeys("selectNext")}: Select next entry  `
-	                             + `${interactionKeys("selectPrevious")}: Select previous entry  `
-	                             + `${interactionKeys("selectChild")}: Visit directory  `
-	                             + `${interactionKeys("selectParent")}: Go to parent directory  `
-	                             + "Enter: Validate selection";
+                                     + `${interactionKeys("selectPrevious")}: Select previous entry  `
+                                     + `${interactionKeys("selectChild")}: Visit directory  `
+                                     + `${interactionKeys("selectParent")}: Go to parent directory  `
+                                     + "Enter: Validate selection";
 
     const environmentTreeInstructions = `${interactionKeys("selectNext")}: Select next entry  `
-	                                  + `${interactionKeys("selectPrevious")}: Select previous entry  `
-	                                  + `${interactionKeys("selectChild")}: Visit entry  `
-	                                  + `${interactionKeys("selectParent")}: Go to parent entry  `
+                                          + `${interactionKeys("selectPrevious")}: Select previous entry  `
+                                          + `${interactionKeys("selectChild")}: Visit entry  `
+                                          + `${interactionKeys("selectParent")}: Go to parent entry  `
                                           + "Enter: Leave";
 
     const messagesInstructions = `${interactionKeys("scrollDown")}: Scroll down  `
-	                           + `${interactionKeys("scrollUp")}: Scroll up  `
+                                   + `${interactionKeys("scrollUp")}: Scroll up  `
                                    + "Enter: Leave";
 
     if (isSourceTreeFocus(message(stream)) && !hasEnded(message(stream))) {
@@ -161,7 +161,7 @@ function instructions() {
     }
     else {
       return predecessor ? f => f(noParameters)(predecessor)
-	                 : f => f(noParameters)(makePackagedContent("instructions", defaultInstructions));
+                         : f => f(noParameters)(makePackagedContent("instructions", defaultInstructions));
     }
   };
 }
@@ -201,18 +201,18 @@ function messages(inspectedMessage, logger) {
 
     if (inspectedMessage(message(stream))) {
       return f => f(noParameters)
-	            (makePackagedContent(label,
-	                                 makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${logger(message(stream))}`, topLine(displayedContent))));
+                    (makePackagedContent(label,
+                                         makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${logger(message(stream))}`, topLine(displayedContent))));
     }
     else if (isError(message(stream))) {
       return f => f(noParameters)
-	            (makePackagedContent(label,
-	                                 makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${reason(message(stream))}`, topLine(displayedContent))));
+                    (makePackagedContent(label,
+                                         makeDisplayedContent(`${predecessor ? content(displayedContent) + "\n" : ""}${reason(message(stream))}`, topLine(displayedContent))));
     }
     else {
       return f => f(noParameters)
-	            (makePackagedContent(focusable(isMessagesFocus, interactionKeys("messagesFocus"))(label, stream),
-			                 scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream)));
+                    (makePackagedContent(focusable(isMessagesFocus, interactionKeys("messagesFocus"))(label, stream),
+                                         scrollable(isMessagesFocus, messagesFocusInput)(displayedContent, stream)));
     }
   };
 }
@@ -244,36 +244,36 @@ function scriptSource() {
 
     const focusableScriptSource = focusableByDefault(message => {
       return (isBreakpointCapture(message)
-	       || isQueryCapture(message)
-	       || isMessagesFocus(message)
-	       || isSourceTreeFocus(message)
-	       || isEnvironmentTreeFocus(message));
+               || isQueryCapture(message)
+               || isMessagesFocus(message)
+               || isSourceTreeFocus(message)
+               || isEnvironmentTreeFocus(message));
     });
 
     const onSelectionChange = (displayChange, scriptId) => {
       if (isScriptSource(message(stream))) {
         return f => f(displayChange, scriptId)
                       (makePackagedContent(label, makeDisplayedContent(readScriptSource(message(stream)),
-			                                               topLine(displayedContent))));
+                                                                       topLine(displayedContent))));
       }
       else {
         return f => f(displayChange, scriptId)
-	              (makePackagedContent(focusableScriptSource(label, stream),
-			                   scrollable(isInput, input)(displayedContent, stream)));
+                      (makePackagedContent(focusableScriptSource(label, stream),
+                                           scrollable(isInput, input)(displayedContent, stream)));
       }
     };
 
     const onDisplayChange = (displayChange, newScriptId) => {
       if (isDebuggerPaused(message(stream))) {
         return f => f(displayChange, newScriptId)
-		      (makePackagedContent(label,
-			                   makeDisplayedContent(content(displayedContent),
-				                                Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0))));
+                      (makePackagedContent(label,
+                                           makeDisplayedContent(content(displayedContent),
+                                                                Math.max(lineNumber(pauseLocation(message(stream))) - 3, 0))));
       }
       else {
         return f => f(displayChange, newScriptId)
-	              (makePackagedContent(focusableScriptSource(label, stream),
-			                   makeDisplayedContent(content(displayedContent), 0)));
+                      (makePackagedContent(focusableScriptSource(label, stream),
+                                           makeDisplayedContent(content(displayedContent), 0)));
       }
     };
 
@@ -294,8 +294,8 @@ function sourceTree() {
     const identity = selection => selection;
 
     return f => f(noParameters)(makePackagedContent(focusable(isSourceTreeFocus, interactionKeys("sourceTreeFocus"))
-	                                              (label, stream),
-	                                            exploreSourceTree(selection, stream, identity, identity)));
+                                                      (label, stream),
+                                                    exploreSourceTree(selection, stream, identity, identity)));
   };
 }
 
@@ -307,7 +307,7 @@ function topRightColumnDisplay() {
   return noParameters => predecessor => stream => {
     const environmentTreeDisplay = (environmentTree, sourceTree) => {
       return sizeHeight(50, label(atom(writeEnvironmentTree(unpackedContent(environmentTree))),
-	                          tabs(0, environmentTree, sourceTree)));
+                                  tabs(0, environmentTree, sourceTree)));
     };
 
     const sourceTreeDisplay = (environmentTree, sourceTree) => {
