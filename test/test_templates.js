@@ -19,27 +19,27 @@ function test_developerDisplay(send, render, terminate) {
 
   return async (stream) => {
     return loop(terminate)
-	     (await userInteraction
-	       (await show(render)(compose(developerDisplay,
-			                   scriptSource(),
-			                   runLocation(),
-			                   breakpoints(),
-			                   displayedScript(),
-		                           topRightColumnDisplay(),
-			                   environmentTree(),
-			                   messages(message => false, () => {}),
-		                           sourceTree(),
-			                   commandLine(),
+             (await userInteraction
+               (await show(render)(compose(developerDisplay,
+                                           scriptSource(),
+                                           runLocation(),
+                                           breakpoints(),
+                                           displayedScript(),
+                                           topRightColumnDisplay(),
+                                           environmentTree(),
+                                           messages(message => false, () => {}),
+                                           sourceTree(),
+                                           commandLine(),
                                            instructions(),
                                            focusableCaptureLog(logCapture(message => false, message => {}, ""),
-						               message => false,
-						               "query Inspector",
-						               interactionKeys("queryCapture")),
+                                                               message => false,
+                                                               "query Inspector",
+                                                               interactionKeys("queryCapture")),
                                            focusableCaptureLog(logCapture(message => false, message => {}, ""),
-							       message => false,
-							       "add breakpoint",
-							       interactionKeys("breakpointCapture"))))
-	         (await skipToDebuggerPausedAfterStepping(send, 0)(stream))));
+                                                               message => false,
+                                                               "add breakpoint",
+                                                               interactionKeys("breakpointCapture"))))
+                 (await skipToDebuggerPausedAfterStepping(send, 0)(stream))));
   };
 }
 
