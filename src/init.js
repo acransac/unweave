@@ -65,22 +65,22 @@ async function parseCliArguments(cliArguments) {
     else {
       switch (uriOptions[0]) {
         case "--address":
-	case "-a":
+        case "-a":
           return parseUriOptions(makeInspectorUri(uriOptions[1], port(inspectorUri), sessionHash(inspectorUri)),
-		                 uriOptions.slice(2));
-	  break;
+                                 uriOptions.slice(2));
+          break;
         case "--port":
-	case "-p":
+        case "-p":
           return parseUriOptions(makeInspectorUri(address(inspectorUri), uriOptions[1], sessionHash(inspectorUri)),
-		                 uriOptions.slice(2));
-	  break;
+                                 uriOptions.slice(2));
+          break;
         case "--session":
-	case "-s":
+        case "-s":
           return parseUriOptions(makeInspectorUri(address(inspectorUri), port(inspectorUri), uriOptions[1]),
-		                 uriOptions.slice(2));
-	  break;
-	default:
-	  throw "Uri option not valid";
+                                 uriOptions.slice(2));
+          break;
+        default:
+          throw "Uri option not valid";
       }
     }
   };
@@ -131,11 +131,11 @@ function startDebugSession(webSocket, session, displayTarget) {
   };
 
   Source.from(mergeEvents([makeEmitter(inputCapture(), "input"), makeEmitter(webSocket, "message")]), "onevent")
-	.withDownstream(async (stream) => 
-	  session(send, render, terminate)(
-	    await runProgram(send)(
-	      await enableDebugger(send)(
-	        await runtimeEnabled(stream)))));
+        .withDownstream(async (stream) => 
+          session(send, render, terminate)(
+            await runProgram(send)(
+              await enableDebugger(send)(
+                await runtimeEnabled(stream)))));
 
   sendEnableRuntime(send);
 }
@@ -143,7 +143,7 @@ function startDebugSession(webSocket, session, displayTarget) {
 function startInspectedProcess(scriptPath) {
   return new Promise(resolve => {
     const inspectedProcess = fork(scriptPath, options = {stdio: ["ignore", "ignore", "pipe", "ipc"],
-	                                                 execArgv: ["--inspect-brk"]});
+                                                         execArgv: ["--inspect-brk"]});
 
     const stderrLines = Readline.createInterface({input: inspectedProcess.stderr});
 
@@ -152,9 +152,9 @@ function startInspectedProcess(scriptPath) {
 
       if (line.startsWith(uriLinePrefix)) {
         resolve((uriString => makeInspectorUri(uriString.match(/^.+:/g)[0].slice(0, -1),
-		                               uriString.match(/:.+\//g)[0].slice(1, -1),
-					       uriString.match(/\/.+/g)[0].slice(1)))
-		  (line.slice(uriLinePrefix.length)));
+                                               uriString.match(/:.+\//g)[0].slice(1, -1),
+                                               uriString.match(/\/.+/g)[0].slice(1)))
+                  (line.slice(uriLinePrefix.length)));
       }
     });
   });
