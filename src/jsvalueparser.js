@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 /*
  * Get the javascript value that is spelled by a string
  * @param {string} jsValueString - The value as a string. This is not JSON but the value like it would be written in a script source

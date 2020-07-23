@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 (async () => {
   await require('./test_components.js');
 

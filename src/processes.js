@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 const { insertInEnvironmentTree, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, resolvePendingEntry } = require('./environmenttree.js');
 const { insertInFileTree, makeFileEntry, makeFileTree, parseFilePath } = require('@acransac/filetree');
 const { ctrlCInput, displayedScriptSource, enterInput, exploreEnvironmentTree, parseUserInput } = require('./helpers.js');

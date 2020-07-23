@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 const { scrollableContent, tag, unpackedContent, writeScriptSource } = require('./helpers.js');
 const { atom, column, cons, emptyList, indent, label, row, sizeHeight, sizeWidth, vindent } = require('@acransac/terminal');
 

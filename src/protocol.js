@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 const parseJsValue = require('./jsvalueparser.js');
 const { now, value } = require('@acransac/streamer');
 

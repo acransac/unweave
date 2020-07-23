@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 const { input, isDebuggerPaused, isInput, makeInput, message, sendStepOver } = require('./protocol.js');
 const { commit, floatOn, later } = require('@acransac/streamer');
 

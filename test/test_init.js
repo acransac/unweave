@@ -1,3 +1,6 @@
+// Copyright (c) Adrien Cransac
+// License: MIT
+
 const { init } = require('../src/init.js');
 const { isDebuggerEnabled, isDebuggerPaused, isScriptParsed, message } = require('../src/protocol.js');
 const { floatOn, later, now, value } = require('@acransac/streamer');
