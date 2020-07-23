@@ -38,7 +38,7 @@ function addBreakpoint(send) {
 /*
  * Start and end captures and focuses, and mark one input character as a capture or focus when they are active
  * @param {Stream} stream - The stream
- * @return {Stream} - The process outputs capture and focus messages with one character on user input messages 
+ * @return {Stream} - The process outputs capture and focus messages with one character on user input messages
  */
 async function changeMode(stream) {
   const modalCapture = (makeCapture, continuation) => {
@@ -125,7 +125,7 @@ function parseCaptures() {
         return floatOn(commit(stream, parser(newCapture)), makeCapture(newCapture));
       }
     };
-   
+
     if (isBreakpointCapture(message(stream))) {
       return parse(makeBreakpointCapture, breakpointCapture);
     }
@@ -223,7 +223,7 @@ function pullScriptSource(send) {
     const onSelectionChange = (displayChange, scriptId) => {
       return commit(stream, scriptChecker(displayChange));
     };
-          
+
     return displayChange(onSelectionChange, onDisplayChange)(stream);
   };
 
