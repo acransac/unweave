@@ -15,8 +15,8 @@ const { columnNumber, entryValue, environmentTreeFocusInput, hasEnded, interacti
  */
 function focusable(isFocus, alwaysHighlightedCharacter) {
   return focusableImpl(message => isFocus(message) && !hasEnded(message),
-	               message => isFocus(message) && hasEnded(message),
-	               alwaysHighlightedCharacter);
+                       message => isFocus(message) && hasEnded(message),
+                       alwaysHighlightedCharacter);
 }
 
 /*
@@ -27,8 +27,8 @@ function focusable(isFocus, alwaysHighlightedCharacter) {
  */
 function focusableByDefault(isNotFocus, alwaysHighlightedCharacter) {
   return focusableImpl(message => isNotFocus(message) && hasEnded(message),
-	               message => isNotFocus(message) && !hasEnded(message),
-	               alwaysHighlightedCharacter);
+                       message => isNotFocus(message) && !hasEnded(message),
+                       alwaysHighlightedCharacter);
 }
 
 function focusableImpl(onFocus, onLoseFocus, alwaysHighlightedCharacter) {
@@ -84,7 +84,7 @@ function tabs(number, ...packagedContents) {
   return packagedContents.map((packagedContent, index) => {
     return (index === number ? label => `>${label}<` : label => label)(tag(packagedContent));
   })
-	                 .join("-");
+                         .join("-");
 }
 
 // ## Packaged Content
@@ -131,7 +131,7 @@ function scrollable(isInput, input) {
     if (isInput(message(stream)) && input(message(stream)) === interactionKeys("scrollDown")) {
       return makeDisplayedContent(content(displayedContent),
                                   Math.min(content(displayedContent).split("\n").length - 1,
-					   topLine(displayedContent) + 1));
+                                           topLine(displayedContent) + 1));
     }
     else if (isInput(message(stream)) && input(message(stream)) === interactionKeys("scrollUp")) {
       return makeDisplayedContent(content(displayedContent), Math.max(0, topLine(displayedContent) - 1));
@@ -221,25 +221,25 @@ function styleText(text, style) {
  */
 function exploreEnvironmentTree(selectionInEnvironmentTree, pendingEntriesRegister, stream, continuation) {
   return (newSelection => continuation(newSelection, registerPendingEntry(pendingEntriesRegister, newSelection)))
-	   (exploreEnvironmentTreeImpl(visitChildEntry)(selectionInEnvironmentTree, stream));
+           (exploreEnvironmentTreeImpl(visitChildEntry)(selectionInEnvironmentTree, stream));
 }
 
 function exploreEnvironmentTreeImpl(visitChildEntry) {
   return (selectionInEnvironmentTree, stream) => {
     if (isEnvironmentTreeFocus(message(stream))
-	  && environmentTreeFocusInput(message(stream)) === interactionKeys("selectNext")) {
+          && environmentTreeFocusInput(message(stream)) === interactionKeys("selectNext")) {
       return selectNextEntry(selectionInEnvironmentTree);
     }
     else if (isEnvironmentTreeFocus(message(stream))
-	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectPrevious")) {
+               && environmentTreeFocusInput(message(stream)) === interactionKeys("selectPrevious")) {
       return selectPreviousEntry(selectionInEnvironmentTree);
     }
     else if (isEnvironmentTreeFocus(message(stream))
-	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectChild")) {
+               && environmentTreeFocusInput(message(stream)) === interactionKeys("selectChild")) {
       return visitChildEntry(selectionInEnvironmentTree);
     }
     else if (isEnvironmentTreeFocus(message(stream))
-	       && environmentTreeFocusInput(message(stream)) === interactionKeys("selectParent")) {
+               && environmentTreeFocusInput(message(stream)) === interactionKeys("selectParent")) {
       return visitParentEntry(selectionInEnvironmentTree);
     }
     else {
@@ -283,7 +283,7 @@ function displayedScriptSource() {
       };
 
       const displayChange = selectionInSourceTree => {
-	const scriptId = selectedEntryHandle(selectedEntry(selectionInSourceTree));
+        const scriptId = selectedEntryHandle(selectedEntry(selectionInSourceTree));
 
         return onDisplayChange(displayUpdater(selectionInSourceTree, scriptId), scriptId);
       };
@@ -320,8 +320,8 @@ function exploreSourceTree(selectionInSourceTree, stream, continuation, onFilePi
     return continuation(visitParentBranch(selectionInSourceTree));
   }
   else if (isSourceTreeFocus(message(stream))
-	     && sourceTreeFocusInput(message(stream)) === enterInput()
-	     && isFileSelected(selectedEntry(selectionInSourceTree))) {
+             && sourceTreeFocusInput(message(stream)) === enterInput()
+             && isFileSelected(selectedEntry(selectionInSourceTree))) {
     return onFilePicked(selectionInSourceTree);
   }
   else {
@@ -394,47 +394,47 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
 
       const lineNumberPrefix = lineNumber => {
         if (lineNumber.toString().length < 4) {
-	  return `${lineNumber.toString().padEnd(3, ' ')}|`;
-	}
-	else {
+          return `${lineNumber.toString().padEnd(3, ' ')}|`;
+        }
+        else {
           return `${lineNumber.toString()}|`;
-	}
+        }
       };
 
       const runLocationHighlights = line => {
-	const highlightCurrentExpression = line => {
-	  const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
-	    const isOneOf = (characterSelection, character) => {
-	      if (characterSelection.length === 0) {
-	        return false;
-	      }
-	      else if (characterSelection[0] === character) {
-	        return true;
-	      }
-	      else {
-	        return isOneOf(characterSelection.slice(1), character);
-	      }
-	    };
+        const highlightCurrentExpression = line => {
+          const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
+            const isOneOf = (characterSelection, character) => {
+              if (characterSelection.length === 0) {
+                return false;
+              }
+              else if (characterSelection[0] === character) {
+                return true;
+              }
+              else {
+                return isOneOf(characterSelection.slice(1), character);
+              }
+            };
 
-	    if (line.length === 0) {
-	      return beforeHighlight;
-	    }
-	    else if (isOneOf("[({ })]=>\r\n;", line[0])) {
-	      return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
-	    }
-	    else {
-	      return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
-	               (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
-	    }
-	  };
+            if (line.length === 0) {
+              return beforeHighlight;
+            }
+            else if (isOneOf("[({ })]=>\r\n;", line[0])) {
+              return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
+            }
+            else {
+              return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
+                       (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
+            }
+          };
 
-	  return highlightCurrentExpressionImpl("", line);
-	};
+          return highlightCurrentExpressionImpl("", line);
+        };
 
         if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
-	  return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
+          return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
         }
-	else {
+        else {
           return `  ${line}`;
         }
       };
@@ -447,15 +447,15 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
   };
 
   return scrollableContent(makeDisplayedContent(formatScriptSource([],
-	                                                           breakpoints.filter(breakpoint => {
-								     return scriptHandle(breakpoint) === displayedScript;
-	                                                           })
-	                                                                      .sort((breakpointA, breakpointB) => {
-								     return lineNumber(breakpointA) - lineNumber(breakpointB);
-							           }),
-	                                                           content(scriptSource).split("\n"),
-	                                                           0).join("\n"),
-	                                        topLine(scriptSource)));
+                                                                   breakpoints.filter(breakpoint => {
+                                                                     return scriptHandle(breakpoint) === displayedScript;
+                                                                   })
+                                                                              .sort((breakpointA, breakpointB) => {
+                                                                     return lineNumber(breakpointA) - lineNumber(breakpointB);
+                                                                   }),
+                                                                   content(scriptSource).split("\n"),
+                                                                   0).join("\n"),
+                                                topLine(scriptSource)));
 }
 
 // ## Tree Writers 
@@ -465,7 +465,7 @@ function writeTreeImpl(visitedTree, filterBranch) {
       ? entryName => `\u001b[7m${entryName}\u001b[0m`
       : entryName => entryName)(
         (isDirectoryEntry(entry) ? entryName => styleText(entryName, "bold")
-	                         : entryName => entryName)(
+                                 : entryName => entryName)(
           entryName(entry)));
   };
 
@@ -473,7 +473,7 @@ function writeTreeImpl(visitedTree, filterBranch) {
     ? `${styleText("root", "bold")}\n`
     : `${styleText(selectedEntryBranchName(selectedEntry(visitedTree)), "bold")}\n`) 
     + selectedBranch(visitedTree).filter(entry => filterBranch ? filterBranch(entry) : true)
-		                 .map(entry => `  ${formatEntry(entry)}\n`).join("");
+                                 .map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
 // ### Environment Tree Writer
@@ -485,7 +485,7 @@ function writeTreeImpl(visitedTree, filterBranch) {
  */
 function describeEnvironment(entries) {
   return entries.filter(entry => !(name(entry) === "exports" || name(entry) === "require" || name(entry) === "module"
-			           || name(entry) === "__filename" || name(entry) === "__dirname"))
+                                   || name(entry) === "__filename" || name(entry) === "__dirname"))
                .reduce((description, entry) => {
     return `${description}${type(entry)} ${name(entry)}${entryValue(entry) ? ": " + entryValue(entry) : ""}\n`;
   }, "");
