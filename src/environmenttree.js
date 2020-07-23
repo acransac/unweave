@@ -85,20 +85,20 @@ function registerPendingEntry(pendingEntriesRegister, selection) {
 function resolvePendingEntry(environmentTree, selection, pendingEntriesRegister, message, environmentReader, send, continuation) {
   const onEntryFound = (newRegister, entryToResolve) => {
     return (newEnvironmentTree => continuation(newEnvironmentTree,
-	                                       refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
-	                                       newRegister))
+                                               refreshSelectedEnvironmentTree(selection, newEnvironmentTree),
+                                               newRegister))
              (insertInEnvironmentTree(environmentTree,
-		                      pendingEntryPath(entryToResolve),
-		                      environmentReader(readEnvironment(message)),
-		                      send));
+                                      pendingEntryPath(entryToResolve),
+                                      environmentReader(readEnvironment(message)),
+                                      send));
   };
 
   const onEntryNotFound = register => continuation(environmentTree, selection, register);
 
   return lookupPendingEntryInRegister(pendingEntriesRegister,
-	                              readEnvironmentEntryUniqueId(message),
-	                              onEntryFound,
-	                              onEntryNotFound);
+                                      readEnvironmentEntryUniqueId(message),
+                                      onEntryFound,
+                                      onEntryNotFound);
 }
 
 function lookupPendingEntryInRegister(pendingEntriesRegister, lookedupEntryUniqueId, onEntryFound, onEntryNotFound) {
@@ -198,7 +198,7 @@ function selectPreviousEntry(selectionInEnvironmentTree) {
 function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))
-	  && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
+          && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEnvironmentEntryDescription);
     }
 
