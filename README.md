@@ -43,3 +43,46 @@ Both of the last two commands are executed in the npm project's root directory.
 **unweave** requires Node.js version 12.0.0 or greater to work, and tests require Node.js version 12.9.0 at least to run. It works as designed on Linux, with a few caveats on Windows (cmd.exe and Powershell) and hasn't been tested on macOS. It doesn't workon Windows with MSYS2 or Mingw64 and hasn't been tested with Cygwin. Tests only run on Linux.
 
 # Usage
+## Start
+**unweave** can either start the Inspector session, connect to it and set it up or attach to an existing session. The first approach requires to point to the script to debug:
+
+```shell
+    $ unweave example.js
+```
+
+or with a local install, in the project's directory:
+
+```shell
+    $ npx unweave example.js
+```
+
+The second approach has two steps. Firstly, Inspector is started with the target script. Secondly, **unweave** is run with the Inspector session's hash as argument, and if necessary with its address or port (the latter default to localhost and 9229, which are Inspector's defaults):
+
+```shell
+    $ node --inspect-brk example.js
+    Debugger listening on ws://127.0.0.1:9229/e21bc327-68e0-4d87-a470-b5f9640e22dc
+    For help, see: https://nodejs.org/en/docs/inspector
+```
+
+And then:
+
+```shell
+    $ unweave --session e21bc327-68e0-4d87-a470-b5f9640e22dc
+```
+
+Or again with all possible options:
+
+```shell
+    $ unweave --address 127.0.0.1 --port 9229 --session e21bc327-68e0-4d87-a470-b5f9640e22dc
+```
+
+Or in short form:
+
+```shell
+    $ unweave -a 127.0.0.1 -p 9229 -s e21bc327-68e0-4d87-a470-b5f9640e22dc
+```
+
+If this is a local install, replace `unweave` with `npx unweave` above.
+
+## Interact
+**unweave** is modal, which means that a thematic set of actions is available after some mode is activated and until it is terminated. Available modes correspond to the windows and tabs in the display, with the _script source_ mode being the first active and default one.
