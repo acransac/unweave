@@ -85,4 +85,14 @@ Or in short form:
 If this is a local install, replace `unweave` with `npx unweave` above.
 
 ## Interact
-**unweave** is modal, which means that a thematic set of actions is available after some mode is activated and until it is terminated. Available modes correspond to the windows and tabs in the display, with the _script source_ mode being the first active and default one.
+**unweave** is modal, which means that a thematic set of actions is available after a mode is activated and until it is superseded by another one. Available modes correspond to the windows and tabs on the screen whose titles show an highlighted character that is the activating key. Once a mode is activated, the possible actions are listed in the _instructions_ window at the bottom of the screen, one of which terminates the mode and focuses back on the default _script source_ mode. In any state, the active mode's window title is entirely highlighted.
+
+The modes are:
+| Mode            | Activating Key | Terminating Key | Special Behaviour                                                |
+|-----------------|----------------|-----------------|------------------------------------------------------------------|
+| script source   | None           | Ctrl+C          | Activated first and when any other mode terminates. Terminating this mode closes **unweave** |
+| environment     | e              | Enter           | None                                                             |
+| workspace       | w              | Enter           | Terminating this mode displays the source of the selected script |
+| messages        | m              | Enter           | None                                                             |
+| query Inspector | q              | Enter           | Hides the instructions and captures all subsequent inputs with backspace erasing recorded characters. Terminating this mode sends the typed query to Inspector. The query has the form `MethodName ParametersObject`, such as for example `Debugger.continueToLocation {scriptId: \"50\", lineNumber: 3}`. See the Inspector protocol |
+| add breakpoint  | b              | Enter           | Hides the instructions and captures all subsequent inputs with backspace erasing recorded characters. Terminating this mode sets a breakpoint on the displayed script at the line whose number is typed |
