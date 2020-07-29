@@ -96,3 +96,75 @@ The modes are:
 | messages        | m              | Enter           | None                                                             |
 | query Inspector | q              | Enter           | Hides the instructions and captures all subsequent inputs with backspace erasing recorded characters. Terminating this mode sends the typed query to Inspector. The query has the form `MethodName ParametersObject`, such as for example `Debugger.continueToLocation {scriptId: \"50\", lineNumber: 3}`. See the Inspector protocol |
 | add breakpoint  | b              | Enter           | Hides the instructions and captures all subsequent inputs with backspace erasing recorded characters. Terminating this mode sets a breakpoint on the displayed script at the line whose number is typed |
+
+# Walkthrough
+Let's walk through an example debugging session with **unweave**. Consider the following script `example.js` that you can find in the `doc` directory:
+
+```javascript
+    const { multiplyBy } = require('./imports.js');
+
+    if (multiplyBy(2)(3) === 6) {
+      console.log("Success");
+    }
+    else {
+      console.log("Failure");
+    }
+```
+
+```shell
+    $ node doc/example.js
+    Failure
+```
+
+It seems that `multiplyBy` is not doing what is expected. Let's check this with **unweave**:
+
+```shell
+    $ unweave doc/example.js
+```
+
+![Alt text](doc/screen_capture_2.png?raw=true)
+
+Notice that the window title _script source_ is highlighted: this is the active mode. At the bottom of the screen are the possible actions in this mode. Try to scroll down and up with "j" and "k".
+
+Note also in the _environment_ tab the presence of the `multiplyBy` variable which is imported. It is reported as undefined. Indeed, the execution is paused before the import logic at the first line of the script as can be seen with the arrow in the _script source_ window. Step through with "n" until the execution reaches the if statement. Take note of the updated type of `multiplyBy`: this is a function and we want to check it.
+
+To do so, we switch to the _workspace_ mode to explore the script sources. We see that the _workspace_ tab has "w" highlighted in its title. This is the key to activate this mode, let's press it:
+
+![Alt text](doc/screen_capture_3.png?raw=true)
+
+_workspace_ is now highlighted and the instructions have changed. We want to take a look at `imports.js` so we select the next entry ("j") and validate the selection ("Enter"):
+
+![Alt text](doc/screen_capture_4.png?raw=true)
+
+By typing enter, we produced the display of `imports.js` and terminated the _workspace_ mode, switching back to _script source_.
+Let's place a breakpoint in `multiplyBy` by activating the _add breakoint_ mode ("b"). From now on, everything we type is displayed in the _add breakpoint_ tab. Type a few characters and delete them with "backspace". Then type "1" and press "enter", effectively placing a breakpoint at line 1 in `imports.js` and leaving the mode back to the default _script source_. Notice a star appeared on the script source, marking a breakpoint. Let's continue the execution ("c"):
+
+![Alt text](doc/screen_capture_5.png?raw=true)
+
+The run continued freely but eventually hit the breakpoint in `multiplyBy` and the arrow marking the execution joined the star in the script source display. Check the environment to see the value of the parameters `n` and `transform`. Note also that "transform" is highlighted in the source. This marks the next expression to be evaluated. It is a ternary operator and we can already guess that `successor` will be called as `transform` is reported undefined in the environment. Let's make sure of this by stepping into the next function call with "s":
+
+![Alt text](doc/screen_capture_6.png?raw=true)
+
+The execution expectedly reached the `successor` function, `n` equals 2 but the function returns `n + 1`. Step over until you are back into `multiplyBy`'s scope. Take a look at the environment and see that `multiplicator` which is part of the returned function's closure equals 3. Step out ("f") of `multiplyBy` to get back to the main function:
+
+![Alt text](doc/screen_capture_7.png?raw=true)
+
+Now the situation is clear: `multiplyBy` accepts a second argument which is a function to transform its first input and returns a multiplicator by the transformed value. Counter-intuitively, this second argument is not defaulted to the identity function but to the successor function. So `multiplyBy(2)(3)` equals 3 * 3, that is 9 and not 6. Step once to verify that the execution branches into the else clause. Finally, finish your session by typing "ctrl+c".
+
+We can now fix our code. The new `example.js` is:
+
+```javascript
+    const { multiplyBy } = require('./imports.js');
+
+    if (multiplyBy(2, n => n)(3) === 6) {
+      console.log("Success");
+    }
+    else {
+      console.log("Failure");
+    }
+```
+
+```shell
+    $ node doc/example.js
+    Success
+```
