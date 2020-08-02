@@ -20,10 +20,10 @@
   },
   "homepage": "https://github.com/acransac/unweave",
   "dependencies": {
-    "@acransac/filetree": "file:../filetree",
-    "@acransac/streamer": "file:../streamer",
-    "@acransac/terminal": "file:../terminal",
-    "@acransac/tester": "file:../tester",
+    "@acransac/filetree": "^1.0.0",
+    "@acransac/streamer": "^1.0.0",
+    "@acransac/terminal": "^1.0.0",
+    "@acransac/tester": "^1.0.0",
     "ws": "^7.1.1"
   }
 }
