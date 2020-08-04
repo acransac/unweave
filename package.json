@@ -1,6 +1,6 @@
 {
   "name": "unweave",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A terminal interface to Google's V8 Inspector for Node.js applications",
   "main": "src/app.js",
   "scripts": {
@@ -19,10 +19,11 @@
     "url": "https://github.com/acransac/unweave/issues"
   },
   "homepage": "https://github.com/acransac/unweave",
+  "keywords": ["debugger", "node", "terminal"],
   "dependencies": {
     "@acransac/filetree": "^1.0.0",
     "@acransac/streamer": "^1.0.0",
-    "@acransac/terminal": "^1.0.0",
+    "@acransac/terminal": "^1.0.1",
     "@acransac/tester": "^1.0.0",
     "ws": "^7.1.1"
   }
