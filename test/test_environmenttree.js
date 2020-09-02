@@ -1,8 +1,8 @@
 // Copyright (c) Adrien Cransac
 // License: MIT
 
-const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('../src/environmenttree.js');
-const { branches, root, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryLeafName, selectedEntryName } = require('@acransac/filetree');
+const { insertInEnvironmentTree, isDeferredEntrySelected, isVisitableEntrySelected, makeEnvironmentTree, makePendingEntriesRegister, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree, registerPendingEntry, resolvePendingEntry, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName, selectNextEntry, selectPreviousEntry, visitChildEntry, visitParentEntry } = require('../src/environmenttree.js');
+const { branches, root, selectedBranch, selectedEntry, selectedEntryName } = require('@acransac/filetree');
 const { init } = require('../src/init.js');
 const { parseEnvironmentTree } = require('../src/processes.js');
 const { isDebuggerPaused, isEnvironment, isEnvironmentEntry, message, readEnvironment } = require('../src/protocol.js');
@@ -138,17 +138,17 @@ function test_selectionInEmptyEnvironmentTree(finish, check) {
 
   return finish(check(selectedBranch(emptySelection).length === 0
                         && selectedEntryName(selectedEntry(emptySelection)) === ""
-                        && selectedEntryLeafName(selectedEntry(emptySelection)) === ""
-                        && selectedEntryBranchName(selectedEntry(emptySelection)) === ""));
+                        && selectedEnvironmentEntryLeafName(selectedEntry(emptySelection)) === ""
+                        && selectedEnvironmentEntryBranchName(selectedEntry(emptySelection)) === ""));
 }
 
 function test_environmentTreeWithOneImmediateEntry(finish, check) {
-  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector(["abc"])]]);
+  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector(["a/bc"])]]);
 
   return finish(check(selectedBranch(selection).length === 1
-                        && selectedEntryName(selectedEntry(selection)) === "/String entry0: \"abc\""
-                        && selectedEntryLeafName(selectedEntry(selection)) === "String entry0: \"abc\""
-                        && selectedEntryBranchName(selectedEntry(selection)) === ""
+                        && selectedEntryName(selectedEntry(selection)) === "/String entry0: \"a/bc\""
+                        && selectedEnvironmentEntryLeafName(selectedEntry(selection)) === "String entry0: \"a/bc\""
+                        && selectedEnvironmentEntryBranchName(selectedEntry(selection)) === ""
                         && !isVisitableEntrySelected(selectedEntry(selection))
                         && !isDeferredEntrySelected(selectedEntry(selection))));
 }
@@ -158,38 +158,38 @@ function test_environmentTreeWithOneDeferredEntry(finish, check) {
 
   return finish(check(selectedBranch(selection).length === 1
                         && selectedEntryName(selectedEntry(selection)) === "/Object entry0"
-                        && selectedEntryLeafName(selectedEntry(selection)) === "Object entry0"
-                        && selectedEntryBranchName(selectedEntry(selection)) === ""
+                        && selectedEnvironmentEntryLeafName(selectedEntry(selection)) === "Object entry0"
+                        && selectedEnvironmentEntryBranchName(selectedEntry(selection)) === ""
                         && isVisitableEntrySelected(selectedEntry(selection))
                         && !isDeferredEntrySelected(selectedEntry(selection))
                         && (deferredEntry => selectedEntryName(deferredEntry) === "/Object entry0/deferred"
-                                               && selectedEntryLeafName(deferredEntry) === "deferred"
-                                               && selectedEntryBranchName(deferredEntry) === "/Object entry0"
+                                               && selectedEnvironmentEntryLeafName(deferredEntry) === "deferred"
+                                               && selectedEnvironmentEntryBranchName(deferredEntry) === "/Object entry0"
                                                && !isVisitableEntrySelected(deferredEntry)
                                                && isDeferredEntrySelected(deferredEntry))
                              (selectedEntry(visitChildEntry(selection)))));
 }
 
 function test_environmentTreeExploration(finish, check) {
-  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector([{}, "abc"])]]);
+  const [environmentTree, selection] = makeEnvironment([["/env", makeFakeEnvironmentEntriesFromInspector([{}, "a/bc"])]]);
 
   const isEmptyObject = entry => selectedEntryName(entry) === "/Object entry0"
-                                   && selectedEntryLeafName(entry) === "Object entry0"
-                                   && selectedEntryBranchName(entry) === ""
+                                   && selectedEnvironmentEntryLeafName(entry) === "Object entry0"
+                                   && selectedEnvironmentEntryBranchName(entry) === ""
                                    && isVisitableEntrySelected(entry)
                                    && !isDeferredEntrySelected(entry);
 
   return finish(check(isEmptyObject(selectedEntry(selection))
-                        && (stringEntry => selectedEntryName(stringEntry) === "/String entry1: \"abc\""
-                                             && selectedEntryLeafName(stringEntry) === "String entry1: \"abc\""
-                                             && selectedEntryBranchName(stringEntry) === ""
+                        && (stringEntry => selectedEntryName(stringEntry) === "/String entry1: \"a/bc\""
+                                             && selectedEnvironmentEntryLeafName(stringEntry) === "String entry1: \"a/bc\""
+                                             && selectedEnvironmentEntryBranchName(stringEntry) === ""
                                              && !isVisitableEntrySelected(stringEntry)
                                              && !isDeferredEntrySelected(stringEntry))
                              (selectedEntry(selectNextEntry(selection)))
                         && isEmptyObject(selectedEntry(selectPreviousEntry(selectNextEntry(selection))))
                         && (deferredEntry => selectedEntryName(deferredEntry) === "/Object entry0/deferred"
-                                               && selectedEntryLeafName(deferredEntry) === "deferred"
-                                               && selectedEntryBranchName(deferredEntry) === "/Object entry0"
+                                               && selectedEnvironmentEntryLeafName(deferredEntry) === "deferred"
+                                               && selectedEnvironmentEntryBranchName(deferredEntry) === "/Object entry0"
                                                && !isVisitableEntrySelected(deferredEntry)
                                                && isDeferredEntrySelected(deferredEntry))
                              (selectedEntry(visitChildEntry(selection)))
@@ -217,8 +217,8 @@ function test_resolveDeferredEntry(finish, check) {
         else if (isEnvironmentEntry(message(stream))) {
           const finishTest = (environmentTree, selection, pendingEntriesRegister) => {
             return floatOn(stream, selectedEntryName(selectedEntry(selection)) === "/Object test/String a: \"abc\""
-                                     && selectedEntryLeafName(selectedEntry(selection)) === "String a: \"abc\""
-                                     && selectedEntryBranchName(selectedEntry(selection)) === "/Object test"
+                                     && selectedEnvironmentEntryLeafName(selectedEntry(selection)) === "String a: \"abc\""
+                                     && selectedEnvironmentEntryBranchName(selectedEntry(selection)) === "/Object test"
                                      && !isVisitableEntrySelected(selectedEntry(selection))
                                      && !isDeferredEntrySelected(selectedEntry(selection)));
           };
@@ -258,8 +258,8 @@ function test_explorationSkipsDeferredEntries(finish, check) {
   ]);
 
   const isExpectedObject = entry => selectedEntryName(entry) === "/Object entry0/Object entry0"
-                                      && selectedEntryLeafName(entry) === "Object entry0"
-                                      && selectedEntryBranchName(entry) === "/Object entry0"
+                                      && selectedEnvironmentEntryLeafName(entry) === "Object entry0"
+                                      && selectedEnvironmentEntryBranchName(entry) === "/Object entry0"
                                       && isVisitableEntrySelected(entry)
                                       && !isDeferredEntrySelected(entry);
 

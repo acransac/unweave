@@ -1,7 +1,7 @@
 // Copyright (c) Adrien Cransac
 // License: MIT
 
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('@acransac/filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('@acransac/filetree');
 const { entryUniqueId, entryValue, name, readEnvironment, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // # Entry Types
@@ -32,7 +32,7 @@ function deferredEntryLeafName() {
 function makePendingEntry(selection) {
   return (selectedEntry => [
     entryUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
-    `/env${selectedEntryBranchName(selectedEntry)}`
+    `/env${selectedEnvironmentEntryBranchName(selectedEntry)}`
   ])(selectedEntry(selection));
 }
 
@@ -241,7 +241,7 @@ function skipDeferredEntry(selectionInEnvironmentTree) {
  * @return {boolean}
  */
 function isDeferredEntrySelected(selectedEntry) {
-  return isFileSelected(selectedEntry) && selectedEntryLeafName(selectedEntry) === deferredEntryLeafName();
+  return isFileSelected(selectedEntry) && selectedEnvironmentEntryLeafName(selectedEntry) === deferredEntryLeafName();
 }
 
 /*
@@ -251,6 +251,53 @@ function isDeferredEntrySelected(selectedEntry) {
  */
 function isVisitableEntrySelected(selectedEntry) {
   return !isFileSelected(selectedEntry);
+}
+
+/*
+ * Get the path from the root with the name excluded of a selected entry
+ * @param {SelectedEntry} selectedEntry - A selected entry
+ * @return {string}
+ */
+function selectedEnvironmentEntryBranchName(selectedEntry) {
+  const extractBranchName = (branchName, selectedEntryName) => {
+    if (selectedEntryName.length === 1) {
+      return branchName.join("/");
+    }
+    else if (selectedEntryName[0].startsWith("String")) {
+      return branchName.join("/");
+    }
+    else {
+      return extractBranchName([...branchName, selectedEntryName[0]], selectedEntryName.slice(1));
+    }
+  };
+
+  if (selectedEntryName(selectedEntry) === "") {
+    return "";
+  }
+  else {
+    return extractBranchName([], selectedEntryName(selectedEntry).split("/"));
+  }
+}
+
+/*
+ * Get the name of a selected entry
+ * @param {SelectedEntry} selectedEntry - A selected entry
+ * @return {string}
+ */
+function selectedEnvironmentEntryLeafName(selectedEntry) {
+  const extractLeafName = selectedEntryName => {
+    if (selectedEntryName.length === 1) {
+      return selectedEntryName[0];
+    }
+    else if (selectedEntryName[0].startsWith("String")) {
+      return selectedEntryName.join("/");
+    }
+    else {
+      return extractLeafName(selectedEntryName.slice(1));
+    }
+  };
+
+  return extractLeafName(selectedEntryName(selectedEntry).split("/"));
 }
 
 // # Helpers
@@ -269,6 +316,8 @@ module.exports = {
   refreshSelectedEnvironmentTree,
   registerPendingEntry,
   resolvePendingEntry,
+  selectedEnvironmentEntryBranchName,
+  selectedEnvironmentEntryLeafName,
   selectNextEntry,
   selectPreviousEntry,
   visitChildEntry,
