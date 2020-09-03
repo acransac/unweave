@@ -19,7 +19,11 @@
     "url": "https://github.com/acransac/unweave/issues"
   },
   "homepage": "https://github.com/acransac/unweave",
-  "keywords": ["debugger", "node", "terminal"],
+  "keywords": [
+    "debugger",
+    "node",
+    "terminal"
+  ],
   "dependencies": {
     "@acransac/filetree": "^1.1.0",
     "@acransac/streamer": "^1.0.0",
