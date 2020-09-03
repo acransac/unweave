@@ -169,7 +169,9 @@ function makeSelectionInEnvironmentTree(environmentTree, selectedBranch, selecte
  * @return {Selection}
  */
 function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironmentTree) {
-  return skipDeferredEntry(refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree));
+  return skipDeferredEntry(refreshSelectedFileTree(selectionInEnvironmentTree,
+                                                   newEnvironmentTree,
+                                                   selectedEnvironmentEntryBranchName));
 }
 
 /*
@@ -178,7 +180,7 @@ function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironme
  * @return {Selection} - If there is no next entry, the original selection is returned
  */
 function selectNextEntry(selectionInEnvironmentTree) {
-  return selectNext(selectionInEnvironmentTree);
+  return selectNext(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName);
 }
 
 /*
@@ -187,7 +189,9 @@ function selectNextEntry(selectionInEnvironmentTree) {
  * @return {Selection} - If there is no previous entry, the original selection is returned
  */
 function selectPreviousEntry(selectionInEnvironmentTree) {
-  return skipDeferredEntry(selectPrevious(selectionInEnvironmentTree));
+  return skipDeferredEntry(selectPrevious(selectionInEnvironmentTree,
+                                          selectedEnvironmentEntryBranchName,
+                                          selectedEnvironmentEntryLeafName));
 }
 
 /*
@@ -198,7 +202,9 @@ function selectPreviousEntry(selectionInEnvironmentTree) {
 function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))
-          && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
+          && isDeferredEntrySelected(selectedEntry(selectNext(newSelection,
+                                                              selectedEnvironmentEntryBranchName,
+                                                              selectedEnvironmentEntryLeafName)))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEnvironmentEntryDescription);
     }
 
@@ -221,12 +227,12 @@ function visitChildEntrySilently(selectionInEnvironmentTree) {
  * @return {Selection} - If the original selection has no parent entry, a selection on the first item of the current sequence of entries is returned
  */
 function visitParentEntry(selectionInEnvironmentTree) {
-  return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree));
+  return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName));
 }
 
 function skipDeferredEntry(selectionInEnvironmentTree) {
   if (isDeferredEntrySelected(selectedEntry(selectionInEnvironmentTree))) {
-    return selectNext(selectionInEnvironmentTree);
+    return selectNext(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName);
   }
   else {
     return selectionInEnvironmentTree;

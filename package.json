@@ -21,7 +21,7 @@
   "homepage": "https://github.com/acransac/unweave",
   "keywords": ["debugger", "node", "terminal"],
   "dependencies": {
-    "@acransac/filetree": "^1.0.0",
+    "@acransac/filetree": "^1.1.0",
     "@acransac/streamer": "^1.0.0",
     "@acransac/terminal": "^1.0.1",
     "@acransac/tester": "^1.0.0",
