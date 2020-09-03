@@ -461,7 +461,7 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
 // ## Tree Writers
 function writeTreeImpl(visitedTree, filterBranch, branchName, leafName) {
   const formatEntry = entry => {
-    return (entryName(entry) === (leafName ? leafName : selectedEntryLeafName)(selectedEntry(visitedTree))
+    return (entryName(entry) === leafName(selectedEntry(visitedTree))
       ? entryName => `\u001b[7m${entryName}\u001b[0m`
       : entryName => entryName)(
         (isDirectoryEntry(entry) ? entryName => styleText(entryName, "bold")
@@ -469,11 +469,10 @@ function writeTreeImpl(visitedTree, filterBranch, branchName, leafName) {
           entryName(entry)));
   };
 
-  return ((branchName ? branchName : selectedEntryBranchName)(selectedEntry(visitedTree)) === ""
+  return (branchName(selectedEntry(visitedTree)) === ""
     ? `${styleText("root", "bold")}\n`
-    : `${styleText((branchName ? branchName : selectedEntryBranchName)(selectedEntry(visitedTree)), "bold")}\n`)
-    + selectedBranch(visitedTree).filter(entry => filterBranch ? filterBranch(entry) : true)
-                                 .map(entry => `  ${formatEntry(entry)}\n`).join("");
+    : `${styleText(branchName(selectedEntry(visitedTree)), "bold")}\n`)
+    + selectedBranch(visitedTree).filter(filterBranch).map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
 // ### Environment Tree Writer
@@ -511,7 +510,7 @@ function writeEnvironmentTree(visitedEnvironmentTree) {
  * @return {string}
  */
 function writeSourceTree(visitedSourceTree) {
-  return writeTreeImpl(visitedSourceTree);
+  return writeTreeImpl(visitedSourceTree, entry => true, selectedEntryBranchName, selectedEntryLeafName);
 }
 
 module.exports = {
