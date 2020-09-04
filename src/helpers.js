@@ -1,7 +1,7 @@
 // Copyright (c) Adrien Cransac
 // License: MIT
 
-const { deferredEntryLeafName, registerPendingEntry, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
+const { deferredEntryLeafName, registerPendingEntry, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName, selectNextEntry, selectPreviousEntry, visitChildEntry, visitChildEntrySilently, visitParentEntry } = require('./environmenttree.js');
 const { entryName, isDirectoryEntry, isFileSelected, makeSelectionInFileTree, makeFileTree, refreshSelectedFileTree, selectedBranch, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('@acransac/filetree');
 const { columnNumber, entryValue, environmentTreeFocusInput, hasEnded, interactionKeys, isDebuggerPaused, isEnvironmentTreeFocus, isSourceTree, isSourceTreeFocus, lineNumber, message, name, pauseLocation, readSourceTree, scriptHandle, sourceTreeFocusInput, type } = require('./protocol.js');
 
@@ -459,9 +459,9 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
 }
 
 // ## Tree Writers
-function writeTreeImpl(visitedTree, filterBranch) {
+function writeTreeImpl(visitedTree, filterBranch, branchName, leafName) {
   const formatEntry = entry => {
-    return (entryName(entry) === selectedEntryLeafName(selectedEntry(visitedTree))
+    return (entryName(entry) === leafName(selectedEntry(visitedTree))
       ? entryName => `\u001b[7m${entryName}\u001b[0m`
       : entryName => entryName)(
         (isDirectoryEntry(entry) ? entryName => styleText(entryName, "bold")
@@ -469,11 +469,10 @@ function writeTreeImpl(visitedTree, filterBranch) {
           entryName(entry)));
   };
 
-  return (selectedEntryBranchName(selectedEntry(visitedTree)) === ""
+  return (branchName(selectedEntry(visitedTree)) === ""
     ? `${styleText("root", "bold")}\n`
-    : `${styleText(selectedEntryBranchName(selectedEntry(visitedTree)), "bold")}\n`)
-    + selectedBranch(visitedTree).filter(entry => filterBranch ? filterBranch(entry) : true)
-                                 .map(entry => `  ${formatEntry(entry)}\n`).join("");
+    : `${styleText(branchName(selectedEntry(visitedTree)), "bold")}\n`)
+    + selectedBranch(visitedTree).filter(filterBranch).map(entry => `  ${formatEntry(entry)}\n`).join("");
 }
 
 // ### Environment Tree Writer
@@ -497,7 +496,10 @@ function describeEnvironment(entries) {
  * @return {string}
  */
 function writeEnvironmentTree(visitedEnvironmentTree) {
-  return writeTreeImpl(visitedEnvironmentTree, entry => entryName(entry) !== deferredEntryLeafName());
+  return writeTreeImpl(visitedEnvironmentTree,
+                       entry => entryName(entry) !== deferredEntryLeafName(),
+                       selectedEnvironmentEntryBranchName,
+                       selectedEnvironmentEntryLeafName);
 }
 
 // ### Source Tree Writer
@@ -508,7 +510,7 @@ function writeEnvironmentTree(visitedEnvironmentTree) {
  * @return {string}
  */
 function writeSourceTree(visitedSourceTree) {
-  return writeTreeImpl(visitedSourceTree);
+  return writeTreeImpl(visitedSourceTree, entry => true, selectedEntryBranchName, selectedEntryLeafName);
 }
 
 module.exports = {

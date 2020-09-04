@@ -1,7 +1,7 @@
 // Copyright (c) Adrien Cransac
 // License: MIT
 
-const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryBranchName, selectedEntryHandle, selectedEntryLeafName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('@acransac/filetree');
+const { insertInFileTree, isFileSelected, makeFileEntry, makeFileTree, makeSelectionInFileTree, refreshSelectedFileTree, selectedEntry, selectedEntryHandle, selectedEntryName, selectNext, selectPrevious, visitChildBranch, visitParentBranch } = require('@acransac/filetree');
 const { entryUniqueId, entryValue, name, readEnvironment, readEnvironmentEntryUniqueId, sendRequestForEnvironmentEntryDescription, type } = require('./protocol.js');
 
 // # Entry Types
@@ -32,7 +32,7 @@ function deferredEntryLeafName() {
 function makePendingEntry(selection) {
   return (selectedEntry => [
     entryUniqueId(selectedEntryHandle(selectedEntry)((_, entry) => entry)),
-    `/env${selectedEntryBranchName(selectedEntry)}`
+    `/env${selectedEnvironmentEntryBranchName(selectedEntry)}`
   ])(selectedEntry(selection));
 }
 
@@ -169,7 +169,9 @@ function makeSelectionInEnvironmentTree(environmentTree, selectedBranch, selecte
  * @return {Selection}
  */
 function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironmentTree) {
-  return skipDeferredEntry(refreshSelectedFileTree(selectionInEnvironmentTree, newEnvironmentTree));
+  return skipDeferredEntry(refreshSelectedFileTree(selectionInEnvironmentTree,
+                                                   newEnvironmentTree,
+                                                   selectedEnvironmentEntryBranchName));
 }
 
 /*
@@ -178,7 +180,7 @@ function refreshSelectedEnvironmentTree(selectionInEnvironmentTree, newEnvironme
  * @return {Selection} - If there is no next entry, the original selection is returned
  */
 function selectNextEntry(selectionInEnvironmentTree) {
-  return selectNext(selectionInEnvironmentTree);
+  return selectNext(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName);
 }
 
 /*
@@ -187,7 +189,9 @@ function selectNextEntry(selectionInEnvironmentTree) {
  * @return {Selection} - If there is no previous entry, the original selection is returned
  */
 function selectPreviousEntry(selectionInEnvironmentTree) {
-  return skipDeferredEntry(selectPrevious(selectionInEnvironmentTree));
+  return skipDeferredEntry(selectPrevious(selectionInEnvironmentTree,
+                                          selectedEnvironmentEntryBranchName,
+                                          selectedEnvironmentEntryLeafName));
 }
 
 /*
@@ -198,7 +202,9 @@ function selectPreviousEntry(selectionInEnvironmentTree) {
 function visitChildEntry(selectionInEnvironmentTree) {
   return (newSelection => {
     if (isDeferredEntrySelected(selectedEntry(newSelection))
-          && isDeferredEntrySelected(selectedEntry(selectNext(newSelection)))) {
+          && isDeferredEntrySelected(selectedEntry(selectNext(newSelection,
+                                                              selectedEnvironmentEntryBranchName,
+                                                              selectedEnvironmentEntryLeafName)))) {
       selectedEntryHandle(selectedEntry(newSelection))(sendRequestForEnvironmentEntryDescription);
     }
 
@@ -221,12 +227,12 @@ function visitChildEntrySilently(selectionInEnvironmentTree) {
  * @return {Selection} - If the original selection has no parent entry, a selection on the first item of the current sequence of entries is returned
  */
 function visitParentEntry(selectionInEnvironmentTree) {
-  return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree));
+  return skipDeferredEntry(visitParentBranch(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName));
 }
 
 function skipDeferredEntry(selectionInEnvironmentTree) {
   if (isDeferredEntrySelected(selectedEntry(selectionInEnvironmentTree))) {
-    return selectNext(selectionInEnvironmentTree);
+    return selectNext(selectionInEnvironmentTree, selectedEnvironmentEntryBranchName, selectedEnvironmentEntryLeafName);
   }
   else {
     return selectionInEnvironmentTree;
@@ -241,7 +247,7 @@ function skipDeferredEntry(selectionInEnvironmentTree) {
  * @return {boolean}
  */
 function isDeferredEntrySelected(selectedEntry) {
-  return isFileSelected(selectedEntry) && selectedEntryLeafName(selectedEntry) === deferredEntryLeafName();
+  return isFileSelected(selectedEntry) && selectedEnvironmentEntryLeafName(selectedEntry) === deferredEntryLeafName();
 }
 
 /*
@@ -251,6 +257,53 @@ function isDeferredEntrySelected(selectedEntry) {
  */
 function isVisitableEntrySelected(selectedEntry) {
   return !isFileSelected(selectedEntry);
+}
+
+/*
+ * Get the path from the root with the name excluded of a selected entry
+ * @param {SelectedEntry} selectedEntry - A selected entry
+ * @return {string}
+ */
+function selectedEnvironmentEntryBranchName(selectedEntry) {
+  const extractBranchName = (branchName, selectedEntryName) => {
+    if (selectedEntryName.length === 1) {
+      return branchName.join("/");
+    }
+    else if (selectedEntryName[0].startsWith("String")) {
+      return branchName.join("/");
+    }
+    else {
+      return extractBranchName([...branchName, selectedEntryName[0]], selectedEntryName.slice(1));
+    }
+  };
+
+  if (selectedEntryName(selectedEntry) === "") {
+    return "";
+  }
+  else {
+    return extractBranchName([], selectedEntryName(selectedEntry).split("/"));
+  }
+}
+
+/*
+ * Get the name of a selected entry
+ * @param {SelectedEntry} selectedEntry - A selected entry
+ * @return {string}
+ */
+function selectedEnvironmentEntryLeafName(selectedEntry) {
+  const extractLeafName = selectedEntryName => {
+    if (selectedEntryName.length === 1) {
+      return selectedEntryName[0];
+    }
+    else if (selectedEntryName[0].startsWith("String")) {
+      return selectedEntryName.join("/");
+    }
+    else {
+      return extractLeafName(selectedEntryName.slice(1));
+    }
+  };
+
+  return extractLeafName(selectedEntryName(selectedEntry).split("/"));
 }
 
 // # Helpers
@@ -269,6 +322,8 @@ module.exports = {
   refreshSelectedEnvironmentTree,
   registerPendingEntry,
   resolvePendingEntry,
+  selectedEnvironmentEntryBranchName,
+  selectedEnvironmentEntryLeafName,
   selectNextEntry,
   selectPreviousEntry,
   visitChildEntry,
