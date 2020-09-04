@@ -3,7 +3,7 @@
 
 const { breakpoints, commandLine, displayedScript, environmentTree, focusableCaptureLog, instructions, logCapture, messages, runLocation, scriptSource, sourceTree, topRightColumnDisplay } = require('./components.js');
 const { addBreakpoint, changeMode, loop, parseCaptures, parseEnvironmentTree, parseSourceTree, pullScriptSource, queryInspector, step } = require('./processes.js');
-const { breakpointCapture, columnNumber, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, pauseLocation, query } = require('./protocol.js');
+const { breakpointCapture, interactionKeys, isBreakpointCapture, isDebuggerPaused, isQueryCapture, query } = require('./protocol.js');
 const { developerDisplay } = require('./templates.js');
 const { compose, show } = require('@acransac/terminal');
 
@@ -16,7 +16,7 @@ const { compose, show } = require('@acransac/terminal');
  */
 function debugSession(send, render, terminate) {
   return async (stream) => {
-    const debugLogger = message => columnNumber(pauseLocation(message));
+    const debugLogger = () => {};
 
     return loop(terminate)(await show(render)(compose(developerDisplay,
                                                       scriptSource(),
@@ -25,7 +25,7 @@ function debugSession(send, render, terminate) {
                                                       displayedScript(),
                                                       topRightColumnDisplay(),
                                                       environmentTree(),
-                                                      messages(isDebuggerPaused, debugLogger),
+                                                      messages(message => false, debugLogger),
                                                       sourceTree(),
                                                       commandLine(),
                                                       instructions(),
