@@ -385,77 +385,69 @@ function parseUserInput(parsed, currentInput) {
  * @return {string}
  */
 function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScript) {
-  const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineNumber) => {
-    if (originalLines.length === 0) {
-      return formattedLines;
-    }
-    else {
-      const hasBreakpoint = !(breakpoints.length === 0) && lineNumber(breakpoints[0]) === originalLineNumber;
+  const formatScriptSource = breakpoints => (originalLine, originalLineNumber) => {
+    const hasBreakpoint = breakpoints.length > 0
+                            && breakpoints.some(breakpoint => lineNumber(breakpoint) === originalLineNumber);
 
-      const lineNumberPrefix = lineNumber => {
-        if (lineNumber.toString().length < 4) {
-          return `${lineNumber.toString().padEnd(3, ' ')}|`;
-        }
-        else {
-          return `${lineNumber.toString()}|`;
-        }
-      };
+    const lineNumberPrefix = lineNumber => {
+      if (lineNumber.toString().length < 4) {
+        return `${lineNumber.toString().padEnd(3, ' ')}|`;
+      }
+      else {
+        return `${lineNumber.toString()}|`;
+      }
+    };
 
-      const runLocationHighlights = line => {
-        const highlightCurrentExpression = line => {
-          const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
-            const isOneOf = (characterSelection, character) => {
-              if (characterSelection.length === 0) {
-                return false;
-              }
-              else if (characterSelection[0] === character) {
-                return true;
-              }
-              else {
-                return isOneOf(characterSelection.slice(1), character);
-              }
-            };
-
-            if (line.length === 0) {
-              return beforeHighlight;
+    const runLocationHighlights = line => {
+      const highlightCurrentExpression = line => {
+        const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
+          const isOneOf = (characterSelection, character) => {
+            if (characterSelection.length === 0) {
+              return false;
             }
-            else if (isOneOf("[({ })]=>\r\n;", line[0])) {
-              return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
+            else if (characterSelection[0] === character) {
+              return true;
             }
             else {
-              return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
-                       (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
+              return isOneOf(characterSelection.slice(1), character);
             }
           };
 
-          return highlightCurrentExpressionImpl("", line);
+          if (line.length === 0) {
+            return beforeHighlight;
+          }
+          else if (isOneOf("[({ })]=>\r\n;", line[0])) {
+            return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
+          }
+          else {
+            return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
+                     (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
+          }
         };
 
-        if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
-          return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
-        }
-        else {
-          return `  ${line}`;
-        }
+        return highlightCurrentExpressionImpl("", line);
       };
 
-      return formatScriptSource([...formattedLines,`${lineNumberPrefix(originalLineNumber)}${hasBreakpoint ? "*" : " "}${runLocationHighlights(originalLines[0])}`],
-                                hasBreakpoint ? breakpoints.slice(1) : breakpoints,
-                                originalLines.slice(1),
-                                originalLineNumber + 1);
-    }
-  };
+      if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
+        return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
+      }
+      else {
+        return `  ${line}`;
+      }
+    };
 
-  return scrollableContent(makeDisplayedContent(formatScriptSource([],
-                                                                   breakpoints.filter(breakpoint => {
-                                                                     return scriptHandle(breakpoint) === displayedScript;
-                                                                   })
-                                                                              .sort((breakpointA, breakpointB) => {
-                                                                     return lineNumber(breakpointA) - lineNumber(breakpointB);
-                                                                   }),
-                                                                   content(scriptSource).split("\n"),
-                                                                   0).join("\n"),
-                                                topLine(scriptSource)));
+    return `${lineNumberPrefix(originalLineNumber)}${hasBreakpoint ? "*" : " "}${runLocationHighlights(originalLine)}`;
+  }
+
+  return scrollableContent(
+           makeDisplayedContent(
+             content(scriptSource).split("\n").map(formatScriptSource(breakpoints.filter(breakpoint => {
+                                                                        return scriptHandle(breakpoint) === displayedScript;
+                                                                      })
+                                                                                 .sort((breakpointA, breakpointB) => {
+                                                                        return lineNumber(breakpointA) - lineNumber(breakpointB);
+                                                                      }))).join("\n"),
+             topLine(scriptSource)));
 }
 
 // ## Tree Writers
