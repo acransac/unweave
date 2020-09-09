@@ -376,6 +376,34 @@ function parseUserInput(parsed, currentInput) {
 // # Writers
 // ## Script Source Writer
 
+function lineNumberPrefix(lineNumber) {
+  if (lineNumber.toString().length < 4) {
+    return `${lineNumber.toString().padEnd(3, ' ')}|`;
+  }
+  else {
+    return `${lineNumber.toString()}|`;
+  }
+}
+
+function markBreakpoint(line, lineNumber) {
+  return (prefixLength => `${line.slice(0, prefixLength)}*${line.slice(prefixLength + 1)}`)
+           (lineNumberPrefix(lineNumber).length);
+}
+
+function markExecutionLocation(line, lineNumber) {
+  return (prefixLength => `${line.slice(0, prefixLength)}>${line.slice(prefixLength + 1)}`)
+           (lineNumberPrefix(lineNumber).length + 1);
+}
+
+/*
+ * Prepend to a script source's lines their number and some space for breakpoints and execution location marks
+ * @param {string[]} scriptSource - The raw script source as an array of its lines
+ * @return {string[]} - The script source as an array of its lines prefixed with their number
+ */
+function prependLineNumber(scriptSource) {
+  return scriptSource.map((line, lineNumber) => `${lineNumberPrefix(lineNumber)}   ${line}`);
+}
+
 /*
  * Write and format the visible part of a script source, marking the run location and breakpoints
  * @param {DisplayedContent} scriptSource - The raw script source as displayed content
@@ -386,19 +414,16 @@ function parseUserInput(parsed, currentInput) {
  */
 function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScript) {
   const formatScriptSource = breakpoints => (originalLine, originalLineNumber) => {
-    const hasBreakpoint = breakpoints.length > 0
-                            && breakpoints.some(breakpoint => lineNumber(breakpoint) === originalLineNumber);
-
-    const lineNumberPrefix = lineNumber => {
-      if (lineNumber.toString().length < 4) {
-        return `${lineNumber.toString().padEnd(3, ' ')}|`;
+    const markBreakpoint = line => {
+      if (breakpoints.length > 0 && breakpoints.some(breakpoint => lineNumber(breakpoint) === originalLineNumber)) {
+        return markBreakpoint(line, originalLineNumber);
       }
       else {
-        return `${lineNumber.toString()}|`;
+        return line;
       }
     };
 
-    const runLocationHighlights = line => {
+    const highlightRunLocation = line => {
       const highlightCurrentExpression = line => {
         const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
           const isOneOf = (characterSelection, character) => {
@@ -429,14 +454,17 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
       };
 
       if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
-        return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
+        return markExecutionLocation(
+                 (locationColumn =>`${line.slice(0, locationColumn)}${highlightCurrentExpression(line.slice(locationColumn))}`)
+                   (lineNumberPrefix(originalLineNumber).length + 3 + columnNumber(runLocation)),
+                 originalLineNumber);
       }
       else {
-        return `  ${line}`;
+        return line;
       }
     };
 
-    return `${lineNumberPrefix(originalLineNumber)}${hasBreakpoint ? "*" : " "}${runLocationHighlights(originalLine)}`;
+    return markBreakpoint(highlightRunLocation(originalLine));
   }
 
   return scrollableContent(
@@ -521,6 +549,7 @@ module.exports = {
   makeDisplayedContent,
   makePackagedContent,
   parseUserInput,
+  prependLineNumber,
   scrollable,
   scrollableContent,
   styleText,
