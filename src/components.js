@@ -3,7 +3,7 @@
 
 const { makeEnvironmentTree, makeSelectionInEnvironmentTree, refreshSelectedEnvironmentTree } = require('./environmenttree.js');
 const { makeSelectionInFileTree, makeFileTree } = require('@acransac/filetree');
-const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, scrollable, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
+const { content, displayedScriptSource, highlightOneCharacter, exploreEnvironmentTreeSilently, exploreSourceTree, focusable, focusableByDefault, makeDisplayedContent, makePackagedContent, prependLineNumber, scrollable, styleText, tabs, tag, topLine, unpackedContent, writeEnvironmentTree, writeSourceTree } = require('./helpers.js');
 const { breakpointLine, hasEnded, input, interactionKeys, isBreakpointCapture, isDebuggerPaused, isEnvironmentTree, isEnvironmentTreeFocus, isError, isInput, isMessagesFocus, isQueryCapture, isScriptSource, isSourceTreeFocus, lineNumber, makeLocation, message, messagesFocusInput, pauseLocation, readEnvironmentTree, readScriptSource, reason } = require('./protocol.js');
 const { atom, label, sizeHeight } = require('@acransac/terminal');
 
@@ -253,8 +253,9 @@ function scriptSource() {
     const onSelectionChange = (displayChange, scriptId) => {
       if (isScriptSource(message(stream))) {
         return f => f(displayChange, scriptId)
-                      (makePackagedContent(label, makeDisplayedContent(readScriptSource(message(stream)),
-                                                                       topLine(displayedContent))));
+                      (makePackagedContent(label, makeDisplayedContent(
+                                                    prependLineNumber(readScriptSource(message(stream)).split("\n")).join("\n"),
+                                                    topLine(displayedContent))));
       }
       else {
         return f => f(displayChange, scriptId)

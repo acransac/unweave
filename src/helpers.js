@@ -376,6 +376,34 @@ function parseUserInput(parsed, currentInput) {
 // # Writers
 // ## Script Source Writer
 
+function lineNumberPrefix(lineNumber) {
+  if (lineNumber.toString().length < 4) {
+    return `${lineNumber.toString().padEnd(3, ' ')}|`;
+  }
+  else {
+    return `${lineNumber.toString()}|`;
+  }
+}
+
+function markBreakpoint(line, lineNumber) {
+  return (prefixLength => `${line.slice(0, prefixLength)}*${line.slice(prefixLength + 1)}`)
+           (lineNumberPrefix(lineNumber).length);
+}
+
+function markExecutionLocation(line, lineNumber) {
+  return (prefixLength => `${line.slice(0, prefixLength)}>${line.slice(prefixLength + 1)}`)
+           (lineNumberPrefix(lineNumber).length + 1);
+}
+
+/*
+ * Prepend to a script source's lines their number and some space for breakpoints and execution location marks
+ * @param {string[]} scriptSource - The raw script source as an array of its lines
+ * @return {string[]} - The script source as an array of its lines prefixed with their number
+ */
+function prependLineNumber(scriptSource) {
+  return scriptSource.map((line, lineNumber) => `${lineNumberPrefix(lineNumber)}   ${line}`);
+}
+
 /*
  * Write and format the visible part of a script source, marking the run location and breakpoints
  * @param {DisplayedContent} scriptSource - The raw script source as displayed content
@@ -385,77 +413,69 @@ function parseUserInput(parsed, currentInput) {
  * @return {string}
  */
 function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScript) {
-  const formatScriptSource = (formattedLines, breakpoints, originalLines, originalLineNumber) => {
-    if (originalLines.length === 0) {
-      return formattedLines;
-    }
-    else {
-      const hasBreakpoint = !(breakpoints.length === 0) && lineNumber(breakpoints[0]) === originalLineNumber;
+  const formatScriptSource = breakpoints => (originalLine, originalLineNumber) => {
+    const printBreakpoint = line => {
+      if (breakpoints.length > 0 && breakpoints.some(breakpoint => lineNumber(breakpoint) === originalLineNumber)) {
+        return markBreakpoint(line, originalLineNumber);
+      }
+      else {
+        return line;
+      }
+    };
 
-      const lineNumberPrefix = lineNumber => {
-        if (lineNumber.toString().length < 4) {
-          return `${lineNumber.toString().padEnd(3, ' ')}|`;
-        }
-        else {
-          return `${lineNumber.toString()}|`;
-        }
-      };
-
-      const runLocationHighlights = line => {
-        const highlightCurrentExpression = line => {
-          const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
-            const isOneOf = (characterSelection, character) => {
-              if (characterSelection.length === 0) {
-                return false;
-              }
-              else if (characterSelection[0] === character) {
-                return true;
-              }
-              else {
-                return isOneOf(characterSelection.slice(1), character);
-              }
-            };
-
-            if (line.length === 0) {
-              return beforeHighlight;
+    const highlightRunLocation = line => {
+      const highlightCurrentExpression = line => {
+        const highlightCurrentExpressionImpl = (beforeHighlight, line) => {
+          const isOneOf = (characterSelection, character) => {
+            if (characterSelection.length === 0) {
+              return false;
             }
-            else if (isOneOf("[({ })]=>\r\n;", line[0])) {
-              return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
+            else if (characterSelection[0] === character) {
+              return true;
             }
             else {
-              return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
-                       (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
+              return isOneOf(characterSelection.slice(1), character);
             }
           };
 
-          return highlightCurrentExpressionImpl("", line);
+          if (line.length === 0) {
+            return beforeHighlight;
+          }
+          else if (isOneOf("[({ })]=>\r\n;", line[0])) {
+            return highlightCurrentExpressionImpl(`${beforeHighlight}${line[0]}`, line.slice(1));
+          }
+          else {
+            return (expression => `${beforeHighlight}${styleText(expression, "bold")}${line.slice(expression.length)}`)
+                     (line.match(/^[a-zA-Z0-9\"\']+/g)[0]);
+          }
         };
 
-        if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
-          return `> ${line.slice(0, columnNumber(runLocation))}${highlightCurrentExpression(line.slice(columnNumber(runLocation)))}`;
-        }
-        else {
-          return `  ${line}`;
-        }
+        return highlightCurrentExpressionImpl("", line);
       };
 
-      return formatScriptSource([...formattedLines,`${lineNumberPrefix(originalLineNumber)}${hasBreakpoint ? "*" : " "}${runLocationHighlights(originalLines[0])}`],
-                                hasBreakpoint ? breakpoints.slice(1) : breakpoints,
-                                originalLines.slice(1),
-                                originalLineNumber + 1);
-    }
-  };
+      if (scriptHandle(runLocation) === displayedScript && lineNumber(runLocation) === originalLineNumber) {
+        return markExecutionLocation(
+                 (locationColumn =>`${line.slice(0, locationColumn)}${highlightCurrentExpression(line.slice(locationColumn))}`)
+                   (lineNumberPrefix(originalLineNumber).length + 3 + columnNumber(runLocation)),
+                 originalLineNumber);
+      }
+      else {
+        return line;
+      }
+    };
 
-  return scrollableContent(makeDisplayedContent(formatScriptSource([],
-                                                                   breakpoints.filter(breakpoint => {
-                                                                     return scriptHandle(breakpoint) === displayedScript;
-                                                                   })
-                                                                              .sort((breakpointA, breakpointB) => {
-                                                                     return lineNumber(breakpointA) - lineNumber(breakpointB);
-                                                                   }),
-                                                                   content(scriptSource).split("\n"),
-                                                                   0).join("\n"),
-                                                topLine(scriptSource)));
+    return printBreakpoint(highlightRunLocation(originalLine));
+  }
+
+  return scrollableContent(
+           makeDisplayedContent(
+             content(scriptSource).split("\n").map(formatScriptSource(breakpoints.filter(breakpoint => {
+                                                                        return scriptHandle(breakpoint) === displayedScript;
+                                                                      })
+                                                                                 .sort((breakpointA, breakpointB) => {
+                                                                        return lineNumber(breakpointA) - lineNumber(breakpointB);
+                                                                      }))).join("\n"),
+             topLine(scriptSource)));
 }
 
 // ## Tree Writers
@@ -529,6 +549,7 @@ module.exports = {
   makeDisplayedContent,
   makePackagedContent,
   parseUserInput,
+  prependLineNumber,
   scrollable,
   scrollableContent,
   styleText,
