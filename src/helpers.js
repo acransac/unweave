@@ -414,7 +414,7 @@ function prependLineNumber(scriptSource) {
  */
 function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScript) {
   const formatScriptSource = breakpoints => (originalLine, originalLineNumber) => {
-    const markBreakpoint = line => {
+    const printBreakpoint = line => {
       if (breakpoints.length > 0 && breakpoints.some(breakpoint => lineNumber(breakpoint) === originalLineNumber)) {
         return markBreakpoint(line, originalLineNumber);
       }
@@ -464,7 +464,7 @@ function writeScriptSource(scriptSource, runLocation, breakpoints, displayedScri
       }
     };
 
-    return markBreakpoint(highlightRunLocation(originalLine));
+    return printBreakpoint(highlightRunLocation(originalLine));
   }
 
   return scrollableContent(
